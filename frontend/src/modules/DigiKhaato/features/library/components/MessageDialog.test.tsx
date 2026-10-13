@@ -43,7 +43,7 @@ describe('MessageDialog', () => {
     expect(send).toHaveAttribute('href', 'https://wa.me/919123456780?text=Hello');
     send.addEventListener('click', (event) => event.preventDefault());
     await userEvent.click(send);
-    expect(service.recordMessage).toHaveBeenCalledWith('m1', 'fee');
+    expect(service.recordMessage).toHaveBeenCalledWith('m1', 'fee', undefined);
   });
 
   it('says why nothing can be sent, and offers no button', async () => {
@@ -60,5 +60,48 @@ describe('MessageDialog', () => {
     );
     expect(await screen.findByText('Nothing is due.')).toBeInTheDocument();
     expect(screen.queryByTestId('library-message-send')).not.toBeInTheDocument();
+  });
+
+  it('asks for the words of a custom message first, then sends exactly those words', async () => {
+    // QA F4 / B51 — nothing is prepared before the desk writes something, the
+    // preview is the server's (personalised, signed), and the tap records the
+    // same words so the server can build the text again at send time.
+    jest.mocked(service.prepareMessage).mockResolvedValue({
+      kind: 'custom',
+      text: 'Hi Asha, closed on Sunday.\n— Reading Room',
+      waUrl: 'https://wa.me/919123456780?text=Hi',
+      recipient: { name: 'Asha', isGuardian: false, hasMobile: true },
+    });
+    jest.mocked(service.recordMessage).mockResolvedValue(undefined);
+    renderWithProviders(
+      <MessageDialog membershipId="m1" name="Asha" kind="custom" onClose={jest.fn()} />
+    );
+    expect(service.prepareMessage).not.toHaveBeenCalled();
+    await userEvent.type(screen.getByRole('textbox'), 'Hi {{name}, closed on Sunday.');
+    await userEvent.click(screen.getByTestId('library-message-prepare'));
+    expect(await screen.findByText(/Hi Asha, closed on Sunday\./)).toBeInTheDocument();
+    expect(service.prepareMessage).toHaveBeenCalledWith(
+      'm1',
+      'custom',
+      expect.anything(),
+      'Hi {name}, closed on Sunday.'
+    );
+    const send = screen.getByTestId('library-message-send');
+    send.addEventListener('click', (event) => event.preventDefault());
+    await userEvent.click(send);
+    expect(service.recordMessage).toHaveBeenCalledWith(
+      'm1',
+      'custom',
+      'Hi {name}, closed on Sunday.'
+    );
+  });
+
+  it('refuses an empty custom message without asking the server', async () => {
+    renderWithProviders(
+      <MessageDialog membershipId="m1" name="Asha" kind="custom" onClose={jest.fn()} />
+    );
+    await userEvent.click(screen.getByTestId('library-message-prepare'));
+    expect(await screen.findByText('Write the message')).toBeInTheDocument();
+    expect(service.prepareMessage).not.toHaveBeenCalled();
   });
 });

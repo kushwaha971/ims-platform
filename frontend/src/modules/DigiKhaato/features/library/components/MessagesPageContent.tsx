@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 
 import dynamic from 'next/dynamic';
 
-import { MessageCircle } from 'lucide-react';
+import { MessageCircle, Users } from 'lucide-react';
 
 import {
   UbAmount,
@@ -33,6 +33,11 @@ import type { FeeReminderRow } from '../types/message.types';
 const MessageDialogLazy = dynamic(() => import('./MessageDialog').then((m) => m.MessageDialog), {
   ssr: false,
 });
+/** QA F4 / B51 — a group message; a form, so it loads with the tap too. */
+const BulkMessageDrawerLazy = dynamic(
+  () => import('./BulkMessageDrawer').then((m) => m.BulkMessageDrawer),
+  { ssr: false }
+);
 
 /**
  * W06 (owner, 4 Oct 2026) — `/library/messages`: today's fee messages, the
@@ -40,6 +45,9 @@ const MessageDialogLazy = dynamic(() => import('./MessageDialog').then((m) => m.
  * ends, then 1, 3 and 7 days after it ended unrenewed — so this list is
  * exactly who to message today. Each opens WhatsApp with the text filled in
  * and is recorded; a row sent today says so and can still be sent again.
+ *
+ * QA F4 / B51 — "Message a group" sends to fee unpaid, plans ending, a shift or
+ * everybody, outside that schedule, in a fixed message or the desk's own words.
  */
 export function MessagesPageContent(): React.JSX.Element {
   const { t } = useTranslation();
@@ -49,6 +57,7 @@ export function MessagesPageContent(): React.JSX.Element {
   const canRead = hasModule('library') && can('library.member.read');
   const canSend = hasModule('library') && can('library.member.write');
   const [open, setOpen] = useState<FeeReminderRow | null>(null);
+  const [groupOpen, setGroupOpen] = useState(false);
 
   useEffect(() => {
     if (!canRead) return undefined;
@@ -74,7 +83,20 @@ export function MessagesPageContent(): React.JSX.Element {
 
   return (
     <UbPageShell width="measure">
-      <UbPageHeader title={t('library.messages.title')} />
+      <UbPageHeader
+        title={t('library.messages.title')}
+        actions={
+          canSend ? (
+            <UbButton
+              icon={<Users className="h-4 w-4" aria-hidden />}
+              onClick={() => setGroupOpen(true)}
+              data-testid="library-bulk-open"
+            >
+              {t('library.messages.bulk.open')}
+            </UbButton>
+          ) : undefined
+        }
+      />
       {state.status === 'idle' || state.status === 'loading' ? (
         <UbPageSkeleton variant="card" />
       ) : state.status === 'failed' ? (
@@ -171,6 +193,15 @@ export function MessagesPageContent(): React.JSX.Element {
           name={open.name}
           kind="fee"
           onClose={() => setOpen(null)}
+        />
+      )}
+      {groupOpen && (
+        <BulkMessageDrawerLazy
+          onClose={() => {
+            setGroupOpen(false);
+            // What was opened today now reads "sent today" on the schedule.
+            void dispatch(fetchFeeReminders());
+          }}
         />
       )}
     </UbPageShell>

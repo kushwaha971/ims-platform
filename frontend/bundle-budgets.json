@@ -761,7 +761,8 @@
   "12 Oct 2026 measured performance follow-up: homepage route 40 -> 40.6 KB (measured 40.5) for cancellable after-load/idle analytics scheduling. Both GA4 and PostHog remain enabled; third-party execution is delayed, not hidden.",
   "DEC-019 phase 2 and the 12 Oct QA fixes (12 Oct 2026) — shared app 110 -> 112. Measured 111.0 on bff44e7 (the commit before phase 2, built in place from a stash) and 111.1 with it: the shell had already crossed its ceiling during the QA fixes, which never raised it — B47/B48/B49's single-flight refresh, the once-per-document session bootstrap and the signed-in gate are shell code by design (they run on every route), and the date fix reads the session's timezone in useValidationSchemas. Phase 2 itself adds 0.1 to the shell (the Udhaar book's manifest beside the other three, the `book` default on the party-list slice) and 0.4-1.0 KB on the party screens (the Shop's words, the `book` plumbing through the list, the timeline and the statement). /khata is new and is the /parties screen, so it has /parties' budget. Every other route whose ceiling those moves crossed was raised by the measured + 0.5 rule. /parties/[id]'s route chunk 103 -> 104 (measured 103.0 after the live look's word fixes; phase 2 added 0.8 KB there).",
   "QA B50 (13 Oct 2026) — shared app 111.1 -> 111.3: `ServiceWorkerRegistrar` (registers /sw.js after load and tells it which business is open) mounts in AppProviders on every route, by design: the installed app's cache has to be set up whichever page it is opened on. Raised by the measured + 0.5 rule: /items/[id] route -> 102; /library/attendance route -> 68; /items/price-lists firstLoad -> 289; /onboarding firstLoad -> 244. The two route chunks sat exactly on their ceilings and the one-shot app-switch latch in useNavigation tipped them.",
-  "QA F1/F2 (13 Oct 2026, library admission: an existing student's dates and dues, any amount in any mode) — the library routes moved 0.1-0.3 KB: the ten new words in the library catalogue every library route loads. The shared mode-line schema and wire mapping were first imported from the payments modules that hold them and cost those routes 2.7-3.4 KB; they now live in two modules that import almost nothing (`payments/validation/paymentLineSchema.ts`, `payments/view-model/modeBreakup.ts`) — the PTY-01 lesson, a fourth time. Raised by the measured + 0.5 rule: /library/members route -> 81; /library/counter firstLoad -> 314; /library/members/[membershipId] route -> 75; /library firstLoad -> 311; /library/seats firstLoad -> 309; /library/messages route -> 66; /library/catalogue/categories route -> 65; /library/catalogue/locations route -> 65."
+  "QA F1/F2 (13 Oct 2026, library admission: an existing student's dates and dues, any amount in any mode) — the library routes moved 0.1-0.3 KB: the ten new words in the library catalogue every library route loads. The shared mode-line schema and wire mapping were first imported from the payments modules that hold them and cost those routes 2.7-3.4 KB; they now live in two modules that import almost nothing (`payments/validation/paymentLineSchema.ts`, `payments/view-model/modeBreakup.ts`) — the PTY-01 lesson, a fourth time. Raised by the measured + 0.5 rule: /library/members route -> 81; /library/counter firstLoad -> 314; /library/members/[membershipId] route -> 75; /library firstLoad -> 311; /library/seats firstLoad -> 309; /library/messages route -> 66; /library/catalogue/categories route -> 65; /library/catalogue/locations route -> 65.",
+  "QA F4 / B51 (13 Oct 2026, library messages to any student and to a group) — the library routes moved 0.1-0.5 KB: the library catalogue every library route loads gained the words for the plan end date, thanks, your own message, the group drawer and the message log, and libraryMessageThunk (statically reachable through the library slice) gained two thunks. /library/members/[membershipId] also renders the message log card itself (+0.5 route); the group drawer and the custom-message form are dynamic() so neither is in a route chunk. /d/[token] and two library route chunks crossed their line by under 0.05 KB: nothing they import changed — webpack moved the shared `money` words, which PaymentModeEditor now loads itself (F2). Raised by the measured + 0.5 rule: /library/members firstLoad -> 319.7; /library/catalogue firstLoad -> 314.8; /library/members/[membershipId] route -> 76; /library/members/[membershipId] firstLoad -> 314.6; /library/counter route -> 75.5; /library/copies firstLoad -> 313.7; /library/fees route -> 71.6; /library/money route -> 68.7; /library/attendance firstLoad -> 306.9; /library/catalogue/[titleId] route -> 66.5; /library/messages firstLoad -> 304.9; /library/catalogue/categories firstLoad -> 303.6; /library/catalogue/locations firstLoad -> 303.6; /d/[token] route -> 39.5."
  ],
  "//shared": [
   "WHERE THESE DIVERGE FROM §19.9.2, AND WHY. Both numbers below are above the",
@@ -1322,7 +1323,7 @@
  },
  "routes": {
   "/library/money": {
-   "route": 68,
+   "route": 68.7,
    "firstLoad": 307
   },
   "/purchases/debit-notes/[id]": {
@@ -1615,11 +1616,11 @@
   },
   "/library/catalogue": {
    "route": 76,
-   "firstLoad": 314
+   "firstLoad": 314.8
   },
   "/library/copies": {
    "route": 75,
-   "firstLoad": 313
+   "firstLoad": 313.7
   },
   "/library/copies/[copyId]": {
    "route": 69,
@@ -1631,26 +1632,26 @@
   },
   "/library/members": {
    "route": 81,
-   "firstLoad": 319
+   "firstLoad": 319.7
   },
   "/library/members/[membershipId]": {
-   "route": 75,
-   "firstLoad": 313
+   "route": 76.0,
+   "firstLoad": 314.6
   },
   "/library/catalogue/[titleId]": {
-   "route": 66,
+   "route": 66.5,
    "firstLoad": 305
   },
   "/library/catalogue/categories": {
    "route": 65,
-   "firstLoad": 303
+   "firstLoad": 303.6
   },
   "/library/catalogue/locations": {
    "route": 65,
-   "firstLoad": 303
+   "firstLoad": 303.6
   },
   "/library/counter": {
-   "route": 75,
+   "route": 75.5,
    "firstLoad": 314
   },
   "/library/seats": {
@@ -1658,7 +1659,7 @@
    "firstLoad": 309
   },
   "/library/fees": {
-   "route": 71,
+   "route": 71.6,
    "firstLoad": 310
   },
   "/signup": {
@@ -1678,7 +1679,7 @@
    "firstLoad": 290
   },
   "/d/[token]": {
-   "route": 39,
+   "route": 39.5,
    "firstLoad": 278
   },
   "/accept-invite/[token]": {
@@ -1707,11 +1708,11 @@
   },
   "/library/attendance": {
    "route": 68,
-   "firstLoad": 306
+   "firstLoad": 306.9
   },
   "/library/messages": {
    "route": 66,
-   "firstLoad": 304
+   "firstLoad": 304.9
   },
   "/lending/loans/new": {
    "route": 129,

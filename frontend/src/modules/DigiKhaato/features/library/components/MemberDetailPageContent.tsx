@@ -56,6 +56,7 @@ import {
 import { CatalogueActionsMenu } from './CatalogueActionsMenu';
 import { MemberAttendanceStrip } from './MemberAttendanceStrip';
 import { MemberChargesSection } from './MemberChargesSection';
+import { MemberMessageLog } from './MemberMessageLog';
 
 import type { MemberDialogKind } from './MemberActionDialog';
 import type { MessageKind } from '../types/message.types';
@@ -102,6 +103,8 @@ export function MemberDetailPageContent({ id }: Readonly<{ id: string }>): React
   const [seating, setSeating] = useState(false);
   const [editing, setEditing] = useState(false);
   const [messaging, setMessaging] = useState<MessageKind | null>(null);
+  // Bumped when a message dialog closes, so the log shows a send at once.
+  const [messageLogKey, setMessageLogKey] = useState(0);
   const [showingQr, setShowingQr] = useState(false);
   const { member } = detail;
 
@@ -225,6 +228,33 @@ export function MemberDetailPageContent({ id }: Readonly<{ id: string }>): React
                     detail.canWrite && !closed && isNonZero(feeAmount)
                       ? () => setShowingQr(true)
                       : undefined,
+                },
+                /* QA F4 / B51 — a paid student can be told their plan's end date,
+                   thanked for renewing, or sent the desk's own words; a custom
+                   message reaches any student, a closed one included. */
+                {
+                  key: 'planEnd',
+                  label: t('library.messages.kind.plan_end.menu'),
+                  icon: MessageCircle,
+                  action:
+                    detail.canWrite && !closed && member.validUntil
+                      ? () => setMessaging('plan_end')
+                      : undefined,
+                },
+                {
+                  key: 'thanks',
+                  label: t('library.messages.kind.thanks.menu'),
+                  icon: MessageCircle,
+                  action:
+                    detail.canWrite && !closed && member.validUntil
+                      ? () => setMessaging('thanks')
+                      : undefined,
+                },
+                {
+                  key: 'custom',
+                  label: t('library.messages.kind.custom.menu'),
+                  icon: MessageCircle,
+                  action: detail.canWrite ? () => setMessaging('custom') : undefined,
                 },
                 {
                   key: 'welcome',
@@ -474,6 +504,8 @@ export function MemberDetailPageContent({ id }: Readonly<{ id: string }>): React
 
         <MemberChargesSection member={member} t={t} />
 
+        <MemberMessageLog membershipId={member.membershipId} refreshKey={messageLogKey} t={t} />
+
         {member.periods.length > 0 && (
           <UbCard padded>
             <UbStack gap={2}>
@@ -514,7 +546,10 @@ export function MemberDetailPageContent({ id }: Readonly<{ id: string }>): React
           membershipId={member.membershipId}
           name={member.name}
           kind={messaging}
-          onClose={() => setMessaging(null)}
+          onClose={() => {
+            setMessaging(null);
+            setMessageLogKey((key) => key + 1);
+          }}
         />
       )}
       {seating && (

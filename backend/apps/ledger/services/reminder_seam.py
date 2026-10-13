@@ -515,6 +515,7 @@ def record_source_reminders(
     sources: list[dict],
     text: str,
     at: dt.datetime | None = None,
+    metadata: dict | None = None,
 ) -> list[Any]:
     """One row per source, sharing `message_group_id` — "3 books overdue" is one
     message about three loans, and each loan's own history must show it.
@@ -524,6 +525,8 @@ def record_source_reminders(
     the whole message rather than recording half of it. `kind` becomes
     `notice` when every amount is None. Rows are `sent` (the merchant was
     handed the text); `text` is kept in the audit row, not on the reminder.
+    `metadata` joins it there — the library's message log reads its `message_kind`
+    back (QA F4), which no reminder column can say.
     """
     from apps.ledger.models import Reminder
     from apps.parties.models import Party
@@ -585,6 +588,7 @@ def record_source_reminders(
                 "source_id": str(row.source_id),
                 "message_group_id": str(group) if group else None,
                 "text": text[:1000],
+                **(metadata or {}),
             },
         )
     return rows

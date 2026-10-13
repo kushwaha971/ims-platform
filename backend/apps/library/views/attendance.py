@@ -99,7 +99,9 @@ class FeeRemindersView(_AttendanceView):
 
 
 class MemberMessageView(_AttendanceView):
-    """`GET|POST /library/members/<id>/message/<kind>` — kind fee | welcome | receipt.
+    """`GET|POST /library/members/<id>/message/<kind>` — one of `fee_messages.KINDS`.
+
+    A custom message carries its words as `?text=` on GET and `text` on POST.
 
     GET prepares the text and the link and records nothing; POST is the tap that
     opens WhatsApp and records it like a reminder (W06).
@@ -110,7 +112,10 @@ class MemberMessageView(_AttendanceView):
 
         return StandardResponse.ok(
             fee_messages.preview(
-                ctx=Ctx.from_request(request), membership_id=membership_id, kind=kind
+                ctx=Ctx.from_request(request),
+                membership_id=membership_id,
+                kind=kind,
+                text=request.query_params.get("text", ""),
             )
         )
 
@@ -123,6 +128,42 @@ class MemberMessageView(_AttendanceView):
                 membership_id=membership_id,
                 kind=kind,
                 data=request.data if isinstance(request.data, dict) else {},
+            )
+        )
+
+
+class MemberMessageLogView(_AttendanceView):
+    """`GET /library/members/<id>/messages` — what this student was sent (QA F4)."""
+
+    def get(self, request: Any, membership_id: Any) -> Any:
+        from apps.library.services import fee_messages
+
+        return StandardResponse.ok(
+            fee_messages.member_log(
+                tenant=get_effective_tenant(request), membership_id=membership_id
+            )
+        )
+
+
+class BulkMessageView(_AttendanceView):
+    """`POST /library/messages/bulk` — one prepared message per student in a group.
+
+    A POST because the desk's custom words can be long, and because preparing a
+    group is the first step of sending to it (library.member.write); it records
+    nothing — each message is recorded when it is opened (QA F4 / B51).
+    """
+
+    def post(self, request: Any) -> Any:
+        from apps.library.services import fee_messages
+
+        data = request.data if isinstance(request.data, dict) else {}
+        return StandardResponse.ok(
+            fee_messages.bulk_prepare(
+                ctx=Ctx.from_request(request),
+                kind=str(data.get("kind") or ""),
+                audience=str(data.get("audience") or ""),
+                shift_id=data.get("shift_id"),
+                text=str(data.get("text") or ""),
             )
         )
 

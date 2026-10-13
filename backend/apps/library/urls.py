@@ -82,6 +82,13 @@ urlpatterns: list = [
     ),
     # ── W06 ── WhatsApp messages handled like reminders
     path("fee-reminders", at.FeeRemindersView.as_view(), name="library-fee-reminders"),
+    # QA F4 / B51 — a group message, and each student's message log
+    path("messages/bulk", at.BulkMessageView.as_view(), name="library-messages-bulk"),
+    path(
+        "members/<uuid:membership_id>/messages",
+        at.MemberMessageLogView.as_view(),
+        name="library-member-messages",
+    ),
     path(
         "members/<uuid:membership_id>/message/<str:kind>",
         at.MemberMessageView.as_view(),

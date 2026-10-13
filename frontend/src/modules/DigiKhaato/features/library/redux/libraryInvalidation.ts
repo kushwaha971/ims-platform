@@ -46,6 +46,9 @@ export const LIBRARY_QUERIES = {
   fetchMemberAttendance: 'libraryAttendance/fetchMember',
   fetchFeeReminders: 'libraryMessages/fetch',
   prepareLibraryMessage: 'libraryMessages/prepare',
+  // QA F4 / B51 — preparing a group records nothing; the log only reads.
+  prepareBulkMessages: 'libraryMessages/bulk',
+  fetchMessageLog: 'libraryMessages/log',
 } as const satisfies Record<string, string>;
 
 export const LIBRARY_MUTATIONS = {

@@ -52,4 +52,7 @@ export const LIBRARY_PATHS = {
   MEMBER_MESSAGE: (id: string, kind: string) =>
     `/library/members/${seg(id)}/message/${encodeURIComponent(kind)}`,
   FEE_REMINDERS: '/library/fee-reminders',
+  // QA F4 / B51 — a group message, and one student's message log.
+  BULK_MESSAGES: '/library/messages/bulk',
+  MEMBER_MESSAGES: (id: string) => `/library/members/${seg(id)}/messages`,
 } as const;
