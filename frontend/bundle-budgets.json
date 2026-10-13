@@ -1,5 +1,6 @@
 {
  "//": [
+    "2026-10-14 B42: import kinds remember their owning app on shared deep links. Only two exceeded limits use measured + 0.5 KB: /parties/tags first load 301.0 and /imports/[id] route 50.6; existing history synchronization is reused.",
     "2026-10-14 B41: new shared Month/Year labels slightly raise first load. Only the exceeded /_not-found limit is raised from 239 to measured 239.0 + 0.5 KB; the calendar remains lazy.",
     "2026-10-14 B38: dated stock explanations in the editor and issue warning. Five exceeded limits use measured + 0.5 KB; about 0.2 KB of shared display logic/copy.",
     "2026-10-13 B37: explicit confirmation for payments dated before their bills. Three exceeded first-load limits use measured 315.6 KB + 0.5 KB.",
@@ -1485,7 +1486,7 @@
   },
   "/parties/tags": {
    "route": 62,
-   "firstLoad": 301
+   "firstLoad": 301.5
   },
   "/parties/[id]/statement": {
    "route": 93,
@@ -1568,7 +1569,7 @@
    "firstLoad": 289.9
   },
   "/imports/[id]": {
-   "route": 50.6,
+   "route": 51.1,
    "firstLoad": 290.1
   },
   "/admin": {

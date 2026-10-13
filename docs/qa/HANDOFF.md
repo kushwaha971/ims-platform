@@ -11,11 +11,11 @@ owner asks.
 
 **Done and pushed** (each has a commit naming it — `git log --grep "B26"` etc.):
 B1, B2, B3, B4, B5, B6, B7, B8, B9, B10, B11, B12, B13, B14, B15, B16, B17, B18, B19, B20, B21, B22, B23, B24, B25, B26, B27–B35,
-B36, B37, B38, B39, B40, B41, B44, B45, B46, B47, B48, B49, B50, B51, F1, F2, F4, F6, F8, F10 (parts A and B),
+B36, B37, B38, B39, B40, B41, B42, B44, B45, B46, B47, B48, B49, B50, B51, F1, F2, F4, F6, F8, F10 (parts A and B),
 F12, FB4, and DEC-019 (each app keeps its own money).
 
 **Next, in this order:**
-1. P2 bugs: B42, B43.
+1. P2 bugs: B43.
    Apply the owner's additional [One Person, One Workspace requirements](one-person-workspace.md)
    throughout these fixes, then complete a dedicated UX16 pass across Library,
    Lending, Shop customer/supplier and Udhaar book person pages before the
@@ -50,6 +50,21 @@ F12, FB4, and DEC-019 (each app keeps its own money).
 Update the "Done" list in this file in the same commit as each item.
 
 ## Verification since 13 Oct 2026
+
+- B42 (14 Oct): B11's history fix preserved an existing Shop entry, but a new
+  import deep link still inherited Library and kept it on reload. Both widths
+  reproduced; four ownership tests failed first. Import access metadata now
+  identifies its app, and the wizard remembers that ownership from the matching
+  loaded job or explicit upload kind. It reuses B11's tenant/path-scoped history
+  mechanism, retaining Next metadata and ignoring stale jobs and export pages.
+  All 45 focused import/header/navigation tests pass. `e2e/import-app-look.mjs`
+  passes direct-link and reload checks at 1280/360: one existing job read, one
+  necessary switch on the direct link, none on reload and no extra document
+  load. All four final screenshots were read. Types, changed-file lint, locales,
+  build and bundle checks pass; only two exceeded limits use measured + 0.5 KB.
+  Full frontend: 4,005 passed and the same three landing-page failures; backend
+  source remains unchanged since B38. Existing desktop import name truncation
+  and crowded Opening balance/Direction headers remain for the U9/UI pass.
 
 - B41 (14 Oct): two years back required 24 live month-arrow clicks at both
   widths. Two five-year jump tests failed first. The shared lazy calendar now

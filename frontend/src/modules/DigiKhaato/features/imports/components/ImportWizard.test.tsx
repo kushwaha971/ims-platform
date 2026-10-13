@@ -140,10 +140,48 @@ beforeEach(() => {
   service.listImportRows.mockResolvedValue({ rows: [], total: 0, page: 1, pageSize: 25 });
 });
 
+afterEach(() => window.history.replaceState(null, '', '/'));
+
 const renderJob = (job: ImportJob) => {
   service.getImportJob.mockResolvedValue(job);
   return renderWithProviders(<ImportWizard kind={null} jobId={job.id} exportId={null} />);
 };
+
+describe('the owning app of an import deep link', () => {
+  /** B42: a shared import URL must use its file's app rather than yesterday's session. */
+  it.each([
+    ['parties', 'shop'],
+    ['items', 'shop'],
+    ['students', 'library'],
+    ['loans', 'lending'],
+  ])('remembers %s imports in %s navigation', async (kind, app) => {
+    signIn(
+      [
+        ...OWNER,
+        'library.member.read',
+        'library.member.write',
+        'lending.loan.read',
+        'lending.loan.create',
+      ],
+      ['parties', 'ledger', 'inventory', 'sales', 'import_export', 'library', 'lending']
+    );
+    window.history.replaceState(
+      {
+        __NA: true,
+        yourkhataApp: {
+          path: '/imports',
+          tenant: 't1',
+          app: app === 'library' ? 'shop' : 'library',
+        },
+      },
+      '',
+      '/imports'
+    );
+    renderJob({ ...READY, kind, status: 'cancelled' });
+    await waitFor(() => expect(window.history.state.yourkhataApp.app).toBe(app));
+    expect(window.history.state.__NA).toBe(true);
+  });
+});
 
 describe('the review step', () => {
   it('imports the good rows and skips the ones with problems, saying so (QA B33)', async () => {

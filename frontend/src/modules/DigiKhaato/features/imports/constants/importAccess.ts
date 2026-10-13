@@ -13,6 +13,8 @@ import type { ImportKind } from '../types/import.types';
  * the server decides, and this only decides what is drawn.
  */
 export interface ImportAccess {
+  /** The app that owns the file, including a notification's shared deep link. */
+  readonly app: string;
   readonly write: readonly PermissionCode[];
   readonly read: PermissionCode;
   readonly modules: readonly ModuleCode[];
@@ -20,6 +22,7 @@ export interface ImportAccess {
 
 export const IMPORT_ACCESS: Readonly<Record<ImportKind, ImportAccess>> = {
   parties: {
+    app: 'shop',
     write: ['parties.party.write', 'ledger.entry.write'],
     read: 'parties.party.read',
     // `sales` is the Shop's anchor: a reading room that has parties and a ledger is
@@ -27,17 +30,20 @@ export const IMPORT_ACCESS: Readonly<Record<ImportKind, ImportAccess>> = {
     modules: ['import_export', 'parties', 'ledger', 'sales'],
   },
   items: {
+    app: 'shop',
     write: ['inventory.item.write'],
     read: 'inventory.item.read',
     modules: ['import_export', 'inventory'],
   },
   // QA F10 — a reading room's register and a lender's, through F1's and F8's services.
   students: {
+    app: 'library',
     write: ['library.member.write'],
     read: 'library.member.read',
     modules: ['import_export', 'library'],
   },
   loans: {
+    app: 'lending',
     write: ['lending.loan.create'],
     read: 'lending.loan.read',
     modules: ['import_export', 'lending'],
