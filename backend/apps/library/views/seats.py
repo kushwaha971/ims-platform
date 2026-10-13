@@ -95,4 +95,7 @@ class SeatMapView(APIView):
             if shift is None:
                 raise ValidationFailed({"shift": ["Choose one of the shifts."]})
         result = seats.seat_map(tenant, shift, tenant_today(tenant))
-        return StandardResponse.ok(result["seats"], meta={"counts": result["counts"]})
+        return StandardResponse.ok(
+            result["seats"],
+            meta={"counts": result["counts"], "shift_counts": result["shift_counts"]},
+        )

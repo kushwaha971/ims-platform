@@ -377,8 +377,47 @@ def assign(
             raise _seat_taken(seat, other)
 
 
+def _holder_json(
+    m: LibraryMembership, shift: LibraryShift | None, today: dt.date, dues: Decimal
+) -> dict:
+    """One student on a seat. `in_view`: they hold it during `shift`; `other_shift`:
+    they do, but in a different (overlapping) shift — QA F6's "Taken (other shift)"."""
+    in_view = shift is None or overlaps(shift, m.shift)
+    return {
+        "membership_id": str(m.id),
+        "name": m.party.name,
+        "member_number": m.member_number,
+        "mobile": m.party.mobile or "",
+        "shift": (
+            {
+                "id": str(m.shift_id),
+                "name": m.shift.name,
+                "starts_at": m.shift.starts_at.strftime("%H:%M"),
+                "ends_at": m.shift.ends_at.strftime("%H:%M"),
+            }
+            if m.shift_id
+            else None
+        ),
+        "valid_until": m.valid_until.isoformat() if m.valid_until else None,
+        "fee_state": fee_state(m, today, dues),
+        "dues_amount": f"{dues:.2f}",
+        "in_view": in_view,
+        # The seat panel's "Free seat" saves against it (optimistic concurrency).
+        "version": m.version,
+        "other_shift": bool(shift is not None and in_view and m.shift_id != shift.id),
+    }
+
+
 def seat_map(tenant: Any, shift: LibraryShift | None, today: dt.date) -> dict:
-    """Every seat, and who holds it during `shift` (None = at any time of day)."""
+    """Every seat, everybody on it, and how taken it is — across the day and in `shift`.
+
+    QA F6: a tile used to know only the students of the chosen shift. Now each seat
+    carries every holder (the panel lists them all, whatever the view), the active
+    shifts it can no longer be given in (`taken_shift_ids`, by the same overlap rule
+    `assign` refuses with), its whole-day state — free, partial, full — and its state
+    in `shift`: free, taken, or `other_shift` when only a student of a different,
+    overlapping shift holds it. `occupants` stays the in-view holders, as before.
+    """
     from django.db.models import Sum
 
     from apps.library.models import LibraryCharge
@@ -386,6 +425,7 @@ def seat_map(tenant: Any, shift: LibraryShift | None, today: dt.date) -> dict:
     seats = list(
         LibrarySeat.objects.filter(tenant=tenant, is_active=True).order_by("label_sort", "id")
     )
+    active = in_day_order(LibraryShift.objects.filter(tenant=tenant, is_active=True))
     holders = list(_holders(tenant))
     dues = {
         row["membership"]: row["t"]
@@ -396,24 +436,43 @@ def seat_map(tenant: Any, shift: LibraryShift | None, today: dt.date) -> dict:
     }
     by_seat: dict[Any, list] = defaultdict(list)
     for m in holders:
-        if shift is None or overlaps(shift, m.shift):
-            by_seat[m.seat_id].append(m)
+        by_seat[m.seat_id].append(m)
     rows, counts = [], defaultdict(int)
+    taken_in: dict[Any, int] = defaultdict(int)
     for seat in seats:
-        occupants = [
-            {
-                "membership_id": str(m.id),
-                "name": m.party.name,
-                "member_number": m.member_number,
-                "shift": {"id": str(m.shift_id), "name": m.shift.name} if m.shift_id else None,
-                "valid_until": m.valid_until.isoformat() if m.valid_until else None,
-                "fee_state": fee_state(m, today, Decimal(dues.get(m.pk) or 0)),
-                "dues_amount": f"{Decimal(dues.get(m.pk) or 0):.2f}",
-            }
-            for m in sorted(by_seat.get(seat.id, []), key=lambda m: span(m.shift))
-        ]
+        mine = sorted(by_seat.get(seat.id, []), key=lambda m: span(m.shift))
+        everyone = [_holder_json(m, shift, today, Decimal(dues.get(m.pk) or 0)) for m in mine]
+        occupants = [h for h in everyone if h["in_view"]]
+        taken = [s for s in active if any(overlaps(s, m.shift) for m in mine)]
+        for s in taken:
+            taken_in[s.id] += 1
+        if not mine:
+            day_state = "free"
+        elif any(m.shift_id is None for m in mine) or len(taken) == len(active):
+            day_state = "full"
+        else:
+            day_state = "partial"
+        if not occupants:
+            view_state = "free"
+        elif all(h["other_shift"] for h in occupants):
+            view_state = "other_shift"
+        else:
+            view_state = "taken"
         counts["occupied" if occupants else "free"] += 1
         for o in occupants:
             counts[o["fee_state"]] += 1
-        rows.append({**seat_json(seat), "occupants": occupants})
-    return {"seats": rows, "counts": dict(counts)}
+        rows.append(
+            {
+                **seat_json(seat),
+                "occupants": occupants,
+                "holders": everyone,
+                "taken_shift_ids": [str(s.id) for s in taken],
+                "day_state": day_state,
+                "view_state": view_state,
+            }
+        )
+    shift_counts = [
+        {"id": str(s.id), "name": s.name, "taken": taken_in[s.id], "total": len(seats)}
+        for s in active
+    ]
+    return {"seats": rows, "counts": dict(counts), "shift_counts": shift_counts}

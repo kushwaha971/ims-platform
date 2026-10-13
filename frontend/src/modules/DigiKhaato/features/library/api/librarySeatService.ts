@@ -8,6 +8,8 @@ import type {
   LibrarySeat,
   LibraryShift,
   SeatMap,
+  SeatMapRow,
+  SeatOccupant,
   SeatRowFormValues,
   ShiftFormValues,
 } from '../types/seat.types';
@@ -46,29 +48,52 @@ export const listSeats = async (signal?: AbortSignal): Promise<LibrarySeat[]> =>
   return response.data.data.map(toSeat);
 };
 
+const toOccupant = (o: Wire): SeatOccupant => {
+  const shift = o.shift as Wire | null;
+  return {
+    membershipId: str(o.membership_id),
+    name: str(o.name),
+    memberNumber: str(o.member_number),
+    mobile: str(o.mobile),
+    shift: shift
+      ? {
+          id: str(shift.id),
+          name: str(shift.name),
+          startsAt: str(shift.starts_at),
+          endsAt: str(shift.ends_at),
+        }
+      : null,
+    validUntil: o.valid_until ? str(o.valid_until) : null,
+    feeState: str(o.fee_state) as FeeState,
+    duesAmount: str(o.dues_amount || '0.00'),
+    inView: o.in_view !== false,
+    otherShift: Boolean(o.other_shift),
+    version: Number(o.version ?? 1),
+  };
+};
+
 export const getSeatMap = async (shiftId: string, signal?: AbortSignal): Promise<SeatMap> => {
-  const response = await api.get<{ data: readonly Wire[]; meta: { counts: Wire } }>(
-    `${LIBRARY_PATHS.SEAT_MAP}${toQueryString({ shift: shiftId || undefined })}`,
-    { signal }
-  );
+  const response = await api.get<{
+    data: readonly Wire[];
+    meta: { counts: Wire; shift_counts?: readonly Wire[] };
+  }>(`${LIBRARY_PATHS.SEAT_MAP}${toQueryString({ shift: shiftId || undefined })}`, { signal });
   return {
     shiftId,
     seats: response.data.data.map((row) => ({
       ...toSeat(row),
-      occupants: ((row.occupants as Wire[] | undefined) ?? []).map((o) => {
-        const shift = o.shift as Wire | null;
-        return {
-          membershipId: str(o.membership_id),
-          name: str(o.name),
-          memberNumber: str(o.member_number),
-          shift: shift ? { id: str(shift.id), name: str(shift.name) } : null,
-          validUntil: o.valid_until ? str(o.valid_until) : null,
-          feeState: str(o.fee_state) as FeeState,
-          duesAmount: str(o.dues_amount || '0.00'),
-        };
-      }),
+      occupants: ((row.occupants as Wire[] | undefined) ?? []).map(toOccupant),
+      holders: ((row.holders as Wire[] | undefined) ?? []).map(toOccupant),
+      takenShiftIds: ((row.taken_shift_ids as unknown[] | undefined) ?? []).map(str),
+      dayState: (str(row.day_state) || 'free') as SeatMapRow['dayState'],
+      viewState: (str(row.view_state) || 'free') as SeatMapRow['viewState'],
     })),
     counts: response.data.meta.counts as SeatMap['counts'],
+    shiftCounts: (response.data.meta.shift_counts ?? []).map((c) => ({
+      id: str(c.id),
+      name: str(c.name),
+      taken: Number(c.taken ?? 0),
+      total: Number(c.total ?? 0),
+    })),
   };
 };
 
