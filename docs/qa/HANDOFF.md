@@ -25,6 +25,19 @@ F12, FB4, and DEC-019 (each app keeps its own money).
    Financial calculations and permissions remain owned by each app (DEC-019).
    Verify all six real-world workflows in that document at 1280/360 px; do not
    mark UX16 done for merely recording this requirement.
+   Also complete UX17: [seat management and its occupancy rules](seat-management.md).
+   Audit current seat/shift models and date-range conflicts, list all occupants
+   with direct student links, default to All seats, and verify the documented
+   concurrency/overnight/future-booking cases. The latest owner requirement
+   releases expired reservations; it supersedes the older rule retaining an
+   expired member's desk. Preserve their unpaid fees and payment history.
+   Coordinate this pass with UX16's Library workspace, before P2 features;
+   recording the requirements does not complete UX17.
+   Apply [UX18 filter/rendering requirements](filter-rendering.md) throughout:
+   routine interactions update affected data in place, preserve scroll/filter
+   state, avoid full-document reloads and duplicate/stale requests, and use
+   measured memoization where needed. Complete the cross-module audit alongside
+   UX16/UX17 before P2 features; verify network and rendering behavior live.
 2. P2 features: F3 (advance applied at renewal), F5, F7, F9, F11, F13;
    owner-editable message templates; per-app wording (no "You gave / You got"
    in Library or Lending); the Udhaar book refusal.
