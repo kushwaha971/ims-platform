@@ -1,5 +1,8 @@
 {
  "//": [
+  "13 Oct 2026, B18 integration: concurrent verified social footer links add",
+  "0.4 KB to the landing route. Its first-load limit is measured 280.1 KB",
+  "+ 0.5 KB; B18 app routes stay within their existing limits.",
   "13 Oct 2026, QA B17: responsive forms, full document headings and wrapping",
   "contacts add at most 0.1 KB on affected routes. Only exceeded limits",
   "are adjusted to their measured gzip size + 0.5 KB.",
@@ -1625,7 +1628,7 @@
   },
   "/": {
    "route": 41.5,
-   "firstLoad": 280
+   "firstLoad": 280.6
   },
   "/settings/business-days": {
    "route": 61.5,

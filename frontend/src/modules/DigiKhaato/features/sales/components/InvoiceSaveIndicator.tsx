@@ -20,9 +20,18 @@ export function InvoiceSaveIndicator({
   savedAt: string | null;
   /** QA B8 — the server's reason for a failed save; "Couldn't save" alone says nothing. */
   reason?: string | null;
-}>): React.JSX.Element | null {
+}>): React.JSX.Element {
   const { t } = useTranslation();
-  if (indicator === 'idle') return null;
+  if (indicator === 'idle') {
+    return (
+      <UbText
+        variant="caption"
+        tone="tertiary"
+        className="min-h-5"
+        data-testid="invoice-save-indicator"
+      />
+    );
+  }
   const time = savedAt ? (formatTimestamp(savedAt).split(', ')[1] ?? '') : '';
   const copy: Record<
     Exclude<AutosaveIndicator, 'idle'>,
@@ -36,7 +45,13 @@ export function InvoiceSaveIndicator({
   };
   const { id, tone } = copy[indicator];
   return (
-    <UbText variant="caption" tone={tone} role="status" data-testid="invoice-save-indicator">
+    <UbText
+      variant="caption"
+      tone={tone}
+      role="status"
+      className="min-h-5"
+      data-testid="invoice-save-indicator"
+    >
       {indicator === 'error' && reason ? t('sales.draft.errorWhy', { reason }) : t(id, { time })}
     </UbText>
   );

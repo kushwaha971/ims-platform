@@ -10,12 +10,12 @@ owner asks.
 ## Status (13 Oct 2026)
 
 **Done and pushed** (each has a commit naming it — `git log --grep "B26"` etc.):
-B1, B2, B3, B4, B5, B6, B7, B8, B9, B10, B11, B12, B13, B14, B15, B16, B17, B22, B23, B25, B26, B27–B35,
+B1, B2, B3, B4, B5, B6, B7, B8, B9, B10, B11, B12, B13, B14, B15, B16, B17, B18, B22, B23, B25, B26, B27–B35,
 B44, B45, B46, B47, B48, B49, B50, B51, F1, F2, F4, F6, F8, F10 (parts A and B),
 F12, FB4, and DEC-019 (each app keeps its own money).
 
 **Next, in this order:**
-1. P2 bugs: B18, B19, B20, B21 (auth call storm), B24, B36, B37, B38, B39,
+1. P2 bugs: B19, B20, B21 (auth call storm), B24, B36, B37, B38, B39,
    B40, B41, B42, B43.
 2. P2 features: F3 (advance applied at renewal), F5, F7, F9, F11, F13;
    owner-editable message templates; per-app wording (no "You gave / You got"
@@ -97,6 +97,25 @@ Update the "Done" list in this file in the same commit as each item.
   to measured + 0.5 KB with a dated note. The full frontend run has 3,977
   passed and the same three existing landing-page failures; backend source
   remains unchanged since its recorded full run.
+
+- B18: live search and invoice fields moved 28–33 px when totals/autosave
+  messages appeared. Two regression tests failed first. The summary now has
+  a reserved skeleton slot (two lines on mobile for wrapped totals), and the
+  save caption keeps its row even while idle without announcing a fake status.
+  The confirmed empty book still has no search or summary. All 14 targeted
+  tests pass. `e2e/layout-shift-look.mjs` measures unchanged field positions at
+  1280/360 px and runs authenticated Lighthouse navigation/timespan audits;
+  CLS is 0.014 or less. All eight screenshots were read. Types, changed-file
+  ESLint, locales and production build pass. App bundle limits stay unchanged;
+  after rebasing onto two concurrent landing-footer commits, only the landing
+  first-load limit needed measured 280.1 KB + 0.5 KB, with a dated note. Full
+  frontend before that rebase: 3,980 passed and the same three landing-page
+  failures; the changed landing/SEO tests were rechecked afterward. Lighthouse
+  13.5.0 was installed with owner approval outside the checkout in
+  `/workspace/yourkhata-cloud/tools`; set `LIGHTHOUSE_ROOT` to a different
+  node_modules path if needed. App manifests/lockfiles were not changed.
+  Puppeteer must attach with `defaultViewport: null`: its default otherwise
+  resizes the Playwright page and corrupts the layout measurements.
 
 ## How each item is done
 

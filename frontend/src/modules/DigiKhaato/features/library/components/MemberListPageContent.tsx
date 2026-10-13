@@ -14,6 +14,7 @@ import {
   UbPageShell,
   UbSearchInput,
   UbStack,
+  UbSkeleton,
   UbText,
   UbActiveFilters,
   UbFilterSelect,
@@ -335,21 +336,34 @@ export function MemberListPageContent(): React.JSX.Element {
           />
         ) : (
           <>
-            {totals && (
-              <UbText variant="body-sm" tone="secondary" data-testid="library-members-totals">
-                {[
-                  t('library.members.totals.members', { count: totals.members }),
-                  t('library.members.totals.dues', { amount: formatInr(totals.dues) }),
-                  ...(Number(totals.depositsHeld) > 0
-                    ? [
-                        t('library.members.totals.deposits', {
-                          amount: formatInr(totals.depositsHeld),
-                        }),
-                      ]
-                    : []),
-                ].join(' · ')}
-              </UbText>
-            )}
+            <UbStack
+              className="min-h-5 max-sm:min-h-10"
+              aria-busy={list.status === 'loading' || list.status === 'idle'}
+              data-testid="library-members-summary"
+            >
+              {totals ? (
+                <UbText variant="body-sm" tone="secondary" data-testid="library-members-totals">
+                  {[
+                    t('library.members.totals.members', { count: totals.members }),
+                    t('library.members.totals.dues', { amount: formatInr(totals.dues) }),
+                    ...(Number(totals.depositsHeld) > 0
+                      ? [
+                          t('library.members.totals.deposits', {
+                            amount: formatInr(totals.depositsHeld),
+                          }),
+                        ]
+                      : []),
+                  ].join(' · ')}
+                </UbText>
+              ) : list.status === 'loading' || list.status === 'idle' ? (
+                <UbSkeleton
+                  variant="text"
+                  count={1}
+                  label={t('library.list.loading')}
+                  className="max-w-64"
+                />
+              ) : null}
+            </UbStack>
             {/* Owner, 6 Oct 2026: the status a desk changes most is the one
             dropdown; dues, shift and plan sit behind Filters, as pills when on.
             Owner, 12 Oct 2026: search and those controls are ONE row. */}

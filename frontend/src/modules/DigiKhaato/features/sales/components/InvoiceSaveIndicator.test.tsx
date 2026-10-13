@@ -15,9 +15,26 @@ import type { InvoiceFormValues } from '../view-model/invoiceForm';
  * outside 0–100 % is not sent at all: the cell refuses it as it is typed.
  */
 describe('a failed draft save', () => {
+  /** B18: the first autosave must not insert a new row above the bill fields. */
+  it('reserves a caption row before the first save without announcing a fake status', () => {
+    const { rerender } = renderWithProviders(
+      <InvoiceSaveIndicator indicator="idle" savedAt={null} />
+    );
+    const slot = screen.getByTestId('invoice-save-indicator');
+    expect(slot).toHaveClass('min-h-5');
+    expect(slot).toHaveTextContent('');
+    expect(slot).not.toHaveAttribute('role', 'status');
+    rerender(<InvoiceSaveIndicator indicator="saved" savedAt="2026-10-13T10:00:00Z" />);
+    expect(screen.getByTestId('invoice-save-indicator')).toBe(slot);
+    expect(slot).toHaveAttribute('role', 'status');
+  });
   it('says why it failed', () => {
     renderWithProviders(
-      <InvoiceSaveIndicator indicator="error" savedAt={null} reason="Discount cannot exceed 100%." />
+      <InvoiceSaveIndicator
+        indicator="error"
+        savedAt={null}
+        reason="Discount cannot exceed 100%."
+      />
     );
     expect(screen.getByTestId('invoice-save-indicator')).toHaveTextContent(
       'Couldn’t save: Discount cannot exceed 100%.'
