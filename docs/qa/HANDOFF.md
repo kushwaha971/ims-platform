@@ -11,11 +11,11 @@ owner asks.
 
 **Done and pushed** (each has a commit naming it — `git log --grep "B26"` etc.):
 B1, B2, B3, B4, B5, B6, B7, B8, B9, B10, B11, B12, B13, B14, B15, B16, B17, B18, B19, B20, B21, B22, B23, B24, B25, B26, B27–B35,
-B36, B37, B38, B39, B40, B44, B45, B46, B47, B48, B49, B50, B51, F1, F2, F4, F6, F8, F10 (parts A and B),
+B36, B37, B38, B39, B40, B41, B44, B45, B46, B47, B48, B49, B50, B51, F1, F2, F4, F6, F8, F10 (parts A and B),
 F12, FB4, and DEC-019 (each app keeps its own money).
 
 **Next, in this order:**
-1. P2 bugs: B41, B42, B43.
+1. P2 bugs: B42, B43.
    Apply the owner's additional [One Person, One Workspace requirements](one-person-workspace.md)
    throughout these fixes, then complete a dedicated UX16 pass across Library,
    Lending, Shop customer/supplier and Udhaar book person pages before the
@@ -50,6 +50,22 @@ F12, FB4, and DEC-019 (each app keeps its own money).
 Update the "Done" list in this file in the same commit as each item.
 
 ## Verification since 13 Oct 2026
+
+- B41 (14 Oct): two years back required 24 live month-arrow clicks at both
+  widths. Two five-year jump tests failed first. The shared lazy calendar now
+  offers month/year dropdowns, with app-language month names and English/Hindi
+  labels. Existing day bounds still apply, and future years remain reachable
+  for plan dates rather than being cut off at the calendar library's default
+  current year. All 29 focused calendar/range/student-edit tests pass.
+  `e2e/date-picker-look.mjs` passes all ten checks across Joined, Plan till,
+  loan collection, payment and bill dates at 1280/360: three choices from the
+  open calendar, immediate rendering, no document reload and no overflow.
+  All ten final screenshots were read. The phone's bill date is under its
+  existing More details disclosure; its accessible name includes the hint.
+  Types, changed-file lint, locale split/check, build and bundle gates pass.
+  Only the exceeded not-found first-load limit uses measured 239.0 + 0.5 KB
+  for the new shared labels. Full frontend: 4,001 passed and the same three
+  landing-page failures. Backend source remains unchanged since B38.
 
 - B40 (14 Oct): the live edit drawer omitted Joined and disabled an expired
   Plan till behind the saved joining date. Three new assertions failed first

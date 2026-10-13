@@ -10,7 +10,7 @@ import { formatDateFace, isoFinancialYearStart, isoToday, UbDateInput } from './
  * still spoke English — "September 2026" over the grid, "Su Mo Tu" under it,
  * "Go to the Next Month" on the arrow — because react-day-picker formats with
  * date-fns' en-US default. The Hindi grid is `Intl`'s hi-IN; English is left
- * exactly as it was.
+ * in English while offering the same direct month/year choices.
  */
 describe('the calendar popover in the app language', () => {
   const sep28 = new Date(2026, 8, 28);
@@ -23,9 +23,13 @@ describe('the calendar popover in the app language', () => {
         locale="hi-IN"
         previousMonthLabel="पिछला महीना"
         nextMonthLabel="अगला महीना"
+        monthDropdownLabel="महीना"
+        yearDropdownLabel="साल"
       />
     );
-    expect(screen.getByText('सितंबर 2026')).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'सितंबर' })).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'साल' })).toHaveValue('2026');
+    expect(screen.getByRole('combobox', { name: 'महीना' })).toHaveValue('8');
     expect(screen.queryByText('September 2026')).toBeNull();
     expect(screen.getByRole('button', { name: 'अगला महीना' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'पिछला महीना' })).toBeInTheDocument();
@@ -34,11 +38,46 @@ describe('the calendar popover in the app language', () => {
 
   it('keeps the English grid as it was', () => {
     render(<UbDateCalendar selected={sep28} onSelect={jest.fn()} locale="en-IN" />);
-    expect(screen.getByText('September 2026')).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'September' })).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'Year' })).toHaveValue('2026');
   });
 });
 
 describe('the dates a merchant actually means', () => {
+  /** B41: a faster calendar must still refuse days outside the caller's range. */
+  it('keeps the existing day bounds while changing months directly', async () => {
+    const user = userEvent.setup();
+    render(
+      <UbDateCalendar
+        selected={new Date(2024, 4, 15)}
+        onSelect={jest.fn()}
+        min={new Date(2024, 4, 10)}
+        max={new Date(2024, 5, 20)}
+      />
+    );
+    expect(screen.getByRole('button', { name: /May 9th, 2024/ })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /May 10th, 2024/ })).toBeEnabled();
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Month' }), '5');
+    expect(screen.getByRole('button', { name: /June 20th, 2024/ })).toBeEnabled();
+    expect(screen.getByRole('button', { name: /June 21st, 2024/ })).toBeDisabled();
+  });
+
+  /** B41: changing year, month and day must replace dozens of month-arrow clicks. */
+  it.each([2021, 2031])('reaches May 15 in %s with three calendar choices', async (year) => {
+    const user = userEvent.setup();
+    const onSelect = jest.fn();
+    render(<UbDateCalendar selected={new Date(2026, 9, 14)} onSelect={onSelect} />);
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Year' }), String(year));
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Month' }), '4');
+    await user.click(screen.getByRole('button', { name: new RegExp(`May 15th, ${year}`) }));
+    expect(onSelect).toHaveBeenCalledWith(
+      new Date(year, 4, 15),
+      expect.anything(),
+      expect.anything(),
+      expect.anything()
+    );
+  });
+
   it('puts the financial year start at 1 April, and last April before that', () => {
     // Every opening balance in this product is "what the book said when I
     // started keeping it", and for anyone filing GST that is 1 April. In

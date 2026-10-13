@@ -1,5 +1,6 @@
 {
  "//": [
+    "2026-10-14 B41: new shared Month/Year labels slightly raise first load. Only the exceeded /_not-found limit is raised from 239 to measured 239.0 + 0.5 KB; the calendar remains lazy.",
     "2026-10-14 B38: dated stock explanations in the editor and issue warning. Five exceeded limits use measured + 0.5 KB; about 0.2 KB of shared display logic/copy.",
     "2026-10-13 B37: explicit confirmation for payments dated before their bills. Three exceeded first-load limits use measured 315.6 KB + 0.5 KB.",
   "13 Oct 2026, QA B24: controlled/cancellable menus and app-add feedback",
@@ -1732,7 +1733,7 @@
   },
   "/_not-found": {
    "route": 1,
-   "firstLoad": 239
+   "firstLoad": 239.5
   },
   "/library": {
    "route": 73.2,

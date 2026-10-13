@@ -23,6 +23,8 @@ export interface UbDateCalendarProps {
   /** The month arrows' names; react-day-picker's own are English sentences. */
   readonly previousMonthLabel?: string;
   readonly nextMonthLabel?: string;
+  readonly monthDropdownLabel?: string;
+  readonly yearDropdownLabel?: string;
 }
 
 /**
@@ -61,19 +63,39 @@ export function UbDateCalendar({
   locale,
   previousMonthLabel,
   nextMonthLabel,
+  monthDropdownLabel = 'Month',
+  yearDropdownLabel = 'Year',
 }: Readonly<UbDateCalendarProps>): React.JSX.Element {
   const disabled = [...(min ? [{ before: min }] : []), ...(max ? [{ after: max }] : [])];
   const hindi = useMemo(() => (locale?.startsWith('hi') ? hindiFormatters() : null), [locale]);
+  const monthNames = useMemo(
+    () => new Intl.DateTimeFormat(locale?.startsWith('hi') ? 'hi-IN' : 'en-IN', { month: 'long' }),
+    [locale]
+  );
+  // DayPicker otherwise ends year-dropdown navigation at THIS year, hiding
+  // future plan dates. Keep a century each way and include any selected outlier;
+  // the field's own bounds still govern which days can actually be selected.
+  const year = new Date().getFullYear();
+  const startMonth = min ?? new Date(Math.min(year - 100, selected?.getFullYear() ?? year), 0);
+  const endMonth = max ?? new Date(Math.max(year + 100, selected?.getFullYear() ?? year), 11);
   return (
     <MLCalendar
       mode="single"
       selected={selected}
       defaultMonth={selected ?? max}
+      captionLayout="dropdown"
+      startMonth={startMonth}
+      endMonth={endMonth}
       onSelect={onSelect}
       disabled={disabled.length ? disabled : undefined}
       initialFocus
-      formatters={hindi?.formatters}
+      formatters={{
+        ...hindi?.formatters,
+        formatMonthDropdown: (date) => monthNames.format(date),
+      }}
       labels={{
+        labelMonthDropdown: () => monthDropdownLabel,
+        labelYearDropdown: () => yearDropdownLabel,
         ...(previousMonthLabel ? { labelPrevious: () => previousMonthLabel } : {}),
         ...(nextMonthLabel ? { labelNext: () => nextMonthLabel } : {}),
         ...(hindi ? { labelDayButton: hindi.labelDayButton } : {}),

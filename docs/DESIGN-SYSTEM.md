@@ -99,7 +99,7 @@ the render props.
 | Tables and phone cards | `UbDataGrid` |
 | Search box | `UbSearchInput` |
 | A header action that navigates or downloads | `UbActionLink` |
-| Date | `UbDateInput` (calendar popover; quick choices below) |
+| Date | `UbDateInput` (calendar popover with month/year dropdowns; quick choices below). QA B41: any date within five years takes year, month and day choices instead of repeated arrows. Bounds remain owned by the field; dropdown month names and labels follow the app's language. |
 | A screen's period — presets plus a custom from/to | `UbDateRangePicker` (renders the `UbFilterBar`: chips on the track, dates and the screen's other scope in `end`, on the right) |
 | Sending something to a customer — WhatsApp, SMS, copy, the platform sheet | `UbShareSheet` over `UbDialog`; links from `src/utils/share.ts`; outcomes to the snackbar through `useShareFeedback` |
 | One floating primary action on a phone | `UbFab` (56 px, safe-area aware, clears the toast via `useBottomInset`) — gallery only until a screen has no header room for its primary action |

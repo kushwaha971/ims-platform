@@ -307,6 +307,8 @@ const UbDateInputInner = forwardRef<HTMLButtonElement, UbDateInputProps>(functio
             locale={intlLocale}
             previousMonthLabel={message('common.calendar.previousMonth', 'Previous month')}
             nextMonthLabel={message('common.calendar.nextMonth', 'Next month')}
+            monthDropdownLabel={message('common.calendar.month', 'Month')}
+            yearDropdownLabel={message('common.calendar.year', 'Year')}
           />
         )}
       </UbPopover>
