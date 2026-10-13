@@ -10,13 +10,12 @@ owner asks.
 ## Status (as of commit 61051cd, 13 Oct 2026)
 
 **Done and pushed** (each has a commit naming it — `git log --grep "B26"` etc.):
-B1, B2, B3, B4, B5, B6, B7, B8, B9, B10, B11, B12, B13, B14, B22, B23, B25, B26, B27–B35,
+B1, B2, B3, B4, B5, B6, B7, B8, B9, B10, B11, B12, B13, B14, B15, B22, B23, B25, B26, B27–B35,
 B44, B45, B46, B47, B48, B49, B50, B51, F1, F2, F4, F6, F8, F10 (parts A and B),
 F12, FB4, and DEC-019 (each app keeps its own money).
 
 **Next, in this order:**
-1. P2 bugs: B15,
-   B16, B17, B18, B19, B20, B21 (auth call storm), B24, B36, B37, B38, B39,
+1. P2 bugs: B16, B17, B18, B19, B20, B21 (auth call storm), B24, B36, B37, B38, B39,
    B40, B41, B42, B43.
 2. P2 features: F3 (advance applied at renewal), F5, F7, F9, F11, F13;
    owner-editable message templates; per-app wording (no "You gave / You got"
@@ -62,6 +61,15 @@ Update the "Done" list in this file in the same commit as each item.
   All 12 collection tests pass. `e2e/lending-advance-look.mjs` verifies Today
   and Borrowers at 1280/360 px; screenshots were read. Formatting checks and
   the full backend run pass except the unchanged vocabulary expectation above.
+- B15: all five cases reproduced live at 1280/360 px. Counter, ISBN and GSTIN
+  errors now check number/length/layout before sequence/checksum; correcting
+  From revalidates an existing To error; preview and Save show one collection
+  refusal. Seven new assertions failed before the fix; all 20 targeted tests
+  now pass. `e2e/validation-messages-look.mjs` checks each case and overflow at
+  both widths, and all ten screenshots were read. Types, changed-file ESLint,
+  i18n, build and bundle gates pass. The full frontend run has 3,969 passed
+  with the same three existing landing-page failures. Backend source is
+  unchanged since the full run recorded above.
 
 ## How each item is done
 

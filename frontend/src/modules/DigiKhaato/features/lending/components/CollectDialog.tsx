@@ -172,7 +172,11 @@ export function CollectDialog({
             <UbMoneyInput
               {...field}
               value={field.value as string}
-              onChange={field.onChange}
+              onChange={(next) => {
+                field.onChange(next);
+                setPreview(null);
+                setRefusal('');
+              }}
               inputMode="decimal"
               disabled={saving}
             />
@@ -197,7 +201,7 @@ export function CollectDialog({
             </UbStack>
           </UbCard>
         )}
-        {refusal && (
+        {refusal && !form.formState.errors.amount && (
           <UbText variant="body-sm" tone="warning">
             {refusal}
           </UbText>

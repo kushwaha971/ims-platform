@@ -16,7 +16,7 @@ import {
   type WithdrawFormValues,
 } from '../types/catalogue.types';
 import { WITHDRAW_NOTE_MIN } from '../view-model/copyDisplay';
-import { isValidIsbn } from '../view-model/isbn';
+import { isIsbnShape, isValidIsbn, normaliseIsbn } from '../view-model/isbn';
 
 /**
  * F03 (LIB-02 §9) — the catalogue forms' rules, composed from the central
@@ -45,9 +45,19 @@ export const useCatalogueSchemas = (): CatalogueSchemas => {
       title: v.requiredBoundedText(TEXT_MAX, 1, 'library.form.title.required'),
       subtitle: v.boundedText(TEXT_MAX),
       authors: v.boundedText(TEXT_MAX),
-      isbn: v
-        .boundedText(17)
-        .test('isbn', t('library.form.isbn.invalid'), (value) => !value || isValidIsbn(value)),
+      isbn: v.boundedText(17).test('isbn', function check(value) {
+        if (!value) return true;
+        const isbn = normaliseIsbn(value);
+        const message =
+          isbn.length !== 10 && isbn.length !== 13
+            ? 'library.form.isbn.length'
+            : !isIsbnShape(isbn)
+              ? 'library.form.isbn.format'
+              : !isValidIsbn(isbn)
+                ? 'library.form.isbn.invalid'
+                : null;
+        return message ? this.createError({ message: t(message) }) : true;
+      }),
       publisher: v.boundedText(160),
       edition: v.boundedText(SHORT_MAX),
       year: v

@@ -1,5 +1,7 @@
 {
  "//": [
+  "13 Oct 2026, QA B15: ISBN length/layout errors add words to the catalogue",
+  "route. Its route limit is measured 76.6 KB + 0.5 KB; other limits stay.",
   "13 Oct 2026, QA B11: browser-history app context keeps Back and reload in",
   "the original app. It adds about 0.2 KB to routes using navigation. The",
   "affected limits below are the measured gzip size plus 0.5 KB; three",
@@ -1624,7 +1626,7 @@
    "firstLoad": 300
   },
   "/library/catalogue": {
-   "route": 76.6,
+   "route": 77.1,
    "firstLoad": 315.4
   },
   "/library/copies": {

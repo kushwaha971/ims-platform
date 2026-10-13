@@ -19,7 +19,7 @@
   "validation.gstType.required": "अपनी जीएसटी स्थिति चुनें",
   "validation.gstin.checksum": "इस GSTIN का चेक डिजिट गलत है।",
   "validation.gstin.format": "GSTIN का फॉर्मेट जाँचें।",
-  "validation.gstin.length": "GSTIN में 15 अक्षर होते हैं।",
+  "validation.gstin.length": "GSTIN में 15 अक्षर होने चाहिए।",
   "validation.gstin.required": "GSTIN भरें।",
   "validation.hsn.format": "HSN कोड 4, 6 या 8 अंकों का होता है।",
   "validation.id.format": "यह रेफरेंस सही नहीं है।",

@@ -340,30 +340,26 @@ export const buildValidationSchemas = (
       .transform((value: unknown) =>
         typeof value === 'string' ? value.trim().toUpperCase() : value
       )
-      .test(
-        'checksum',
-        t('validation.gstin.checksum'),
-        (value) => !value || isValidGstinChecksum(value)
-      );
+      .test('gstin', function check(value) {
+        if (!value) return true;
+        // QA B15: length and layout must be useful before there is a check digit to judge.
+        const message =
+          value.length !== 15
+            ? 'validation.gstin.length'
+            : !REGEX.GSTIN.test(value)
+              ? 'validation.gstin.format'
+              : !isValidGstinChecksum(value)
+                ? 'validation.gstin.checksum'
+                : null;
+        return message ? this.createError({ message: t(message) }) : true;
+      });
     return required
-      ? base
-          .length(15, t('validation.gstin.length'))
-          .matches(REGEX.GSTIN, t('validation.gstin.format'))
-          .required(t('validation.gstin.required'))
+      ? base.required(t('validation.gstin.required'))
       : base
-          // `.length(15)` on an optional field rejects the empty string as
-          // "a GSTIN has 15 characters", which is true and is not what the
-          // merchant did. The rules move inside the required branch and the
-          // optional branch checks them only once there is something to
-          // check.
+          // A blank optional GSTIN is not an incomplete identifier to validate.
           .transform(blankToNull)
           .nullable()
-          .notRequired()
-          .test(
-            'gstin-shape',
-            t('validation.gstin.format'),
-            (value) => !value || (value.length === 15 && REGEX.GSTIN.test(value))
-          );
+          .notRequired();
   };
 
   const hsnValidation = () =>

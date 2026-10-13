@@ -7,20 +7,22 @@
  */
 export const normaliseIsbn = (raw: string): string => raw.replace(/[\s-]/g, '').toUpperCase();
 
+/** The statutory layout, before there is a check digit to validate (QA B15). */
+export const isIsbnShape = (raw: string): boolean =>
+  /^(?:\d{9}[\dX]|97[89]\d{10})$/.test(normaliseIsbn(raw));
+
 export const isValidIsbn = (raw: string): boolean => {
   const value = normaliseIsbn(raw);
-  if (/^\d{9}[\dX]$/.test(value)) {
+  if (!isIsbnShape(value)) return false;
+  if (value.length === 10) {
     const sum = [...value].reduce(
       (acc, ch, i) => acc + (ch === 'X' ? 10 : Number(ch)) * (10 - i),
       0
     );
     return sum % 11 === 0;
   }
-  if (/^97[89]\d{10}$/.test(value)) {
-    const sum = [...value].reduce((acc, ch, i) => acc + Number(ch) * (i % 2 === 0 ? 1 : 3), 0);
-    return sum % 10 === 0;
-  }
-  return false;
+  const sum = [...value].reduce((acc, ch, i) => acc + Number(ch) * (i % 2 === 0 ? 1 : 3), 0);
+  return sum % 10 === 0;
 };
 
 /** Does a search term look like an ISBN at all (FR-3's "searches first")? */

@@ -19,7 +19,7 @@
   "validation.gstType.required": "Choose your GST status",
   "validation.gstin.checksum": "That GSTIN's check digit is wrong.",
   "validation.gstin.format": "Check the GSTIN format.",
-  "validation.gstin.length": "A GSTIN has 15 characters.",
+  "validation.gstin.length": "GSTIN must be 15 characters.",
   "validation.gstin.required": "Enter the GSTIN.",
   "validation.hsn.format": "An HSN code has 4, 6 or 8 digits.",
   "validation.id.format": "That reference is not valid.",

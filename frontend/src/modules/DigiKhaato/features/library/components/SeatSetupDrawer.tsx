@@ -206,7 +206,18 @@ export function SeatSetupDrawer({ onClose }: Readonly<{ onClose: () => void }>):
                   {(field) => <UbTextInput {...field} autoComplete="off" />}
                 </UbField>
                 <UbField name="from" label={t('library.seats.row.from')} className="flex-1">
-                  {(field) => <UbTextInput {...field} inputMode="numeric" autoComplete="off" />}
+                  {(field) => (
+                    <UbTextInput
+                      {...field}
+                      inputMode="numeric"
+                      autoComplete="off"
+                      onChange={(event) => {
+                        field.onChange(event);
+                        // QA B15: To's refusal depends on From, so correct both together.
+                        if (rowForm.getFieldState('to').error) void rowForm.trigger('to');
+                      }}
+                    />
+                  )}
                 </UbField>
                 <UbField name="to" label={t('library.seats.row.to')} className="flex-1">
                   {(field) => <UbTextInput {...field} inputMode="numeric" autoComplete="off" />}

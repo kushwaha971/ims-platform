@@ -80,11 +80,17 @@ export const useLibrarySettingsSchemas = (): LibrarySettingsSchemas => {
         nextNumber: Yup.string()
           .defined()
           .trim()
-          .test(
-            'forward',
-            t('library.settings.number.backwards', { current }),
-            (value) => /^\d{1,9}$/.test(value ?? '') && Number(value) >= current
-          ),
+          .test('forward', function check(value) {
+            if (!/^\d{1,9}$/.test(value ?? '')) {
+              return this.createError({ message: t('library.settings.number.invalid') });
+            }
+            return (
+              Number(value) >= current ||
+              this.createError({
+                message: t('library.settings.number.backwards', { current }),
+              })
+            );
+          }),
       });
 
     return { librarySettingsSchema, raiseNumberSchema };
