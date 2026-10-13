@@ -4,7 +4,13 @@ import type { TranslateFn } from 'src/hooks/useTranslation';
 import { formatBusinessDate } from 'src/utils/dates';
 import { formatInr } from 'src/utils/money';
 
-import { FEE_TONE, isNonZero, placeLine, validityLine } from '../view-model/memberDisplay';
+import {
+  FEE_TONE,
+  feeLabel,
+  isNonZero,
+  placeLine,
+  validityLine,
+} from '../view-model/memberDisplay';
 
 import type { MemberSummary } from '../types/member.types';
 
@@ -25,9 +31,12 @@ import type { MemberSummary } from '../types/member.types';
 export const createMemberColumns = ({
   t,
   today,
+  cards = false,
 }: {
   readonly t: TranslateFn;
   readonly today: string;
+  /** Phone cards: no "Plan till" column, so the fee badge carries the date itself. */
+  readonly cards?: boolean;
 }): readonly UbDataGridColumn<MemberSummary>[] => [
   {
     id: 'member',
@@ -125,7 +134,13 @@ export const createMemberColumns = ({
     cardSlot: 'trailing',
     widthShare: 12,
     cell: (row) => (
-      <UbStatusBadge tone={FEE_TONE[row.feeState]} label={t(`library.fee.${row.feeState}`)} />
+      <UbStatusBadge
+        tone={FEE_TONE[row.feeState]}
+        // QA B26 — "Paid till 12/11/2026" on a card; in the table the date is the
+        // Plan till column's, one cell along, and repeating it pushed the badge
+        // into the table's edge at 1280 px.
+        label={feeLabel(t, row.feeState, cards ? row.validUntil : null)}
+      />
     ),
   },
 ];

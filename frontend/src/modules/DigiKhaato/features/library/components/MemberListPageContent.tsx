@@ -116,7 +116,10 @@ export function MemberListPageContent(): React.JSX.Element {
     MEMBER_SEARCH_DEBOUNCE_MS
   );
 
-  const columns = useMemo(() => createMemberColumns({ t, today }), [t, today]);
+  const columns = useMemo(
+    () => createMemberColumns({ t, today, cards: tier === 'cards' }),
+    [t, today, tier]
+  );
   const sheetSpecs = useMemo<UbFilterSpec[]>(
     () => [
       {

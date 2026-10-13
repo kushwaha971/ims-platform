@@ -90,22 +90,31 @@ def seat_json(row: LibrarySeat) -> dict:
     }
 
 
-def fee_state(m: LibraryMembership, today: dt.date, dues: Decimal) -> str:
+def fee_state(
+    m: LibraryMembership, today: dt.date, dues: Decimal, paid: Decimal = Decimal("0")
+) -> str:
     """What the students list says about the fee: one word, worst first.
 
-    `overdue` — the plan ran out and was not renewed; `unpaid` — a fee is
-    charged and not (fully) paid; `due_soon` — the plan ends within
-    RENEWAL_SOON_DAYS; `paid` otherwise. A closed membership is `left`.
+    `left` — closed; `on_hold` — suspended now; `overdue` — the plan ran out and was
+    not renewed; `part_paid` / `unpaid` — a fee is owed, with or without something
+    paid towards it (`paid` = what was paid on the charges still open); `no_fee` —
+    the plan costs nothing; `due_soon` — the plan ends within RENEWAL_SOON_DAYS;
+    `paid` otherwise. QA B26: a student on a ₹0 plan read "Paid", "Nothing due" —
+    "Paid" with no payment behind it — and a suspended one read as paid too.
     """
     from apps.library.services.members import effective_status
 
     status = effective_status(m, today)
     if status == "closed":
         return "left"
+    if status == "suspended":
+        return "on_hold"
     if status == "expired":
         return "overdue"
     if dues > 0:
-        return "unpaid"
+        return "part_paid" if paid > 0 else "unpaid"
+    if Decimal(m.membership_type.fee_amount) <= 0:
+        return "no_fee"
     if m.valid_until is not None and m.valid_until <= today + dt.timedelta(days=RENEWAL_SOON_DAYS):
         return "due_soon"
     return "paid"
@@ -338,7 +347,7 @@ def _holders(tenant: Any) -> Any:
     return (
         LibraryMembership.objects.filter(tenant=tenant, seat__isnull=False)
         .exclude(status=MembershipStatus.CLOSED)
-        .select_related("party", "shift", "seat")
+        .select_related("party", "shift", "seat", "membership_type")
     )
 
 
@@ -378,7 +387,11 @@ def assign(
 
 
 def _holder_json(
-    m: LibraryMembership, shift: LibraryShift | None, today: dt.date, dues: Decimal
+    m: LibraryMembership,
+    shift: LibraryShift | None,
+    today: dt.date,
+    dues: Decimal,
+    paid: Decimal = Decimal("0"),
 ) -> dict:
     """One student on a seat. `in_view`: they hold it during `shift`; `other_shift`:
     they do, but in a different (overlapping) shift — QA F6's "Taken (other shift)"."""
@@ -399,7 +412,7 @@ def _holder_json(
             else None
         ),
         "valid_until": m.valid_until.isoformat() if m.valid_until else None,
-        "fee_state": fee_state(m, today, dues),
+        "fee_state": fee_state(m, today, dues, paid),
         "dues_amount": f"{dues:.2f}",
         "in_view": in_view,
         # The seat panel's "Free seat" saves against it (optimistic concurrency).
@@ -428,11 +441,11 @@ def seat_map(tenant: Any, shift: LibraryShift | None, today: dt.date) -> dict:
     active = in_day_order(LibraryShift.objects.filter(tenant=tenant, is_active=True))
     holders = list(_holders(tenant))
     dues = {
-        row["membership"]: row["t"]
+        row["membership"]: (row["t"], row["p"])
         for row in LibraryCharge.objects.filter(membership__in=[m.pk for m in holders])
         .open()
         .values("membership")
-        .annotate(t=Sum("amount_due"))
+        .annotate(t=Sum("amount_due"), p=Sum("amount_paid"))
     }
     by_seat: dict[Any, list] = defaultdict(list)
     for m in holders:
@@ -441,7 +454,10 @@ def seat_map(tenant: Any, shift: LibraryShift | None, today: dt.date) -> dict:
     taken_in: dict[Any, int] = defaultdict(int)
     for seat in seats:
         mine = sorted(by_seat.get(seat.id, []), key=lambda m: span(m.shift))
-        everyone = [_holder_json(m, shift, today, Decimal(dues.get(m.pk) or 0)) for m in mine]
+        everyone = [
+            _holder_json(m, shift, today, *(Decimal(v or 0) for v in dues.get(m.pk, (0, 0))))
+            for m in mine
+        ]
         occupants = [h for h in everyone if h["in_view"]]
         taken = [s for s in active if any(overlaps(s, m.shift) for m in mine)]
         for s in taken:

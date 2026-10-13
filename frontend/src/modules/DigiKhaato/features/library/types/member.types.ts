@@ -9,10 +9,21 @@ export const MEMBER_ORDERINGS = ['name', 'member_number', 'valid_until', '-dues'
 
 /**
  * W02 — the fee in one word, worst first: the plan ran out (`overdue`), a fee
- * is charged and not paid (`unpaid`), the plan ends within a week
- * (`due_soon`), all clear (`paid`), or the student has left.
+ * is charged and nothing paid (`unpaid`) or some of it (`part_paid`), the plan
+ * ends within a week (`due_soon`), all clear (`paid`), the plan costs nothing
+ * (`no_fee`), suspended (`on_hold`), or the student has left. QA B26: a ₹0 plan
+ * read "Paid" with no payment behind it.
  */
-export const FEE_STATES = ['overdue', 'unpaid', 'due_soon', 'paid', 'left'] as const;
+export const FEE_STATES = [
+  'overdue',
+  'unpaid',
+  'part_paid',
+  'due_soon',
+  'paid',
+  'no_fee',
+  'on_hold',
+  'left',
+] as const;
 export type FeeState = (typeof FEE_STATES)[number];
 
 export interface SeatRef {

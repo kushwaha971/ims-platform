@@ -133,6 +133,8 @@ class Figures:
     #: Lost books whose charge is still owed (LIB-07 BR-7, D18).
     lost_unsettled: int
     dues: Decimal
+    #: QA B26 — paid towards the charges still open: "Part paid", not "Fee unpaid".
+    dues_paid: Decimal
     deposit: Any
 
 
@@ -147,6 +149,7 @@ def figures(m: LibraryMembership, today: dt.date) -> Figures:
         .open()
         .aggregate(
             t=Sum("amount_due"),
+            p=Sum("amount_paid"),
             lost=Count("loan", distinct=True, filter=Q(kind="lost_book", loan__status="lost")),
         )
     )
@@ -155,6 +158,7 @@ def figures(m: LibraryMembership, today: dt.date) -> Figures:
         loans_overdue=loans["overdue"],
         lost_unsettled=charges["lost"],
         dues=q2(charges["t"] or ZERO),
+        dues_paid=q2(charges["p"] or ZERO),
         deposit=deposit_for(m),
     )
 
@@ -234,7 +238,7 @@ def member_summary(m: LibraryMembership, today: dt.date) -> dict:
         "locker_label": m.locker_label,
         "plan_fee": f"{Decimal(m.membership_type.fee_amount):.2f}",
         "validity_months": m.membership_type.validity_months,
-        "fee_state": seating.fee_state(m, today, numbers.dues),
+        "fee_state": seating.fee_state(m, today, numbers.dues, numbers.dues_paid),
         "loans_open": numbers.loans_open,
         "loans_overdue": numbers.loans_overdue,
         "holds_ready": m.holds.filter(status="ready").count(),

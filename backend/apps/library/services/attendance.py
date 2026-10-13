@@ -46,7 +46,18 @@ def _with_dues(qs: Any) -> Any:
         .values("total"),
         output_field=DecimalField(max_digits=14, decimal_places=2),
     )
-    return qs.annotate(dues=Coalesce(dues, Value(0), output_field=DecimalField()))
+    paid = Subquery(
+        LibraryCharge.objects.filter(membership=OuterRef("pk"))
+        .open()
+        .values("membership")
+        .annotate(total=Sum("amount_paid"))
+        .values("total"),
+        output_field=DecimalField(max_digits=14, decimal_places=2),
+    )
+    return qs.annotate(
+        dues=Coalesce(dues, Value(0), output_field=DecimalField()),
+        dues_paid=Coalesce(paid, Value(0), output_field=DecimalField()),
+    )
 
 
 def policy(tenant: Any, party_id: Any, context_id: Any, on: dt.date) -> dict:
@@ -160,7 +171,7 @@ def day_register(tenant: Any, on: dt.date, shift_id: Any = None) -> dict:
                 "member_number": m.member_number,
                 "seat": m.seat.label if m.seat_id else None,
                 "shift": m.shift.name if m.shift_id else None,
-                "fee_state": fee_state(m, on, Decimal(m.dues)),
+                "fee_state": fee_state(m, on, Decimal(m.dues), Decimal(m.dues_paid)),
                 "mark_id": str(mark.id) if mark else None,
                 "check_in_at": mark.check_in_at.isoformat() if mark and mark.check_in_at else None,
                 "check_out_at": (

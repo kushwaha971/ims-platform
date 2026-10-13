@@ -17,7 +17,6 @@ import {
   UbNativeSelect,
   UbPhoneInput,
   UbStack,
-  UbSwitch,
   UbText,
   UbTextInput,
 } from 'src/design-system';
@@ -50,6 +49,12 @@ const FIRST_LINE: EnrolFormValues['lines'][number] = {
   amount: '',
   reference: '',
 };
+
+/** QA B26 — "How is this student paying?" (`new` stands in for both on a plan that
+ *  asks for no money, where collecting and owing are the same nothing). */
+type PayWay = 'now' | 'later' | 'already' | 'new';
+const PAY_WAYS: readonly PayWay[] = ['now', 'later', 'already'];
+const FREE_WAYS: readonly PayWay[] = ['new', 'already'];
 
 const DEFAULTS: EnrolFormValues = {
   partyMode: 'new',
@@ -104,9 +109,9 @@ export function EnrolMemberDrawer({
     resolver: yupResolver(enrolSchema),
     mode: 'onTouched',
     defaultValues: {
+      // QA B26 — the plan starts empty and is chosen: the newest plan used to be
+      // pre-selected, and a ₹0 one quietly admitted students as "Paid".
       ...DEFAULTS,
-      membershipTypeId: active[0]?.id ?? '',
-      lines: [{ ...FIRST_LINE, amount: enrolCost(active[0]).fees }],
     },
   });
   const [mode, _partyId, partyName, typeId, collectNow, shiftId, existingStudent] = useWatch({
@@ -144,6 +149,13 @@ export function EnrolMemberDrawer({
     [t]
   );
   const asksMoney = isNonZero(cost.fees) || isNonZero(cost.deposit);
+  const payWay: PayWay = existingStudent
+    ? 'already'
+    : !asksMoney
+      ? 'new'
+      : collectNow
+        ? 'now'
+        : 'later';
 
   /* QA F2 — a new plan's fees become the amount offered, as long as the merchant
      has not split the payment or typed their own figure. */
@@ -254,16 +266,28 @@ export function EnrolMemberDrawer({
           )}
         </UbField>
 
-        {/* QA F1 — moving the paper register in: an existing student's real dates,
-            with no fee today and no money recorded today. */}
-        <UbField name="existingStudent" label={t('library.enrol.existing')} controlOwnsLabel>
+        {/* QA B26 — one question instead of two switches: collect now (any amount,
+            F2), pay later (it is owed), or an existing student who has already paid
+            (F1: their real dates, no fee and no money today). */}
+        <UbField
+          name="existingStudent"
+          label={t('library.enrol.payWay')}
+          hint={t(`library.enrol.payWay.${payWay}.hint`)}
+        >
           {(field) => (
-            <UbSwitch
+            <UbChoiceChips<PayWay>
               id={field.id}
-              checked={Boolean(field.value)}
-              onCheckedChange={field.onChange}
-              label={t('library.enrol.existing')}
-              description={t('library.enrol.existing.hint')}
+              ariaLabel={t('library.enrol.payWay')}
+              value={payWay}
+              onChange={(next) => {
+                setValue('existingStudent', next === 'already', { shouldDirty: true });
+                setValue('collectNow', next === 'now', { shouldDirty: true });
+              }}
+              onBlur={field.onBlur}
+              options={(asksMoney ? PAY_WAYS : FREE_WAYS).map((way) => ({
+                value: way,
+                label: t(`library.enrol.payWay.${way}`),
+              }))}
               disabled={busy}
             />
           )}
@@ -467,20 +491,6 @@ export function EnrolMemberDrawer({
                   <UbText variant="body-sm-medium">{formatInr(cost.deposit)}</UbText>
                 </UbStack>
               )}
-              <UbField name="collectNow" label={t('library.enrol.collectNow')} controlOwnsLabel>
-                {(field) => (
-                  <UbSwitch
-                    id={field.id}
-                    checked={Boolean(field.value)}
-                    onCheckedChange={field.onChange}
-                    label={t('library.enrol.collectNow')}
-                    description={t(
-                      collectNow ? 'library.enrol.collectNow.on' : 'library.enrol.collectNow.off'
-                    )}
-                    disabled={busy}
-                  />
-                )}
-              </UbField>
               {/* QA F2 — any amount, every mode Take fee has, split if need be. The
                   editor touches only `lines`, which this form shares with the
                   payment form, so the cast is to that one field's shape. */}

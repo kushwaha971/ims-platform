@@ -1,6 +1,14 @@
 import { libraryPanelAppliesTo } from '../partyPanel';
 
-import { blockParams, enrolCost, toEnrolBody, validityLine } from './memberDisplay';
+import {
+  blockParams,
+  enrolCost,
+  feeLabel,
+  owesFee,
+  toEnrolBody,
+  validityLine,
+} from './memberDisplay';
+import { seatState } from './seatDisplay';
 
 import type { EnrolFormValues, MembershipType } from '../types/member.types';
 
@@ -161,5 +169,29 @@ describe('memberDisplay', () => {
     expect(libraryPanelAppliesTo({ roleBadges: [{ code: 'library_member' }] })).toBe(true);
     expect(libraryPanelAppliesTo({ roleBadges: [{ code: 'borrower' }] })).toBe(false);
     expect(libraryPanelAppliesTo({})).toBe(false);
+  });
+});
+
+describe('the fee badge (QA B26)', () => {
+  const t = ((key: string, values?: Record<string, string>) =>
+    values?.date ? `${key}:${values.date}` : key) as never;
+
+  it('says "Paid till" with the date only for a paid plan that ends', () => {
+    expect(feeLabel(t, 'paid', '2026-11-30')).toBe('library.fee.paidTill:30/11/2026');
+    expect(feeLabel(t, 'paid', null)).toBe('library.fee.paid');
+    expect(feeLabel(t, 'no_fee', '2026-11-30')).toBe('library.fee.no_fee');
+  });
+
+  it('never chases a free plan, a full payment or a student on hold', () => {
+    expect(owesFee('no_fee')).toBe(false);
+    expect(owesFee('paid')).toBe(false);
+    expect(owesFee('on_hold')).toBe(false);
+    expect(owesFee('part_paid')).toBe(true);
+  });
+
+  it('keeps the seat map to four colours: part paid is unpaid, no fee is clear', () => {
+    const occ = (feeState: 'part_paid' | 'no_fee') => ({ occupants: [{ feeState }] }) as never;
+    expect(seatState(occ('part_paid'))).toBe('unpaid');
+    expect(seatState(occ('no_fee'))).toBe('paid');
   });
 });

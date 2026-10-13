@@ -1,4 +1,6 @@
 import type { UbStatusBadgeTone } from 'src/design-system';
+import type { TranslateFn } from 'src/hooks/useTranslation';
+import { formatBusinessDate } from 'src/utils/dates';
 import { formatInr } from 'src/utils/money';
 
 import { toModeBreakup } from 'modules/DigiKhaato/features/payments/view-model/modeBreakup';
@@ -27,10 +29,23 @@ export const STATUS_TONE: Readonly<Record<EffectiveStatus, UbStatusBadgeTone>> =
 export const FEE_TONE: Readonly<Record<FeeState, UbStatusBadgeTone>> = {
   overdue: 'error',
   unpaid: 'warning',
+  part_paid: 'warning',
   due_soon: 'warning',
   paid: 'success',
+  no_fee: 'neutral',
+  on_hold: 'neutral',
   left: 'neutral',
 };
+
+/** QA B26 — whether the badge is a fee to chase: never for a free plan or a full payment. */
+export const owesFee = (state: FeeState): boolean =>
+  state === 'overdue' || state === 'unpaid' || state === 'part_paid' || state === 'due_soon';
+
+/** The badge's words: "Paid till 30/11/2026" when the plan has an end, else the state's. */
+export const feeLabel = (t: TranslateFn, state: FeeState, validUntil: string | null): string =>
+  state === 'paid' && validUntil
+    ? t('library.fee.paidTill', { date: formatBusinessDate(validUntil) })
+    : t(`library.fee.${state}`);
 
 /** "A12 · Morning", "A12", "Morning" or '' — where and when a student sits. */
 export const placeLine = (member: Pick<MemberSummary, 'seat' | 'shift'>): string =>

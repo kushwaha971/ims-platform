@@ -3,14 +3,32 @@ import type { TranslateFn } from 'src/hooks/useTranslation';
 import type { FeeState } from '../types/member.types';
 import type { SeatDayState, SeatMapRow, SeatOccupant } from '../types/seat.types';
 
-/** W03 — a tile's state: free, or the WORST fee of whoever holds it in the shift. */
-export type SeatState = Exclude<FeeState, 'left'> | 'free';
+/** W03 — a tile's state: free, or the WORST fee of whoever holds it in the shift. The
+ *  map keeps four colours: part paid reads as unpaid, a free plan or a student on
+ *  hold as nothing owed (QA B26 added the words, not new colours). */
+export type SeatState = 'overdue' | 'unpaid' | 'due_soon' | 'paid' | 'free';
 
-const WORST_FIRST: readonly Exclude<FeeState, 'left'>[] = ['overdue', 'unpaid', 'due_soon', 'paid'];
+const ON_THE_MAP: Readonly<Record<FeeState, Exclude<SeatState, 'free'>>> = {
+  overdue: 'overdue',
+  unpaid: 'unpaid',
+  part_paid: 'unpaid',
+  due_soon: 'due_soon',
+  paid: 'paid',
+  no_fee: 'paid',
+  on_hold: 'paid',
+  left: 'paid',
+};
+
+const WORST_FIRST: readonly Exclude<SeatState, 'free'>[] = [
+  'overdue',
+  'unpaid',
+  'due_soon',
+  'paid',
+];
 
 export const seatState = (seat: Pick<SeatMapRow, 'occupants'>): SeatState => {
   if (seat.occupants.length === 0) return 'free';
-  const states = new Set(seat.occupants.map((o) => o.feeState));
+  const states = new Set(seat.occupants.map((o) => ON_THE_MAP[o.feeState]));
   return WORST_FIRST.find((state) => states.has(state)) ?? 'paid';
 };
 
@@ -95,7 +113,8 @@ export const seatMatches = (seat: SeatMapRow, filters: SeatFilters, wholeDay: bo
     return false;
   if (filters.unpaidOnly) {
     const people = wholeDay ? seat.holders : seat.occupants;
-    if (!people.some((p) => p.feeState === 'unpaid' || p.feeState === 'overdue')) return false;
+    const owes = (state: FeeState) => ON_THE_MAP[state] === 'unpaid' || state === 'overdue';
+    if (!people.some((p) => owes(p.feeState))) return false;
   }
   return true;
 };

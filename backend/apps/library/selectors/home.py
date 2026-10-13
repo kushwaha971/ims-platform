@@ -184,13 +184,24 @@ def study_home(tenant: Any, today: dt.date) -> dict:
         .values("total"),
         output_field=DecimalField(max_digits=14, decimal_places=2),
     )
+    paid = Subquery(
+        LibraryCharge.objects.filter(membership=OuterRef("pk"))
+        .open()
+        .values("membership")
+        .annotate(total=Sum("amount_paid"))
+        .values("total"),
+        output_field=DecimalField(max_digits=14, decimal_places=2),
+    )
     week = today + dt.timedelta(days=7)
     from django.db.models import Q
 
     to_pay = (
         LibraryMembership.objects.filter(tenant=tenant)
         .exclude(status="closed")
-        .annotate(dues=Coalesce(dues, Value(0), output_field=DecimalField()))
+        .annotate(
+            dues=Coalesce(dues, Value(0), output_field=DecimalField()),
+            dues_paid=Coalesce(paid, Value(0), output_field=DecimalField()),
+        )
         .filter(Q(valid_until__lte=week) | Q(dues__gt=0))
         .select_related("party", "membership_type", "shift", "seat")
         .order_by("valid_until", "member_number_sort")[:TO_PAY_SHOWN]
@@ -216,7 +227,9 @@ def study_home(tenant: Any, today: dt.date) -> dict:
                 "plan_fee": f"{Decimal(m.membership_type.fee_amount):.2f}",
                 "valid_until": m.valid_until.isoformat() if m.valid_until else None,
                 "dues_amount": f"{Decimal(m.dues):.2f}",
-                "fee_state": seating.fee_state(m, today, Decimal(m.dues)),
+                "fee_state": seating.fee_state(
+                    m, today, Decimal(m.dues), Decimal(m.dues_paid)
+                ),
             }
             for m in to_pay
         ],

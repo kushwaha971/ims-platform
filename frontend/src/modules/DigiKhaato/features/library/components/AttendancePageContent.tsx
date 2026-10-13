@@ -32,7 +32,7 @@ import {
   checkOutLibraryStudent,
   fetchLibraryAttendance,
 } from '../redux/libraryAttendanceThunk';
-import { FEE_TONE } from '../view-model/memberDisplay';
+import { FEE_TONE, owesFee } from '../view-model/memberDisplay';
 
 import type { AttendanceRow } from '../types/attendance.types';
 
@@ -244,7 +244,7 @@ export function AttendancePageContent(): React.JSX.Element {
                                 })
                               : t('library.attendance.inAt', { time: formatClock(row.checkInAt) })}
                         </UbText>
-                        {row.feeState !== 'paid' && (
+                        {owesFee(row.feeState) && (
                           <UbStatusBadge
                             tone={FEE_TONE[row.feeState]}
                             label={t(`library.fee.${row.feeState}`)}

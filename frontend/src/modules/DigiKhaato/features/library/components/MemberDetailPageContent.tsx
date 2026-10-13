@@ -47,6 +47,8 @@ import { fetchLibraryMembershipTypes } from '../redux/libraryMemberThunk';
 import {
   blockParams,
   FEE_TONE,
+  feeLabel,
+  owesFee,
   isNonZero,
   shiftHours,
   STATUS_TONE,
@@ -216,7 +218,7 @@ export function MemberDetailPageContent({ id }: Readonly<{ id: string }>): React
                   label: t('library.messages.kind.fee.menu'),
                   icon: MessageCircle,
                   action:
-                    detail.canWrite && !closed && member.feeState !== 'paid'
+                    detail.canWrite && !closed && owesFee(member.feeState)
                       ? () => setMessaging('fee')
                       : undefined,
                 },
@@ -322,10 +324,13 @@ export function MemberDetailPageContent({ id }: Readonly<{ id: string }>): React
           <UbText variant="body-sm" className="ds-mono" data-testid="library-member-number">
             {member.memberNumber}
           </UbText>
-          <UbStatusBadge
-            tone={FEE_TONE[member.feeState]}
-            label={t(`library.fee.${member.feeState}`)}
-          />
+          {/* A suspended student's own badge below says "On hold" already. */}
+          {member.feeState !== 'on_hold' && (
+            <UbStatusBadge
+              tone={FEE_TONE[member.feeState]}
+              label={feeLabel(t, member.feeState, member.validUntil)}
+            />
+          )}
           {suspended && (
             <UbStatusBadge
               tone={STATUS_TONE[member.effectiveStatus]}
