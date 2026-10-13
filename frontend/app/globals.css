@@ -939,3 +939,25 @@
     font-size: 16px;
   }
 }
+
+/* QA B50 — before React has hydrated, a button is painted but cannot act. A tap in
+   that window used to vanish; now the pressed control dims and pulses, so the
+   merchant sees the app received it and is still getting ready.
+   `ServiceWorkerRegistrar` sets `data-hydrated` on <html> once React is live. */
+html:not([data-hydrated]) :is(button, [role='button'], a):active {
+  cursor: progress;
+  opacity: 0.6;
+  animation: ub-prehydration-busy 900ms ease-in-out infinite;
+}
+
+@keyframes ub-prehydration-busy {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-hydrated]) :is(button, [role='button'], a):active {
+    animation: none;
+  }
+}

@@ -90,6 +90,16 @@ const nextConfig = {
         source,
         headers: [{ key: 'X-Robots-Tag', value: 'noindex, nofollow, noarchive' }],
       })),
+      /**
+       * QA B50 — the service worker script itself is never cached: a browser
+       * holding yesterday's `sw.js` would keep yesterday's caching rules. The
+       * browser re-checks it on every navigation anyway; this makes the HTTP
+       * cache agree.
+       */
+      {
+        source: '/sw.js',
+        headers: [{ key: 'Cache-Control', value: 'no-cache, no-store, must-revalidate' }],
+      },
       {
         source: '/:path*',
         headers: [

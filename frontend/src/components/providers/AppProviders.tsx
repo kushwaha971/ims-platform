@@ -8,6 +8,7 @@ import { SnackbarHost } from 'src/components/layout/SnackbarHost';
 import { IntlProviderShell } from 'src/components/providers/IntlProviderShell';
 import { NetworkProbe } from 'src/components/providers/NetworkProbe';
 import { PreferencesBootstrap } from 'src/components/providers/PreferencesBootstrap';
+import { ServiceWorkerRegistrar } from 'src/components/providers/ServiceWorkerRegistrar';
 import { ThemeProvider } from 'src/components/providers/ThemeProvider';
 import { WhiteLabelSync } from 'src/components/providers/WhiteLabelSync';
 import { ANALYTICS_ENABLED, POSTHOG_KEY } from 'src/constants';
@@ -66,6 +67,8 @@ export function AppProviders({ children }: Readonly<{ children: ReactNode }>): R
             {children}
             <SnackbarHost />
             <NetworkProbe />
+            {/* B50 — the installed app's cache; after load, production only. */}
+            <ServiceWorkerRegistrar />
             {/* WLB-01 FR-4 — the active tenant's brand ramp on <html>. */}
             <WhiteLabelSync />
             {ANALYTICS_ON && (

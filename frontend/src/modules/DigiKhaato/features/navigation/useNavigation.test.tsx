@@ -11,7 +11,7 @@ import { APP_MANIFESTS } from 'modules/appManifests';
 import * as authService from '../auth/api/authService';
 
 import { PLATFORM_NAV_ITEMS } from './appManifest';
-import { useNavigation } from './useNavigation';
+import { resetNavigationSyncForTests, useNavigation } from './useNavigation';
 
 /**
  * docs/platform/14 §4.2 — the sidebar is the CURRENT APP's manifest, filtered by
@@ -88,6 +88,7 @@ beforeEach(() => {
   jest.mocked(authService.switchApp).mockReset();
   jest.mocked(authService.switchApp).mockImplementation(() => new Promise(() => undefined));
   mockPath = '/settings';
+  resetNavigationSyncForTests();
   load();
 });
 
@@ -175,6 +176,20 @@ describe('the switcher', () => {
       listed();
     });
     await waitFor(() => expect(authService.switchApp).toHaveBeenCalledWith('lending'));
+  });
+
+  it('asks ONCE however many parts of the shell read the menu (QA B50/B21)', async () => {
+    // The sidebar, the tab bar, the top bar and five more call this hook. Each one
+    // used to send its own switch — a burst online, an endless retry offline.
+    load({ activeApp: 'library' });
+    mockPath = '/lending/loans';
+    act(() => {
+      listed();
+      listed();
+      listed();
+    });
+    await waitFor(() => expect(authService.switchApp).toHaveBeenCalled());
+    expect(authService.switchApp).toHaveBeenCalledTimes(1);
   });
 
   it('says nothing when the page belongs to the app the person is already in', () => {

@@ -61,6 +61,14 @@ export const appForPath = (
 
 const NO_SHELL: NonNullable<AppManifest['shell']> = {};
 
+/** The app the session was last asked to switch to, shared by every caller. */
+let lastSyncedTo: string | null = null;
+
+/** Tests only: forget the last switch, as a fresh page load does. */
+export const resetNavigationSyncForTests = (): void => {
+  lastSyncedTo = null;
+};
+
 /**
  * docs/platform/14 §4.2 — the sidebar is `currentApp.navigation ∩ entitlements ∩
  * permissions`, plus the platform's own rows.
@@ -136,7 +144,18 @@ export function useNavigation(): UseNavigationResult {
   const syncTo =
     sessionApps && fromPath && fromPath !== activeApp && result.app === fromPath ? fromPath : null;
   useEffect(() => {
-    if (syncTo) void dispatch(switchApp({ app: syncTo }));
+    if (!syncTo) {
+      lastSyncedTo = null;
+      return;
+    }
+    // ONE request per target, not one per caller: eight components call this hook
+    // (the sidebar, the tab bar, the top bar…), and each effect fired its own
+    // POST /auth/switch-app — a burst online, and an endless retry offline, found
+    // by e2e/offline.mjs (QA B50/B21). A failure is not retried by every
+    // re-render either; the next navigation asks again.
+    if (lastSyncedTo === syncTo) return;
+    lastSyncedTo = syncTo;
+    void dispatch(switchApp({ app: syncTo }));
   }, [dispatch, syncTo]);
 
   return result;

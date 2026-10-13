@@ -11,7 +11,9 @@ ARG NEXT_PUBLIC_SITE_URL=https://yourkhata.com
 ARG NEXT_PUBLIC_APP_NAME
 ARG NEXT_PUBLIC_DEFAULT_LOCALE
 ARG NEXT_PUBLIC_ANALYTICS_ENABLED
-ARG NEXT_PUBLIC_SW_ENABLED
+# QA B50 — the production image installs the service worker; native dev keeps it off
+# (frontend/.env.example), so a stale worker never serves a developer old chunks.
+ARG NEXT_PUBLIC_SW_ENABLED=true
 ARG NEXT_PUBLIC_GA4_MEASUREMENT_ID
 ARG NEXT_PUBLIC_POSTHOG_KEY
 ARG NEXT_PUBLIC_POSTHOG_HOST
