@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from '@testing-library/react';
+import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { sessionLoaded } from 'src/redux/slice/sessionSlice';
@@ -6,6 +6,8 @@ import { store } from 'src/redux/store';
 import { ALL_MESSAGES, hi } from 'src/tests/allMessages';
 import { renderWithProviders } from 'src/tests/renderWithProviders';
 import type { PermissionCode } from 'src/types/domain.types';
+
+import { addDialogClosed } from '../redux/calendarSlice';
 
 import { BusinessDaysPageContent } from './BusinessDaysPageContent';
 
@@ -65,6 +67,29 @@ beforeEach(() => {
 });
 
 describe('Business days', () => {
+  it('says a closure moves loan collections, only when lending reads the calendar', async () => {
+    // QA F8 — lending re-dates its unpaid instalments off a new holiday; the owner
+    // adding one should know that before saving it.
+    const user = userEvent.setup();
+    signIn(['platform.calendar.manage']);
+    service.listClosedDays.mockResolvedValue({ ...DATA, readers: ['lending'] });
+    const { unmount } = renderWithProviders(<BusinessDaysPageContent />, { messages: MESSAGES });
+    await user.click(await screen.findByRole('button', { name: 'Add closure' }));
+    expect(await screen.findByTestId('calendar-moves-loans')).toHaveTextContent(
+      /move to the next collection day/
+    );
+    unmount();
+
+    service.listClosedDays.mockResolvedValue(DATA);
+    renderWithProviders(<BusinessDaysPageContent />, { messages: MESSAGES });
+    await user.click(await screen.findByRole('button', { name: 'Add closure' }));
+    expect(screen.queryByTestId('calendar-moves-loans')).not.toBeInTheDocument();
+    // The dialog's open state lives in the store: close it for the next test.
+    act(() => {
+      store.dispatch(addDialogClosed());
+    });
+  });
+
   it('shows Sunday closed, the closures by month, and a feature-only tag', async () => {
     signIn(['platform.calendar.manage']);
     renderWithProviders(<BusinessDaysPageContent />, { messages: MESSAGES });

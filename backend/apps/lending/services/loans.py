@@ -195,12 +195,16 @@ def parse_late_fee(data: dict) -> dict:
     }
 
 
+#: Calendar days one instalment spans, for how far ahead to read closed days.
+SPAN_DAYS = {"daily": 2, "weekly": 7, "fortnightly": 14, "monthly": 31}
+
+
 def _closed(tenant: Any, terms: LoanTerms) -> set[dt.date]:
-    if terms.frequency != "daily":
-        return set()
+    """The closed days a new loan's dates step around — every frequency (QA F8)."""
     from apps.platform_app.services.calendar import closed_days_between
 
-    end = terms.first_due_on + dt.timedelta(days=terms.instalment_count * 2 + 60)
+    span = SPAN_DAYS.get(terms.frequency, 2)
+    end = terms.first_due_on + dt.timedelta(days=terms.instalment_count * span + 60)
     return closed_days_between(tenant, terms.first_due_on, end, module=MODULE)
 
 
@@ -444,6 +448,42 @@ def _audit(ctx: Any, action: str, loan: LendingLoan, **after: Any) -> None:
 # ── create (LEN-04) ─────────────────────────────────────────────────────────
 
 
+def parse_existing(data: dict, schedule: Schedule) -> Decimal | None:
+    """QA F8 — `existing: {instalments_collected | collected_amount}` for a loan brought in
+    from paper, or None for a new loan. N instalments are the first N on the schedule
+    (what a paper register counts); an amount may be any figure. Either way it must
+    leave something owed: a loan paid in full has nothing to bring in."""
+    raw = data.get("existing")
+    if raw in (None, False, ""):
+        return None
+    if not isinstance(raw, dict):
+        raise ValidationFailed({"existing": ["Say what was already collected."]})
+    total = schedule.total_payable
+    count = raw.get("instalments_collected")
+    if count not in (None, ""):
+        try:
+            n = int(count)
+        except (TypeError, ValueError):
+            n = -1
+        if not 0 < n < len(schedule.rows):
+            raise ValidationFailed(
+                {"existing": [f"Enter how many of the {len(schedule.rows)} instalments were paid."]}
+            )
+        amount = q2(sum((r.amount for r in schedule.rows[:n]), ZERO))
+    else:
+        try:
+            amount = q2(Decimal(str(raw.get("collected_amount") or "")))
+        except (ArithmeticError, ValueError):
+            raise ValidationFailed({"existing": ["Enter the amount already collected."]}) from None
+    if amount <= ZERO:
+        raise ValidationFailed({"existing": ["Enter the amount already collected."]})
+    if amount >= total:
+        raise ValidationFailed(
+            {"existing": [f"Already collected must be less than the whole loan (Rs {total:,.2f})."]}
+        )
+    return amount
+
+
 @transaction.atomic
 def create_loan(*, ctx: Any, data: Any) -> LendingLoan:
     from apps.dues.services.plans import create_plan
@@ -451,7 +491,7 @@ def create_loan(*, ctx: Any, data: Any) -> LendingLoan:
     from apps.ledger.constants import EntryType
     from apps.ledger.services.postings import post_source_entry
     from apps.parties.services.balance import lock_party
-    from apps.payments.services.record import record_payment
+    from apps.payments.services.record import record_adjustment, record_payment
     from apps.platform_app.services.sequences import allocate_counter
 
     if not isinstance(data, dict):
@@ -459,6 +499,7 @@ def create_loan(*, ctx: Any, data: Any) -> LendingLoan:
     today = tenant_today(ctx.tenant)
     terms = parse_terms(data, today)
     schedule = _schedule(ctx.tenant, terms, today)
+    already = parse_existing(data, schedule)
     mode = data.get("payment_mode") or "cash"
     if mode not in PAYMENT_MODES:
         raise ValidationFailed({"payment_mode": ["Choose cash, UPI, bank or cheque."]})
@@ -544,7 +585,10 @@ def create_loan(*, ctx: Any, data: Any) -> LendingLoan:
             bucket="loan",
         )
 
-    disbursal = record_payment(
+    # QA F8 — a loan brought in from paper: the money left the drawer long before
+    # this book, so its disbursal is an `adjustment` (R24/R37) no cash report counts.
+    give = record_adjustment if already is not None else record_payment
+    disbursal = give(
         ctx=ctx,
         payload={
             "direction": "out",
@@ -552,9 +596,13 @@ def create_loan(*, ctx: Any, data: Any) -> LendingLoan:
             "payment_date": terms.disbursed_on.isoformat(),
             "mode_breakup": [
                 {
-                    "mode": mode,
+                    "mode": "adjustment" if already is not None else mode,
                     "amount": f"{schedule.cash_handed_over:.2f}",
-                    **({"reference": str(data.get("reference"))} if data.get("reference") else {}),
+                    **(
+                        {"reference": str(data.get("reference"))}
+                        if data.get("reference") and already is None
+                        else {}
+                    ),
                 }
             ],
             "allocations": [
@@ -564,7 +612,9 @@ def create_loan(*, ctx: Any, data: Any) -> LendingLoan:
                     "amount": f"{schedule.cash_handed_over:.2f}",
                 }
             ],
-            "note": f"Loan {loan.number} given" + (f" — {note}" if note else ""),
+            "note": f"Loan {loan.number} given"
+            + (" (brought forward)" if already is not None else "")
+            + (f" — {note}" if note else ""),
         },
     )
 
@@ -615,6 +665,10 @@ def create_loan(*, ctx: Any, data: Any) -> LendingLoan:
     loan.schedule_id = result.schedule.id
     loan.disbursal_payment_id = disbursal["payment"].id
     loan.save(update_fields=["schedule_id", "disbursal_payment_id", "updated_at"])
+    if already is not None:
+        from apps.lending.services.collections import record_opening
+
+        record_opening(ctx=ctx, loan=loan, amount=already, on=today)
     _audit(
         ctx,
         "lending.loan.created",

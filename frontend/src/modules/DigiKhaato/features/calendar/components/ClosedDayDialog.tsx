@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useId, useMemo } from 'react';
 
 import { yupResolver } from '@hookform/resolvers/yup';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 
 import {
   UbButton,
@@ -12,6 +12,7 @@ import {
   UbField,
   UbForm,
   UbSelect,
+  UbText,
   UbTextInput,
 } from 'src/design-system';
 import { useTranslation } from 'src/hooks/useTranslation';
@@ -60,6 +61,11 @@ export function ClosedDayDialog({
   }, [addOpen, reset, defaults]);
 
   const readers = useMemo(() => calendar.data?.readers ?? [], [calendar.data?.readers]);
+  const appliesToModule = useWatch({ control: form.control, name: 'module' });
+  // QA F8 — a closure that reaches lending moves the loan collections due on it.
+  const movesLoans =
+    readers.includes('lending' as ModuleCode) &&
+    (appliesToModule === WHOLE_BUSINESS || appliesToModule === 'lending');
   const appliesTo = useMemo(
     () => [
       { value: WHOLE_BUSINESS, label: t('calendar.dialog.appliesTo.all') },
@@ -132,6 +138,11 @@ export function ClosedDayDialog({
           <UbField name="module" label={t('calendar.dialog.appliesTo')}>
             {(field) => <UbSelect {...field} options={appliesTo} />}
           </UbField>
+        )}
+        {movesLoans && (
+          <UbText variant="caption" tone="secondary" data-testid="calendar-moves-loans">
+            {t('calendar.dialog.lendingMoves')}
+          </UbText>
         )}
       </UbForm>
     </UbDialog>

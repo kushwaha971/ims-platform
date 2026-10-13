@@ -16,7 +16,10 @@ closures in a single statement), because a fine over a long loan or a year of
 sessions must not read the calendar once per day.
 
 **Never rewrites history (BR-4).** Adding or removing a closure changes no posted
-due, fine or mark; consumers read the calendar when they next compute.
+due, fine or mark; consumers read the calendar when they next compute. A module
+may LISTEN for a change (`register_calendar_listener`) to re-date what holds no
+money yet — lending moves a loan's unpaid instalments off a new holiday (QA F8),
+never one that is past or holds money.
 
 Writes: tenant-wide rows and weekdays need `platform.calendar.manage` (owner,
 admin — owner Q2, R26); a row or override for module X may also be written by a
@@ -55,6 +58,24 @@ def register_calendar_reader(module: str) -> None:
     """`module` reads the calendar, so the Business days screen is shown while
     it is enabled. Idempotent. Registered from the module's `ready()`."""
     _READERS.setdefault(module, None)
+
+
+# ── Listeners (QA F8) ────────────────────────────────────────────────────────
+
+_LISTENERS: list[Any] = []
+
+
+def register_calendar_listener(listener: Any) -> None:
+    """`listener(ctx=, module=)` runs after a closure is added or removed, or the closed
+    weekdays change, inside the same transaction. `module` is the one the change
+    applies to, or None for every module. Idempotent; from a module's `ready()`."""
+    if listener not in _LISTENERS:
+        _LISTENERS.append(listener)
+
+
+def _changed(ctx: Any, module: str | None) -> None:
+    for listener in _LISTENERS:
+        listener(ctx=ctx, module=module)
 
 
 def calendar_readers() -> tuple[str, ...]:
@@ -273,6 +294,7 @@ def set_closed_weekdays(*, ctx: Any, value: Any, modules: Any) -> dict[str, Any]
             before=before,
             after=after,
         )
+        _changed(ctx, None)
     return after
 
 
@@ -349,6 +371,7 @@ def add_closed_days(
                 "module": module,
             },
         )
+        _changed(ctx, module)
     return rows, skipped
 
 
@@ -365,3 +388,4 @@ def delete_closed_day(*, ctx: Any, row: Any) -> None:
         entity_id=pk,
         before=snapshot,
     )
+    _changed(ctx, snapshot["module"])

@@ -503,7 +503,7 @@ def record_payment(*, ctx: Ctx, payload: dict, walk_in_document_id: Any = None) 
     """Record one payment. See the module docstring for the contract.
 
     Refuses `adjustment` in `mode_breakup` (A4b, R24): money that did not move is
-    written only by `payments.services.deposits`, through `record_adjustment`.
+    written only through `record_adjustment`, by the callers listed there.
     """
     return _record(ctx=ctx, payload=payload, walk_in_document_id=walk_in_document_id)
 
@@ -514,7 +514,10 @@ def record_adjustment(*, ctx: Ctx, payload: dict) -> dict:
     The same validation, locks, allocation, numbering, ledger posting and audit as
     any payment; the one difference is that `mode_breakup` may be one
     `adjustment` line. Called ONLY by `payments.services.deposits` — the two halves
-    of applying a held deposit and an opening deposit (R37). Runs inside the
+    of applying a held deposit and an opening deposit (R37) — and by lending for a
+    loan brought in from paper (QA F8): its disbursal and what it had already
+    collected, which is R37's case for a loan. Never from a request's own mode: the
+    server decides, and no public path accepts `adjustment`. Runs inside the
     caller's transaction.
     """
     lines = payload.get("mode_breakup") or []

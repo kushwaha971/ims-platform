@@ -181,3 +181,26 @@ def test_the_book_total_equals_its_borrowers_added_up(ramesh: dict) -> None:
     _save(ramesh, {"amount": "2500", "split": split["loans"]})
     totals, person = both()
     assert totals == person == {"left": "14500.00", "late": "500.00"}
+
+
+def test_a_split_collected_yesterday_is_dated_yesterday_on_every_loan(ramesh: dict) -> None:
+    """QA B45 — money one borrower handed over yesterday for several loans is recorded
+    on yesterday for each share, not as today's cash."""
+    import datetime as dt
+
+    from apps.common.dates import tenant_today
+
+    yesterday = tenant_today(ramesh["tenant"]) - dt.timedelta(days=1)
+    split = _preview(ramesh, "2500").json()["data"]
+    saved = _save(
+        ramesh,
+        {
+            "amount": "2500",
+            "split": split["loans"],
+            "mode": "cash",
+            "collected_on": yesterday.isoformat(),
+        },
+        key="split-yesterday",
+    )
+    assert saved.status_code == 201, saved.json()
+    assert {r.collected_on for r in LendingCollection.objects.all()} == {yesterday}

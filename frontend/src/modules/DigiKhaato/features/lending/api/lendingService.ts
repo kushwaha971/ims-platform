@@ -160,6 +160,15 @@ export const toLoanBody = (values: LoanFormValues): Record<string, unknown> => (
       }),
   route_id: values.routeId || undefined,
   payment_mode: values.paymentMode,
+  // QA F8 — the server records it as history (an adjustment), never today's cash.
+  ...(values.existingLoan
+    ? {
+        existing:
+          values.collectedBy === 'amount'
+            ? { collected_amount: values.collectedAmount }
+            : { instalments_collected: Number(values.collectedInstalments) },
+      }
+    : {}),
   notes: (values.notes ?? '').trim() || undefined,
   ...(values.lateFeeKind && values.lateFeeKind !== 'none'
     ? {
@@ -264,6 +273,7 @@ export const getLoanActivity = async (
       note: str(c.note),
       receiptNumber: str(c.receipt_number),
       voided: Boolean(c.voided),
+      opening: Boolean(c.opening),
     })),
     visits: (response.data.meta?.visits ?? []).map((v) => ({
       onDate: str(v.on_date),
@@ -323,6 +333,7 @@ export const collect = async (
       mode: values.mode,
       reference: (values.reference ?? '').trim() || undefined,
       note: (values.note ?? '').trim() || undefined,
+      collected_on: values.collectedOn || undefined,
     },
     ubConfig({ headers: { 'Idempotency-Key': key }, suppressErrorSnackbar: true })
   );
@@ -558,6 +569,7 @@ export const collectFromBorrower = async (
       mode: values.mode,
       reference: (values.reference ?? '').trim() || undefined,
       note: (values.note ?? '').trim() || undefined,
+      collected_on: values.collectedOn || undefined,
     },
     ubConfig({ headers: { 'Idempotency-Key': key }, suppressErrorSnackbar: true })
   );

@@ -5,7 +5,12 @@ import * as Yup from 'yup';
 import { useTranslation } from 'src/hooks/useTranslation';
 import { useValidationSchemas } from 'src/hooks/useValidationSchemas';
 
-import type { BorrowerEditValues, CollectFormValues, LoanFormValues } from '../types/lending.types';
+import type {
+  BorrowerEditValues,
+  CollectedBy,
+  CollectFormValues,
+  LoanFormValues,
+} from '../types/lending.types';
 
 /**
  * Lending's forms from the central validators. The server re-checks every rule
@@ -27,6 +32,9 @@ export const useLendingSchemas = (): {
         .defined(),
       reference: v.boundedText(64),
       note: v.boundedText(255),
+      // QA B45 — a past day is allowed, a future one is not (the server also refuses
+      // a day before the loan was given).
+      collectedOn: v.businessDateValidation().defined().default(''),
     }) as Yup.ObjectSchema<CollectFormValues>;
 
     const whole = (min: number, max: number) =>
@@ -87,6 +95,30 @@ export const useLendingSchemas = (): {
         .oneOf(['cash', 'upi', 'bank', 'cheque'])
         .defined(),
       notes: v.boundedText(500),
+      // QA F8 — what an existing loan had already collected: a count or an amount.
+      existingLoan: Yup.boolean().defined(),
+      collectedBy: Yup.mixed<CollectedBy>().oneOf(['instalments', 'amount']).defined(),
+      collectedInstalments: Yup.string()
+        .defined()
+        .default('')
+        .when(['existingLoan', 'collectedBy'], {
+          is: (existing: boolean, by: CollectedBy) => existing && by === 'instalments',
+          then: () =>
+            v
+              .requiredText(5, 'lending.form.collected.instalments.required')
+              .test(
+                'whole',
+                t('lending.form.collected.instalments.required'),
+                (value) => /^\d+$/.test(String(value ?? '')) && Number(value) >= 1
+              ),
+        }),
+      collectedAmount: Yup.string()
+        .defined()
+        .default('')
+        .when(['existingLoan', 'collectedBy'], {
+          is: (existing: boolean, by: CollectedBy) => existing && by === 'amount',
+          then: () => v.amountValidation(),
+        }),
       lateFeeKind: Yup.mixed<LoanFormValues['lateFeeKind']>()
         .oneOf(['none', 'flat_once', 'per_day', 'simple_interest'])
         .defined(),

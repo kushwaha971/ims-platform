@@ -178,7 +178,8 @@ export function LoanPageContent({ id }: Readonly<{ id: string }>): React.JSX.Ele
     (m) => m.kind === 'reminder' && localDay(m.at) === today
   );
   // "Receipt after a collection": offered on the latest one still standing.
-  const latestCollection = state.collections.find((c) => !c.voided);
+  // An opening row (QA F8) had no receipt, so it is never the one offered.
+  const latestCollection = state.collections.find((c) => !c.voided && !c.opening);
   const asked = (Number(loan.dueToday) + Number(loan.arrears)).toFixed(2);
   const schedule = showAll
     ? loan.schedule
@@ -506,30 +507,32 @@ export function LoanPageContent({ id }: Readonly<{ id: string }>): React.JSX.Ele
                   <UbText variant="caption" tone="tertiary">
                     {[
                       formatBusinessDate(c.collectedOn),
-                      t(`lending.mode.${c.mode}`),
+                      c.opening ? t('lending.loan.collectedBefore') : t(`lending.mode.${c.mode}`),
                       c.receiptNumber,
                     ]
                       .filter(Boolean)
                       .join(' · ')}
                   </UbText>
                 </UbStack>
-                {(c.note || c.reference || c.voided) && (
+                {!c.opening && (c.note || c.reference || c.voided) && (
                   <UbText variant="caption" tone="secondary">
                     {[c.voided ? t('lending.loan.voided') : '', c.reference, c.note]
                       .filter(Boolean)
                       .join(' · ')}
                   </UbText>
                 )}
-                <UbButton
-                  size="sm"
-                  variant="ghost"
-                  className="self-start"
-                  icon={<Printer className="h-4 w-4" aria-hidden />}
-                  onClick={() => printPaper('receipt', c.id)}
-                  data-testid="lending-loan-print-receipt"
-                >
-                  {t('lending.papers.receipt.print')}
-                </UbButton>
+                {!c.opening && (
+                  <UbButton
+                    size="sm"
+                    variant="ghost"
+                    className="self-start"
+                    icon={<Printer className="h-4 w-4" aria-hidden />}
+                    onClick={() => printPaper('receipt', c.id)}
+                    data-testid="lending-loan-print-receipt"
+                  >
+                    {t('lending.papers.receipt.print')}
+                  </UbButton>
+                )}
                 {canRemind && c.id === latestCollection?.id && (
                   <UbButton
                     size="sm"

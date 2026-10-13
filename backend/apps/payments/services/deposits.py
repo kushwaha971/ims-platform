@@ -25,9 +25,10 @@ first, then the deposit, then hands the payment to `record_payment`, which takes
 the same locks again (re-entrant inside one transaction) and the rest in order.
 
 ── `adjustment` ──────────────────────────────────────────────────────────────
-Only this module writes it (R24), through `record.record_adjustment`: the two
-halves of an application, and an opening deposit taken before go-live (R37),
-which is money that arrived in the paper era and must not appear as today's cash.
+This module writes it (R24), through `record.record_adjustment`: the two halves
+of an application, and an opening deposit taken before go-live (R37), which is
+money that arrived in the paper era and must not appear as today's cash. The one
+other caller is lending's loan brought in from paper (QA F8), the same case.
 The cashbook skips every adjustment share (R4).
 
 Voiding either half of an application voids the other (`void.void_payment`, BR-7);

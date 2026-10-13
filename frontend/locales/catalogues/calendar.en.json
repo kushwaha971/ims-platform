@@ -15,6 +15,7 @@
   "calendar.dialog.appliesTo.all": "The whole business",
   "calendar.dialog.body": "One day, or up to 31 days in a row.",
   "calendar.dialog.from": "First day",
+  "calendar.dialog.lendingMoves": "Loan collections due on these days move to the next collection day, and the loan ends that much later. Money already collected does not move.",
   "calendar.dialog.reason": "Reason",
   "calendar.dialog.reasonPlaceholder": "Enter the reason",
   "calendar.dialog.submit": "Add",

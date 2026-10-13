@@ -124,6 +124,8 @@ export interface CollectionRow {
   readonly note: string;
   readonly receiptNumber: string;
   readonly voided: boolean;
+  /** QA F8 — collected before the loan came into this book: history, no receipt. */
+  readonly opening: boolean;
 }
 
 export interface VisitRow {
@@ -349,7 +351,17 @@ export interface LoanFormValues {
   lateFeeValue: string;
   lateFeeCap: string;
   lateFeeGraceDays: string;
+  /** QA F8 — a loan already running in the paper book, brought in with what it has
+   *  already collected: as history, never today's cash. */
+  existingLoan: boolean;
+  collectedBy: CollectedBy;
+  collectedInstalments: string;
+  collectedAmount: string;
 }
+
+/** How a lender counts what was already collected: instalments, or an amount. */
+export type CollectedBy = 'instalments' | 'amount';
+export const COLLECTED_BY: readonly CollectedBy[] = ['instalments', 'amount'];
 
 export type LateFeeKind = 'none' | 'flat_once' | 'per_day' | 'simple_interest';
 export const LATE_FEE_KINDS: readonly LateFeeKind[] = [
@@ -390,4 +402,6 @@ export interface CollectFormValues {
   mode: LendingPaymentMode;
   reference: string;
   note: string;
+  /** QA B45 — the day the money was taken: today unless the collector says otherwise. */
+  collectedOn: string;
 }

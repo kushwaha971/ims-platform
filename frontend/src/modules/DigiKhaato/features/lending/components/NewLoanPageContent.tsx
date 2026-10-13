@@ -22,6 +22,7 @@ import {
   UbPhoneInput,
   UbStack,
   UbStatusBanner,
+  UbSwitch,
   UbText,
   UbTextInput,
 } from 'src/design-system';
@@ -46,10 +47,12 @@ import {
 } from '../redux/lendingThunk';
 import { selectLendingToday } from '../redux/lendingTodaySlice';
 import {
+  COLLECTED_BY,
   LATE_FEE_KINDS,
   PAYMENT_MODES,
   PLAN_FREQUENCIES,
   PLAN_TYPES,
+  type CollectedBy,
   type LendingPaymentMode,
   type LoanFormValues,
   type PlanType,
@@ -62,7 +65,6 @@ const PREVIEW_DEBOUNCE_MS = 400;
 const BORROWER_BLOCKED = 'borrower_blocked';
 const MON_TO_SAT = 63;
 const SHOWN_ROWS = 5;
-
 
 /** Server field → this form's field. */
 const SERVER_FIELD: Readonly<Record<string, keyof LoanFormValues>> = {
@@ -88,9 +90,20 @@ const firstReason = (error: { details?: Record<string, unknown> } | null): strin
 };
 
 const toFormDetails = (
-  details: Readonly<Record<string, unknown>> | undefined
+  details: Readonly<Record<string, unknown>> | undefined,
+  collectedBy: CollectedBy = 'instalments'
 ): Record<string, unknown> =>
-  Object.fromEntries(Object.entries(details ?? {}).map(([k, m]) => [SERVER_FIELD[k] ?? k, m]));
+  Object.fromEntries(
+    Object.entries(details ?? {}).map(([k, m]) => [
+      // QA F8 — "already collected" is refused under whichever box is showing.
+      k === 'existing'
+        ? collectedBy === 'amount'
+          ? 'collectedAmount'
+          : 'collectedInstalments'
+        : (SERVER_FIELD[k] ?? k),
+      m,
+    ])
+  );
 
 /**
  * `/lending/loans/new` (FRD LEN-03, LEN-04; the agreed wireframe): who, the
@@ -148,6 +161,10 @@ export function NewLoanPageContent(): React.JSX.Element {
       lateFeeValue: '',
       lateFeeCap: '',
       lateFeeGraceDays: '0',
+      existingLoan: false,
+      collectedBy: 'instalments',
+      collectedInstalments: '',
+      collectedAmount: '',
     },
   });
   const values = useWatch({ control: form.control }) as LoanFormValues;
@@ -225,9 +242,9 @@ export function NewLoanPageContent(): React.JSX.Element {
       return;
     }
     applyServerErrors(
-      { ...failure, details: toFormDetails(failure.details) },
+      { ...failure, details: toFormDetails(failure.details, data.collectedBy) },
       form.setError,
-      Object.values(SERVER_FIELD)
+      [...Object.values(SERVER_FIELD), 'collectedInstalments', 'collectedAmount']
     );
   };
 
@@ -578,23 +595,102 @@ export function NewLoanPageContent(): React.JSX.Element {
 
           <UbCard padded>
             <UbStack gap={1}>
-              <UbField name="paymentMode" label={t('lending.form.givenBy')} controlOwnsLabel>
+              {/* QA F8 — a loan already running in the paper book: what it has
+                  collected comes in as history, and nothing moves today's cash. */}
+              <UbField name="existingLoan" label={t('lending.form.existing')} controlOwnsLabel>
                 {(field) => (
-                  <UbStack gap={1}>
-                    <UbText variant="body-sm-medium">{t('lending.form.givenBy')}</UbText>
-                    <UbChoiceChips<LendingPaymentMode>
-                      id={field.id}
-                      ariaLabel={t('lending.form.givenBy')}
-                      value={field.value as LendingPaymentMode}
-                      onChange={(next) => field.onChange(next)}
-                      options={PAYMENT_MODES.map((m) => ({
-                        value: m,
-                        label: t(`lending.mode.${m}`),
-                      }))}
-                    />
-                  </UbStack>
+                  <UbSwitch
+                    id={field.id}
+                    checked={Boolean(field.value)}
+                    onCheckedChange={field.onChange}
+                    label={t('lending.form.existing')}
+                    description={t('lending.form.existing.hint')}
+                    disabled={saving}
+                  />
                 )}
               </UbField>
+              {values.existingLoan ? (
+                <UbStack gap={2} data-testid="lending-existing">
+                  <UbField name="collectedBy" label={t('lending.form.collected')} controlOwnsLabel>
+                    {(field) => (
+                      <UbStack gap={1}>
+                        <UbText variant="body-sm-medium">{t('lending.form.collected')}</UbText>
+                        <UbChoiceChips<CollectedBy>
+                          id={field.id}
+                          ariaLabel={t('lending.form.collected')}
+                          value={field.value as CollectedBy}
+                          onChange={(next) => field.onChange(next)}
+                          options={COLLECTED_BY.map((by) => ({
+                            value: by,
+                            label: t(`lending.form.collected.${by}`),
+                          }))}
+                        />
+                      </UbStack>
+                    )}
+                  </UbField>
+                  {values.collectedBy === 'amount' ? (
+                    <UbField
+                      name="collectedAmount"
+                      label={t('lending.form.collected.amountLabel')}
+                      placeholder="0.00"
+                      required
+                    >
+                      {(field) => (
+                        <UbMoneyInput
+                          {...field}
+                          value={field.value as string}
+                          onChange={field.onChange}
+                          inputMode="decimal"
+                          disabled={saving}
+                        />
+                      )}
+                    </UbField>
+                  ) : (
+                    <UbField
+                      name="collectedInstalments"
+                      label={t('lending.form.collected.instalmentsLabel')}
+                      hint={
+                        preview
+                          ? t('lending.form.collected.instalmentsHint', {
+                              count: preview.schedule.length,
+                            })
+                          : undefined
+                      }
+                      required
+                    >
+                      {(field) => (
+                        <UbTextInput
+                          {...field}
+                          inputMode="numeric"
+                          autoComplete="off"
+                          disabled={saving}
+                        />
+                      )}
+                    </UbField>
+                  )}
+                  <UbText variant="caption" tone="tertiary">
+                    {t('lending.form.existing.noCash')}
+                  </UbText>
+                </UbStack>
+              ) : (
+                <UbField name="paymentMode" label={t('lending.form.givenBy')} controlOwnsLabel>
+                  {(field) => (
+                    <UbStack gap={1}>
+                      <UbText variant="body-sm-medium">{t('lending.form.givenBy')}</UbText>
+                      <UbChoiceChips<LendingPaymentMode>
+                        id={field.id}
+                        ariaLabel={t('lending.form.givenBy')}
+                        value={field.value as LendingPaymentMode}
+                        onChange={(next) => field.onChange(next)}
+                        options={PAYMENT_MODES.map((m) => ({
+                          value: m,
+                          label: t(`lending.mode.${m}`),
+                        }))}
+                      />
+                    </UbStack>
+                  )}
+                </UbField>
+              )}
               <UbField
                 name="notes"
                 label={t('lending.form.notes')}
@@ -688,9 +784,11 @@ export function NewLoanPageContent(): React.JSX.Element {
             disabled={!preview}
             data-testid="lending-loan-save"
           >
-            {preview
-              ? t('lending.loan.save', { amount: formatInr(preview.cashHandedOver) })
-              : t('lending.loan.saveDisabled')}
+            {!preview
+              ? t('lending.loan.saveDisabled')
+              : values.existingLoan
+                ? t('lending.loan.saveExisting')
+                : t('lending.loan.save', { amount: formatInr(preview.cashHandedOver) })}
           </UbButton>
         </UbStack>
       </UbStack>

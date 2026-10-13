@@ -165,6 +165,8 @@ def collect(*, ctx: Any, borrower_id: Any, data: Any) -> dict:
                 "mode": data.get("mode"),
                 "reference": data.get("reference"),
                 "note": data.get("note"),
+                # QA B45 — every loan's share on the day the money was really taken.
+                "collected_on": data.get("collected_on"),
             },
         )
         | {"loan_id": row["loan_id"], "number": row["number"]}

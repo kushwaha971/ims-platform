@@ -165,6 +165,33 @@ describe('LoanPageContent', () => {
     expect(screen.queryByTestId('lending-loan-remind')).not.toBeInTheDocument();
   });
 
+  it('shows paper-era collections as collected before, with no receipt to print or send', async () => {
+    // QA F8 — a loan brought in from the old book: its history had no receipt.
+    jest.mocked(service.getLoan).mockResolvedValue(loan({ nextDueOn: '2026-12-01' }));
+    jest.mocked(service.getLoanActivity).mockResolvedValue({
+      collections: [
+        {
+          id: 'c0',
+          collectedOn: '2026-10-12',
+          amount: '6000.00',
+          mode: 'adjustment',
+          reference: '',
+          note: 'Loan LN-0001 — collected before records began',
+          receiptNumber: '',
+          voided: false,
+          opening: true,
+        },
+      ],
+      visits: [],
+      messages: [],
+    } as never);
+    renderWithProviders(<LoanPageContent id="l1" />);
+    expect(await screen.findByText(/Collected before \(from old book\)/)).toBeInTheDocument();
+    expect(screen.queryByText(/lending\.mode\.adjustment/)).not.toBeInTheDocument();
+    expect(screen.queryByTestId('lending-loan-print-receipt')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('lending-loan-receipt')).not.toBeInTheDocument();
+  });
+
   it('offers a receipt on the latest collection, and lists what was sent', async () => {
     jest.mocked(service.getLoan).mockResolvedValue(loan({ nextDueOn: '2026-12-01' }));
     jest.mocked(service.getLoanActivity).mockResolvedValue({

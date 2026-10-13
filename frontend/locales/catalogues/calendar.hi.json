@@ -15,6 +15,7 @@
   "calendar.dialog.appliesTo.all": "पूरा व्यापार",
   "calendar.dialog.body": "एक दिन, या लगातार 31 दिन तक।",
   "calendar.dialog.from": "पहला दिन",
+  "calendar.dialog.lendingMoves": "इन दिनों की कर्ज़ वसूली अगले वसूली के दिन पर चली जाएगी, और कर्ज़ उतने ही दिन बाद ख़त्म होगा। जो पैसा पहले वसूल हो चुका है, वह नहीं हिलेगा।",
   "calendar.dialog.reason": "कारण",
   "calendar.dialog.reasonPlaceholder": "कारण लिखें",
   "calendar.dialog.submit": "जोड़ें",

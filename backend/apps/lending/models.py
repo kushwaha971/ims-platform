@@ -187,6 +187,9 @@ class LendingCollection(TenantModel):
         "platform.User", on_delete=models.SET_NULL, null=True, blank=True, related_name="+"
     )
     voided_at = models.DateTimeField(null=True, blank=True)
+    #: QA F8 — what a loan brought in from paper had already collected: history, an
+    #: `adjustment` payment no cash report counts, never part of a day's round.
+    is_opening = models.BooleanField(default=False, db_default=False)
 
     class Meta:
         db_table = "lending_collection"

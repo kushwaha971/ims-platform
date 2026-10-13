@@ -26,9 +26,13 @@ class LendingConfig(AppConfig):
             SUBJECT_LOAN,
         )
         from apps.lending.services import loans, messages
+        from apps.lending.services.holidays import on_calendar_changed
         from apps.parties.services.roles import register_party_role
         from apps.payments.services.targets import register_target
-        from apps.platform_app.services.calendar import register_calendar_reader
+        from apps.platform_app.services.calendar import (
+            register_calendar_listener,
+            register_calendar_reader,
+        )
         from apps.platform_app.services.sequences import register_number_kind
 
         register_number_kind(
@@ -48,6 +52,8 @@ class LendingConfig(AppConfig):
             label_id="lending.numbering.borrower",
         )
         register_calendar_reader(MODULE)
+        # QA F8 — a holiday moves the instalments that hold no money yet.
+        register_calendar_listener(on_calendar_changed)
         # FRD §0.3 — a deduction at disbursal is a `charge` in the loan bucket.
         register_posting_source(
             SOURCE_DEDUCTION,
@@ -98,7 +104,7 @@ class LendingConfig(AppConfig):
         )
 
         # docs/platform/14 step 5 — the setup checklist on this app's home.
-        from apps.platform_app.apps_registry import register_app_setup
         from apps.lending.selectors.setup import lending_setup
+        from apps.platform_app.apps_registry import register_app_setup
 
         register_app_setup("lending", lending_setup)

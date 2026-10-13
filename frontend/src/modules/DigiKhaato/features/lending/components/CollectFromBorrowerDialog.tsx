@@ -10,6 +10,7 @@ import {
   UbButton,
   UbCard,
   UbChoiceChips,
+  UbDateInput,
   UbDialog,
   UbField,
   UbForm,
@@ -22,7 +23,9 @@ import {
 import { useAppDispatch, useAppSelector } from 'src/hooks/useAppStore';
 import { useIdempotencyKey } from 'src/hooks/useIdempotencyKey';
 import { useTranslation } from 'src/hooks/useTranslation';
+import { selectTenantTimezone } from 'src/redux/slice/sessionSlice';
 import { showSnackbar } from 'src/redux/slice/snackbarSlice';
+import { todayInTenantTz } from 'src/utils/dates';
 import { formatInr } from 'src/utils/money';
 
 import { selectLendingForm } from '../redux/lendingFormSlice';
@@ -83,10 +86,12 @@ export function CollectFromBorrowerDialog({
   const { saving } = useAppSelector(selectLendingForm);
   const { key, rotate } = useIdempotencyKey();
   const { collectSchema } = useLendingSchemas();
+  const timezone = useAppSelector(selectTenantTimezone);
+  const today = todayInTenantTz(timezone ?? undefined);
   const form = useForm<CollectFormValues>({
     resolver: yupResolver(collectSchema),
     mode: 'onTouched',
-    defaultValues: { amount: '', mode: 'cash', reference: '', note: '' },
+    defaultValues: { amount: '', mode: 'cash', reference: '', note: '', collectedOn: today },
   });
   const [amount, mode] = useWatch({ control: form.control, name: ['amount', 'mode'] });
   const [split, setSplit] = useState<BorrowerSplit | null>(null);
@@ -263,6 +268,16 @@ export function CollectFromBorrowerDialog({
             {(field) => <UbTextInput {...field} autoComplete="off" disabled={saving} />}
           </UbField>
         )}
+        {/* QA B45 — the day the money was really taken, for every loan's share. */}
+        <UbField
+          name="collectedOn"
+          label={t('lending.collect.on')}
+          hint={t('lending.collect.on.hint')}
+        >
+          {(field) => (
+            <UbDateInput {...field} value={field.value as string} max={today} disabled={saving} />
+          )}
+        </UbField>
         <UbField
           name="note"
           label={t('lending.collect.note')}

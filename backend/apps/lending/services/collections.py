@@ -125,6 +125,76 @@ def _over(payoff: Decimal, value: Decimal) -> BusinessRuleViolation:
     )
 
 
+def _collected_on(raw: Any, loan: LendingLoan, today: dt.date) -> dt.date:
+    """QA B45 — the day the money was really taken: today unless said, never in the
+    future, never before the loan was given."""
+    if raw in (None, ""):
+        return today
+    try:
+        on = dt.date.fromisoformat(str(raw))
+    except ValueError:
+        raise ValidationFailed({"collected_on": ["Enter a date."]}) from None
+    if on > today:
+        raise ValidationFailed({"collected_on": ["A collection cannot be in the future."]})
+    if on < loan.disbursed_on:
+        raise ValidationFailed(
+            {"collected_on": ["A collection cannot be before the loan was given."]}
+        )
+    return on
+
+
+def record_opening(*, ctx: Any, loan: LendingLoan, amount: Decimal, on: dt.date) -> Any:
+    """QA F8 — what a loan brought in from paper had already collected, as history.
+
+    An `adjustment` payment (R24/R37: money that did not move today), allocated oldest
+    instalment first like any collection, so the late days run from the first
+    instalment really unpaid. The row is `is_opening`: no day's round counts it and
+    the loan's page shows it as collected before, with no receipt.
+    """
+    from apps.dues.services.settlement import plan_allocation
+    from apps.payments.services.record import record_adjustment
+
+    plan = plan_allocation(
+        tenant=ctx.tenant, schedule_id=loan.schedule_id, amount=amount, allow_scheduled=True
+    )
+    result = record_adjustment(
+        ctx=ctx,
+        payload={
+            "direction": "in",
+            "party_id": str(loan.party_id),
+            "payment_date": on.isoformat(),
+            "mode_breakup": [{"mode": "adjustment", "amount": f"{amount:.2f}"}],
+            "allocations": [
+                {
+                    "document_type": r["document_type"],
+                    "document_id": r["document_id"],
+                    "amount": r["amount"],
+                }
+                for r in plan
+            ],
+            "note": f"Loan {loan.number} — collected before records began",
+        },
+    )
+    row = LendingCollection.objects.create(
+        tenant=ctx.tenant,
+        created_by=getattr(ctx, "actor", None),
+        loan=loan,
+        payment_id=result["payment"].id,
+        amount=amount,
+        collected_on=on,
+        route=loan.route,
+        is_opening=True,
+    )
+    write_audit(
+        ctx=ctx,
+        action="lending.collection.opening",
+        entity_type="lending_collection",
+        entity_id=row.id,
+        after={"loan": loan.number, "amount": f"{amount:.2f}"},
+    )
+    return row
+
+
 @transaction.atomic
 def collect(*, ctx: Any, loan_id: Any, data: Any) -> dict:
     """`POST /lending/loans/<id>/collections` — record one collection."""
@@ -150,12 +220,13 @@ def collect(*, ctx: Any, loan_id: Any, data: Any) -> dict:
         tenant=ctx.tenant, schedule_id=loan.schedule_id, amount=value, allow_scheduled=True
     )
     today = tenant_today(ctx.tenant)
+    on = _collected_on(data.get("collected_on"), loan, today)
     result = record_payment(
         ctx=ctx,
         payload={
             "direction": "in",
             "party_id": str(loan.party_id),
-            "payment_date": today.isoformat(),
+            "payment_date": on.isoformat(),
             "mode_breakup": [
                 {
                     "mode": mode,
@@ -182,7 +253,7 @@ def collect(*, ctx: Any, loan_id: Any, data: Any) -> dict:
         loan=loan,
         payment_id=payment.id,
         amount=value,
-        collected_on=today,
+        collected_on=on,
         route=loan.route,
         collected_by=(
             getattr(ctx, "actor", None) if getattr(ctx, "actor_type", "") == "user" else None
@@ -336,7 +407,7 @@ def today_round(tenant: Any, route_id: Any = None) -> dict:
     collected = {
         r["loan_id"]: r["t"]
         for r in LendingCollection.objects.filter(
-            tenant=tenant, collected_on=today, voided_at__isnull=True
+            tenant=tenant, collected_on=today, voided_at__isnull=True, is_opening=False
         )
         .values("loan_id")
         .annotate(t=Sum("amount"))
@@ -421,7 +492,9 @@ def loan_collections(loan: LendingLoan) -> list[dict]:
                 "mode": p.primary_mode if p else "",
                 "reference": p.reference if p else "",
                 "note": p.note if p else "",
-                "receipt_number": p.number if p else "",
+                # QA F8 — paper-era history: no receipt was ever given for it.
+                "receipt_number": "" if r.is_opening else (p.number if p else ""),
+                "opening": r.is_opening,
                 "voided": r.voided_at is not None,
             }
         )

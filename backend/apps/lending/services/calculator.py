@@ -167,17 +167,33 @@ def validate(terms: LoanTerms, today: dt.date) -> None:
 # ── dates (BR-7) ────────────────────────────────────────────────────────────
 
 
+def _off_closed(dates: list[dt.date], closed: set[dt.date] | frozenset) -> list[dt.date]:
+    """QA F8 — an instalment on a closed day moves to the next open day, never onto or
+    past the one after it being moved too: each lands after the one before."""
+    if not closed:
+        return dates
+    out: list[dt.date] = []
+    for day in dates:
+        if out and day <= out[-1]:
+            day = out[-1] + dt.timedelta(days=1)
+        while day in closed:
+            day += dt.timedelta(days=1)
+        out.append(day)
+    return out
+
+
 def due_dates(terms: LoanTerms, closed: set[dt.date] | frozenset = frozenset()) -> list[dt.date]:
     """The instalment dates. Monthly keeps the first due's day (month-end
     clamped); weekly and fortnightly keep their weekday; daily runs on the
-    collection weekdays and skips closed days, keeping the count."""
+    collection weekdays and skips closed days, keeping the count. A weekly or
+    monthly date on a closed day moves to the next open day (QA F8)."""
     first, n = terms.first_due_on, terms.instalment_count
     if terms.plan_type == "flexible":
         return [first]
     far = first + dt.timedelta(days=366 * 31)
     if terms.frequency == "monthly":
         rule = Recurrence(freq="monthly", anchor=first, by_month_day=first.day, count=n)
-        return occurrences(rule, start=first, end=far, limit=n)
+        return _off_closed(occurrences(rule, start=first, end=far, limit=n), closed)
     if terms.frequency in ("weekly", "fortnightly"):
         rule = Recurrence(
             freq="weekly",
@@ -186,7 +202,7 @@ def due_dates(terms: LoanTerms, closed: set[dt.date] | frozenset = frozenset()) 
             by_weekday=weekday_mask([first.weekday()]),
             count=n,
         )
-        return occurrences(rule, start=first, end=far, limit=n)
+        return _off_closed(occurrences(rule, start=first, end=far, limit=n), closed)
     dates: list[dt.date] = []
     day = first
     weekdays = {d for d in range(7) if terms.collection_weekdays & (1 << d)}
