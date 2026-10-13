@@ -17,6 +17,14 @@ F12, FB4, and DEC-019 (each app keeps its own money).
 **Next, in this order:**
 1. P2 bugs: B37, B38, B39,
    B40, B41, B42, B43.
+   Apply the owner's additional [One Person, One Workspace requirements](one-person-workspace.md)
+   throughout these fixes, then complete a dedicated UX16 pass across Library,
+   Lending, Shop customer/supplier and Udhaar book person pages before the
+   remaining P2 features. Routine collections, backdated entries, reminders,
+   edits and history stay on the person's page via dialogs/inline sections.
+   Financial calculations and permissions remain owned by each app (DEC-019).
+   Verify all six real-world workflows in that document at 1280/360 px; do not
+   mark UX16 done for merely recording this requirement.
 2. P2 features: F3 (advance applied at renewal), F5, F7, F9, F11, F13;
    owner-editable message templates; per-app wording (no "You gave / You got"
    in Library or Lending); the Udhaar book refusal.
