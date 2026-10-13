@@ -207,11 +207,13 @@ function LandingFooterBase() {
           </UbText>
           <UbStack as="ul" gap={2}>
             <FooterLink href="/solutions">{t('landing.footer.solutions')}</FooterLink>
-            {landingAnchors().filter((anchor) => anchor.href !== '#faq').map((anchor) => (
-              <FooterLink key={anchor.href} href={anchor.href}>
-                {t(anchor.key)}
-              </FooterLink>
-            ))}
+            {landingAnchors()
+              .filter((anchor) => anchor.href !== '#faq')
+              .map((anchor) => (
+                <FooterLink key={anchor.href} href={anchor.href}>
+                  {t(anchor.key)}
+                </FooterLink>
+              ))}
           </UbStack>
         </UbBox>
         <UbBox as="nav" aria-label={t('landing.footer.contactSupport')}>
@@ -231,8 +233,19 @@ function LandingFooterBase() {
               </UbLink>
             </UbBox>
             <FooterLink href="#faq">{t('landing.nav.faq')}</FooterLink>
-            <FooterLink href={ROUTES.SIGNUP}>{t('landing.footer.signup')}</FooterLink>
-            <FooterLink href={ROUTES.LOGIN}>{t('landing.nav.login')}</FooterLink>
+          </UbStack>
+          <UbStack direction="row" align="center" gap={3} className="mt-4" wrap>
+            <UbLink
+              href="https://www.linkedin.com/company/yourkhata"
+              aria-label="YourKhata on LinkedIn"
+              title="LinkedIn"
+              underline={false}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#0A66C2] text-white transition-opacity hover:opacity-80"
+            >
+              <Linkedin aria-hidden="true" className="h-4 w-4" />
+            </UbLink>
           </UbStack>
         </UbBox>
       </UbBox>
@@ -240,19 +253,6 @@ function LandingFooterBase() {
         className={`${LANDING_CONTAINER} border-t border-border-hairline py-5 md:flex-row md:items-center md:justify-between`}
         gap={5}
       >
-        <UbStack direction="row" align="center" gap={3} wrap>
-          <UbLink
-            href="https://www.linkedin.com/company/yourkhata"
-            aria-label="YourKhata on LinkedIn"
-            title="LinkedIn"
-            underline={false}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#0A66C2] text-white transition-opacity hover:opacity-80"
-          >
-            <Linkedin aria-hidden="true" className="h-4 w-4" />
-          </UbLink>
-        </UbStack>
         <UbText variant="body-sm" tone="tertiary">
           {t('landing.footer.copyright', { year: String(year) })}
         </UbText>
