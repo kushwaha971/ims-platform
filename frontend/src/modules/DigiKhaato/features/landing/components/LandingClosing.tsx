@@ -193,7 +193,7 @@ function LandingFooterBase() {
   return (
     <UbBox as="footer" className="border-t border-border-hairline bg-surface-subtle">
       <UbBox
-        className={`${LANDING_CONTAINER} grid grid-cols-2 gap-10 py-12 md:grid-cols-[minmax(0,2fr)_repeat(2,minmax(0,1fr))] md:py-16`}
+        className={`${LANDING_CONTAINER} grid grid-cols-2 gap-x-8 gap-y-8 py-10 md:grid-cols-[minmax(0,2fr)_repeat(2,minmax(0,1fr))] md:py-12`}
       >
         <UbStack gap={4} align="start" className="col-span-2 md:col-span-1">
           <UbLogo variant="full" size="md" label="YourKhata" />
@@ -225,10 +225,10 @@ function LandingFooterBase() {
         </UbBox>
       </UbBox>
       <UbStack
-        className={`${LANDING_CONTAINER} border-t border-border-hairline py-6 md:flex-row md:items-center md:justify-between`}
+        className={`${LANDING_CONTAINER} border-t border-border-hairline py-5 md:flex-row md:items-center md:justify-between`}
         gap={5}
       >
-        <UbStack direction="row" align="center" gap={4} wrap>
+        <UbStack direction="row" align="center" gap={3} wrap>
           <UbLink
             href="https://www.linkedin.com/company/yourkhata"
             aria-label="YourKhata on LinkedIn"
@@ -236,15 +236,15 @@ function LandingFooterBase() {
             underline={false}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-[#0A66C2] text-white transition-opacity hover:opacity-80"
+            className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#0A66C2] text-white transition-opacity hover:opacity-80"
           >
-            <Linkedin aria-hidden="true" className="h-5 w-5" />
+            <Linkedin aria-hidden="true" className="h-4 w-4" />
           </UbLink>
           <UbLink
             href="tel:+919794620535"
             tone="secondary"
             underline={false}
-            className="inline-flex min-h-10 items-center gap-2 hover:text-text-primary hover:underline"
+            className="inline-flex min-h-8 items-center gap-2 hover:text-text-primary hover:underline"
           >
             <Phone aria-hidden="true" className="h-4 w-4" />
             +91-9794620535
