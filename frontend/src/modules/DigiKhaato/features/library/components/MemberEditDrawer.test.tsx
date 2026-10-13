@@ -172,6 +172,17 @@ describe('who sees the acts on a student', () => {
 });
 
 describe('the edit drawer', () => {
+  /** B40: a copied register needs its original joining date, not today's lower bound. */
+  it('offers an editable joining date in the student drawer', async () => {
+    signIn('owner');
+    renderWithProviders(<MemberDetailPageContent id="m1" />);
+    await openMenu();
+    await userEvent.click(screen.getByTestId('library-action-edit'));
+    expect(await screen.findByRole('button', { name: /Joined on/ })).toHaveTextContent(
+      '1 Apr 2026'
+    );
+  });
+
   it('sends only what changed, with the version, and takes the answer', async () => {
     jest.mocked(service.updateMember).mockResolvedValue({
       ...ASHA,
@@ -217,7 +228,20 @@ describe('the edit drawer', () => {
 });
 
 describe('changedFields', () => {
-  const values = { memberNumber: 'M-0043', groupLabel: '9-B', validUntil: '2027-03-31', notes: '' };
+  const values = {
+    memberNumber: 'M-0043',
+    groupLabel: '9-B',
+    startsOn: '2026-04-01',
+    validUntil: '2027-03-31',
+    notes: '',
+  };
+
+  /** B40: both historical dates must travel together rather than losing Joined. */
+  it('sends a corrected joining date alongside an already expired plan end', () => {
+    expect(
+      changedFields(ASHA, { ...values, startsOn: '2025-09-01', validUntil: '2025-10-05' })
+    ).toEqual({ startsOn: '2025-09-01', validUntil: '2025-10-05' });
+  });
 
   it('is empty when nothing changed, so no request is made', () => {
     expect(changedFields(ASHA, values)).toEqual({});

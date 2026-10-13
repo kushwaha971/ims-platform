@@ -271,6 +271,7 @@ export type MemberEditBody = Readonly<
   Partial<{
     memberNumber: string;
     groupLabel: string;
+    startsOn: string;
     validUntil: string | null;
     notes: string;
   }>
@@ -292,6 +293,7 @@ export const updateMember = async (
     {
       ...(body.memberNumber !== undefined ? { member_number: body.memberNumber } : {}),
       ...(body.groupLabel !== undefined ? { group_label: body.groupLabel } : {}),
+      ...(body.startsOn !== undefined ? { starts_on: body.startsOn } : {}),
       ...(body.validUntil !== undefined ? { valid_until: body.validUntil } : {}),
       ...(body.notes !== undefined ? { notes: body.notes } : {}),
       version,

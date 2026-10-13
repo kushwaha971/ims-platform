@@ -105,6 +105,7 @@ export const useMemberSchemas = (): MemberSchemas => {
     const editSchema = Yup.object({
       memberNumber: v.requiredBoundedText(NUMBER_MAX, 1, 'library.member.edit.number.required'),
       groupLabel: v.boundedText(GROUP_MAX),
+      startsOn: v.businessDateValidation({ allowFuture: true, minDate: '2000-01-01' }),
       validUntil: Yup.string().defined(),
       notes: v.boundedText(NOTES_MAX),
     }) as Yup.ObjectSchema<MemberEditFormValues>;

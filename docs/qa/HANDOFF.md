@@ -11,11 +11,11 @@ owner asks.
 
 **Done and pushed** (each has a commit naming it — `git log --grep "B26"` etc.):
 B1, B2, B3, B4, B5, B6, B7, B8, B9, B10, B11, B12, B13, B14, B15, B16, B17, B18, B19, B20, B21, B22, B23, B24, B25, B26, B27–B35,
-B36, B37, B38, B39, B44, B45, B46, B47, B48, B49, B50, B51, F1, F2, F4, F6, F8, F10 (parts A and B),
+B36, B37, B38, B39, B40, B44, B45, B46, B47, B48, B49, B50, B51, F1, F2, F4, F6, F8, F10 (parts A and B),
 F12, FB4, and DEC-019 (each app keeps its own money).
 
 **Next, in this order:**
-1. P2 bugs: B40, B41, B42, B43.
+1. P2 bugs: B41, B42, B43.
    Apply the owner's additional [One Person, One Workspace requirements](one-person-workspace.md)
    throughout these fixes, then complete a dedicated UX16 pass across Library,
    Lending, Shop customer/supplier and Udhaar book person pages before the
@@ -50,6 +50,19 @@ F12, FB4, and DEC-019 (each app keeps its own money).
 Update the "Done" list in this file in the same commit as each item.
 
 ## Verification since 13 Oct 2026
+
+- B40 (14 Oct): the live edit drawer omitted Joined and disabled an expired
+  Plan till behind the saved joining date. Three new assertions failed first
+  (missing control, change payload and API mapping). The drawer now edits Joined
+  and uses its current value as Plan till's lower bound; the existing backend
+  accepts both historical dates together. No fee or permission rule changed.
+  All 14 focused frontend and 27 backend admission/permission tests pass.
+  `e2e/student-dates-look.mjs` reproduces the original refusal with `--before`
+  and verifies the fix at 1280/360: seven days overdue, the same ₹900 fee and no
+  document reload. All four final screenshots were read. Types, changed-file
+  ESLint, locales, production build and unchanged bundle budgets pass. Full
+  frontend: 3,998 passed and the same three landing-page failures. Backend source
+  is unchanged since B38's recorded full run.
 
 - B9 was already closed by DEC-019. `e2e/library-book-look.mjs` creates a person
   with a ₹900 Library fee and a ₹250 opening balance in the Udhaar book, then

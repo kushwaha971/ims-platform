@@ -3,7 +3,7 @@
 import { useId } from 'react';
 
 import { yupResolver } from '@hookform/resolvers/yup';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 
 import {
   UbButton,
@@ -35,11 +35,12 @@ import 'src/i18n/catalogues/library';
 import 'src/i18n/catalogues/payments';
 import 'src/i18n/catalogues/validation';
 
-const EDIT_FIELDS = ['memberNumber', 'groupLabel', 'validUntil', 'notes'] as const;
+const EDIT_FIELDS = ['memberNumber', 'groupLabel', 'startsOn', 'validUntil', 'notes'] as const;
 /** Server field paths → the drawer's own names. */
 const SERVER_FIELD: Readonly<Record<string, (typeof EDIT_FIELDS)[number]>> = {
   member_number: 'memberNumber',
   group_label: 'groupLabel',
+  starts_on: 'startsOn',
   valid_until: 'validUntil',
   notes: 'notes',
 };
@@ -47,6 +48,7 @@ const SERVER_FIELD: Readonly<Record<string, (typeof EDIT_FIELDS)[number]>> = {
 const valuesOf = (member: MemberDetail): MemberEditFormValues => ({
   memberNumber: member.memberNumber,
   groupLabel: member.groupLabel,
+  startsOn: member.startsOn,
   validUntil: member.validUntil ?? '',
   notes: member.notes,
 });
@@ -68,6 +70,7 @@ export const changedFields = (
     ...(values.groupLabel.trim() !== before.groupLabel
       ? { groupLabel: values.groupLabel.trim() }
       : {}),
+    ...(values.startsOn !== before.startsOn ? { startsOn: values.startsOn } : {}),
     ...(values.validUntil !== before.validUntil ? { validUntil: values.validUntil || null } : {}),
     ...(values.notes.trim() !== before.notes ? { notes: values.notes.trim() } : {}),
   };
@@ -104,6 +107,7 @@ export function MemberEditDrawer({
     mode: 'onTouched',
     defaultValues: valuesOf(member),
   });
+  const startsOn = useWatch({ control: form.control, name: 'startsOn' });
 
   const save = async (values: MemberEditFormValues): Promise<void> => {
     const body = changedFields(member, values);
@@ -179,6 +183,20 @@ export function MemberEditDrawer({
         >
           {(field) => <UbTextInput {...field} autoComplete="off" disabled={busy} />}
         </UbField>
+        <UbField name="startsOn" label={t('library.enrol.joinedOn')} required>
+          {(field) => (
+            <UbDateInput
+              id={field.id}
+              name={field.name}
+              value={(field.value as string) || null}
+              onChange={(next) => field.onChange(next ?? '')}
+              onBlur={field.onBlur}
+              min="2000-01-01"
+              invalid={field.invalid}
+              disabled={busy}
+            />
+          )}
+        </UbField>
         <UbField
           name="validUntil"
           label={t('library.member.validUntil')}
@@ -192,7 +210,7 @@ export function MemberEditDrawer({
               value={(field.value as string) || null}
               onChange={(next) => field.onChange(next ?? '')}
               onBlur={field.onBlur}
-              min={member.startsOn}
+              min={startsOn}
               invalid={field.invalid}
               disabled={busy}
             />

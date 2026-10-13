@@ -193,6 +193,7 @@ export interface CloseFormValues {
 export interface MemberEditFormValues {
   memberNumber: string;
   groupLabel: string;
+  startsOn: string;
   validUntil: string;
   notes: string;
 }
