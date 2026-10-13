@@ -243,9 +243,9 @@ function LandingFooterBase() {
               underline={false}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#0A66C2] text-white transition-opacity hover:opacity-80"
+              className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full sm:h-8 sm:w-8 bg-[#0A66C2] text-white transition-opacity hover:opacity-80"
             >
-              <Linkedin aria-hidden="true" className="h-4 w-4" />
+              <Linkedin aria-hidden="true" className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
             </UbLink>
             <UbLink
               href={FACEBOOK_URL}
@@ -254,9 +254,9 @@ function LandingFooterBase() {
               underline={false}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#1877F2] text-white transition-opacity hover:opacity-80"
+              className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full sm:h-8 sm:w-8 bg-[#1877F2] text-white transition-opacity hover:opacity-80"
             >
-              <Facebook aria-hidden="true" className="h-4 w-4" />
+              <Facebook aria-hidden="true" className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
             </UbLink>
             <UbLink
               href={INSTAGRAM_URL}
@@ -265,9 +265,9 @@ function LandingFooterBase() {
               underline={false}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#C13584] text-white transition-opacity hover:opacity-80"
+              className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full sm:h-8 sm:w-8 bg-[#C13584] text-white transition-opacity hover:opacity-80"
             >
-              <Instagram aria-hidden="true" className="h-4 w-4" />
+              <Instagram aria-hidden="true" className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
             </UbLink>
             <UbLink
               href={WHATSAPP_CONTACT_URL}
@@ -276,10 +276,10 @@ function LandingFooterBase() {
               underline={false}
               target="_blank"
               rel="noopener noreferrer"
-              className="relative inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#128C7E] text-white transition-opacity hover:opacity-80"
+              className="relative inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full sm:h-8 sm:w-8 bg-[#128C7E] text-white transition-opacity hover:opacity-80"
             >
-              <MessageCircle aria-hidden="true" className="h-5 w-5" />
-              <Phone aria-hidden="true" className="absolute h-2.5 w-2.5" />
+              <MessageCircle aria-hidden="true" className="h-4 w-4 sm:h-5 sm:w-5" />
+              <Phone aria-hidden="true" className="absolute h-2 w-2 sm:h-2.5 sm:w-2.5" />
             </UbLink>
           </UbStack>
         </UbBox>
