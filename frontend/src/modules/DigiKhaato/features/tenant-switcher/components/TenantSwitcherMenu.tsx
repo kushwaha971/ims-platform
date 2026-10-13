@@ -1,6 +1,6 @@
 'use client';
 
-import { Fragment, useCallback, useState } from 'react';
+import { Fragment, useCallback, useRef, useState } from 'react';
 
 import { useRouter } from 'next/navigation';
 
@@ -19,15 +19,12 @@ import { MLMenu, MLMenuItem, MLMenuLabel, MLSpinner } from 'src/design-system/pr
 import { useAppDispatch, useAppSelector } from 'src/hooks/useAppStore';
 import { useTranslation } from 'src/hooks/useTranslation';
 import { selectAppsAddable } from 'src/redux/slice/sessionSlice';
+import { showSnackbar } from 'src/redux/slice/snackbarSlice';
 import { ROUTES } from 'src/routes';
 import { cn } from 'src/utils/cn';
 import { roleLabel } from 'src/utils/roleLabel';
 
-import {
-  leaveApp,
-  setAppRunning,
-  switchApp,
-} from 'modules/DigiKhaato/features/auth/redux/sessionThunk';
+import { leaveApp, setAppRunning } from 'modules/DigiKhaato/features/auth/redux/sessionThunk';
 import { useNavigation } from 'modules/DigiKhaato/features/navigation/useNavigation';
 
 import { useTenantSwitcher } from '../hooks/useTenantSwitcher';
@@ -87,7 +84,10 @@ export function TenantSwitcherMenu({
   const { apps, app } = useNavigation();
   const addable = useAppSelector(selectAppsAddable);
   const [appAction, setAppAction] = useState<'off' | 'leave' | null>(null);
+  const [addingApp, setAddingApp] = useState<string | null>(null);
+  const adding = useRef(false);
   const [appBusy, setAppBusy] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [leavingMembershipId, setLeavingMembershipId] = useState<string | null>(null);
 
   const confirmLeave = useCallback(async () => {
@@ -100,14 +100,29 @@ export function TenantSwitcherMenu({
 
   // Add an app: run it for the business, open it, and land on its home.
   const addApp = useCallback(
-    async (code: string, home: string) => {
+    async (code: string, home: string, name: string) => {
+      if (adding.current) return;
+      adding.current = true;
       setAppBusy(true);
-      const done = await dispatch(setAppRunning({ app: code, running: true }));
-      if (setAppRunning.fulfilled.match(done)) {
-        await dispatch(switchApp({ app: code }));
-        router.push(home);
+      setAddingApp(code);
+      try {
+        const done = await dispatch(setAppRunning({ app: code, running: true }));
+        if (setAppRunning.fulfilled.match(done)) {
+          dispatch(
+            showSnackbar({
+              severity: 'success',
+              id: 'tenant.switcher.apps.added',
+              params: { app: name },
+            })
+          );
+          setMenuOpen(false);
+          router.push(home);
+        }
+      } finally {
+        adding.current = false;
+        setAppBusy(false);
+        setAddingApp(null);
       }
-      setAppBusy(false);
     },
     [dispatch, router]
   );
@@ -155,6 +170,8 @@ export function TenantSwitcherMenu({
   return (
     <>
       <MLMenu
+        open={menuOpen}
+        onOpenChange={setMenuOpen}
         ariaLabel={t('tenant.switcher.title')}
         triggerLabel={t('tenant.switcher.trigger', { name: active.name })}
         className={className}
@@ -228,10 +245,24 @@ export function TenantSwitcherMenu({
                 <MLMenuItem
                   key={`add-${item.code}`}
                   disabled={appBusy || !switcher.canSwitch}
-                  onSelect={() => void addApp(item.code, item.homePath)}
+                  aria-busy={addingApp === item.code || undefined}
+                  className={addingApp === item.code ? 'disabled:opacity-100' : undefined}
+                  onSelect={(event) => {
+                    event.preventDefault();
+                    void addApp(item.code, item.homePath, t(item.labelId));
+                  }}
                 >
-                  <Plus aria-hidden className="h-4 w-4 shrink-0 text-text-tertiary" />
-                  {t('tenant.switcher.apps.add', { app: t(item.labelId) })}
+                  {addingApp === item.code ? (
+                    <MLSpinner />
+                  ) : (
+                    <Plus aria-hidden className="h-4 w-4 shrink-0 text-text-tertiary" />
+                  )}
+                  {t(
+                    addingApp === item.code
+                      ? 'tenant.switcher.apps.adding'
+                      : 'tenant.switcher.apps.add',
+                    { app: t(item.labelId) }
+                  )}
                 </MLMenuItem>
               ))}
             {apps.length > 1 && openAppName && (

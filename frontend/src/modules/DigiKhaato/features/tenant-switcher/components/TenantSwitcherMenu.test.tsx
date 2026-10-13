@@ -121,6 +121,32 @@ describe('step 4 — businesses you own and where you work', () => {
 });
 
 describe('step 4 — the owner adds and turns off apps', () => {
+  /** B24: the clicked Add row must stay visible and refuse repeats until the request settles. */
+  it('keeps the adding row visible, prevents duplicate enable calls and confirms success', async () => {
+    load([LIBRARY], { addable: [LENDING] });
+    let finish!: (value: ReturnType<typeof after>) => void;
+    authService.setAppRunning.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          finish = resolve;
+        })
+    );
+    renderWithProviders(<TenantSwitcherMenu rail caption="YourKhata" />);
+    await userEvent.click(screen.getByRole('button', { name: /Verma Finance/ }));
+    await userEvent.dblClick(screen.getByRole('menuitem', { name: 'Add Lending' }));
+    const adding = screen.getByRole('menuitem', { name: 'Adding Lending…' });
+    expect(adding).toBeVisible();
+    expect(adding).toBeDisabled();
+    expect(adding).toHaveAttribute('aria-busy', 'true');
+    expect(authService.setAppRunning).toHaveBeenCalledTimes(1);
+    finish(after([LIBRARY, LENDING], 'library'));
+    await waitFor(() => expect(push).toHaveBeenCalledWith('/lending'));
+    expect(screen.queryByRole('menu')).toBeNull();
+    expect(store.getState().snackbar).toMatchObject({
+      id: 'tenant.switcher.apps.added',
+      params: { app: 'Lending' },
+    });
+  });
   it('offers an app the plan has, runs it and opens its home', async () => {
     load([LIBRARY], { addable: [LENDING] });
     authService.setAppRunning.mockResolvedValue(after([LIBRARY, LENDING], 'library'));
@@ -128,7 +154,7 @@ describe('step 4 — the owner adds and turns off apps', () => {
     await userEvent.click(screen.getByRole('button', { name: /Verma Finance/ }));
     await userEvent.click(await screen.findByRole('menuitem', { name: 'Add Lending' }));
     await waitFor(() => expect(authService.setAppRunning).toHaveBeenCalledWith('lending', true));
-    await waitFor(() => expect(authService.switchApp).toHaveBeenCalledWith('lending'));
+    await waitFor(() => expect(push).toHaveBeenCalledWith('/lending'));
   });
 
   it('turns the open app off for the business, after saying what that means', async () => {

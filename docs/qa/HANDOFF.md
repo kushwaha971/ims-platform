@@ -10,12 +10,12 @@ owner asks.
 ## Status (13 Oct 2026)
 
 **Done and pushed** (each has a commit naming it — `git log --grep "B26"` etc.):
-B1, B2, B3, B4, B5, B6, B7, B8, B9, B10, B11, B12, B13, B14, B15, B16, B17, B18, B19, B20, B21, B22, B23, B25, B26, B27–B35,
+B1, B2, B3, B4, B5, B6, B7, B8, B9, B10, B11, B12, B13, B14, B15, B16, B17, B18, B19, B20, B21, B22, B23, B24, B25, B26, B27–B35,
 B44, B45, B46, B47, B48, B49, B50, B51, F1, F2, F4, F6, F8, F10 (parts A and B),
 F12, FB4, and DEC-019 (each app keeps its own money).
 
 **Next, in this order:**
-1. P2 bugs: B24, B36, B37, B38, B39,
+1. P2 bugs: B36, B37, B38, B39,
    B40, B41, B42, B43.
 2. P2 features: F3 (advance applied at renewal), F5, F7, F9, F11, F13;
    owner-editable message templates; per-app wording (no "You gave / You got"
@@ -163,6 +163,21 @@ Update the "Done" list in this file in the same commit as each item.
   sets of screenshots were read. Types, changed-file ESLint, locales, build
   and unchanged bundle limits pass. Full frontend: 3,984 passed and the same
   three landing-page failures. Backend source remains unchanged.
+
+- B24: adding Library/Lending closed the menu immediately, leaving no progress
+  or success confirmation. Three regression cases failed first. The shared
+  menu supports controlled opening and cancellable selection; Add app keeps
+  its row visible with a spinner and disables repeat submissions until the
+  request finishes. Success closes the menu, shows a localized confirmation
+  and navigates; route sync owns the app switch as in B21. All 33 targeted
+  tests pass. `e2e/add-app-look.mjs` passes 30 checks at 1280/360 px: progress
+  appears within 2–7 ms, double clicks enable each app once, and confirmation
+  is visible. All eight loading/success screenshots were read. The auth
+  harness also passes its 30 checks with two calls per ordinary app switch
+  and no RSC 5xx. Types, changed-file ESLint, locales, build and bundle gates
+  pass; 41 exceeded limits use measured + 0.5 KB with a dated note for about
+  0.2 KB of shared menu/copy. Full frontend: 3,987 passed and the same three
+  landing-page failures. Backend source is unchanged.
 
 ## How each item is done
 

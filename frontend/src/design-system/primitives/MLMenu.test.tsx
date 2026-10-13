@@ -42,6 +42,33 @@ describe('placeMenu', () => {
 });
 
 describe('MLMenu', () => {
+  /** B24: async commands need a cancellable selection so their progress row remains visible. */
+  it('keeps a menu open when the item cancels default closing', async () => {
+    render(
+      <MLMenu trigger="Open" ariaLabel="Things">
+        <MLMenuItem onSelect={(event) => event?.preventDefault()}>Add app</MLMenuItem>
+      </MLMenu>
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'Open' }));
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Add app' }));
+    expect(screen.getByRole('menu')).toBeVisible();
+  });
+
+  /** A completed async command must let its owner close the controlled menu. */
+  it('accepts a controlled open state for completion', () => {
+    const { rerender } = render(
+      <MLMenu trigger="Open" ariaLabel="Things" open onOpenChange={() => undefined}>
+        <MLMenuItem onSelect={() => undefined}>Add app</MLMenuItem>
+      </MLMenu>
+    );
+    expect(screen.getByRole('menu')).toBeVisible();
+    rerender(
+      <MLMenu trigger="Open" ariaLabel="Things" open={false} onOpenChange={() => undefined}>
+        <MLMenuItem onSelect={() => undefined}>Add app</MLMenuItem>
+      </MLMenu>
+    );
+    expect(screen.queryByRole('menu')).toBeNull();
+  });
   it('renders its panel outside the trigger’s container', async () => {
     render(
       <div data-testid="rail" style={{ overflow: 'auto' }}>

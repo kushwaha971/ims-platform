@@ -17,6 +17,8 @@
   "tenant.switcher.add": "नया व्यापार जोड़ें",
   "tenant.switcher.apps": "ऐप्स",
   "tenant.switcher.apps.add": "{app} जोड़ें",
+  "tenant.switcher.apps.added": "{app} जोड़ दिया गया",
+  "tenant.switcher.apps.adding": "{app} जोड़ रहे हैं…",
   "tenant.switcher.apps.leave": "{app} छोड़ें",
   "tenant.switcher.apps.leave.body": "यहाँ आपको {app} नहीं दिखेगा। आपके बाकी ऐप बने रहेंगे, और मालिक आपको फिर जोड़ सकते हैं।",
   "tenant.switcher.apps.leave.title": "{business} में {app} छोड़ें?",

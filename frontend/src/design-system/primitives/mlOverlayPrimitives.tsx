@@ -21,8 +21,8 @@
  *    so keyboard and screen-reader focus cannot leave the dialog anyway);
  *  - no nested-overlay stack (nothing in Sprints 1–3 opens a dialog from a
  *    dialog; a second one would need a depth counter for the scroll lock);
- *  - the menu closes on choosing an item, on outside pointerdown and on Escape,
- *    and does not implement typeahead.
+ *  - the menu closes on choosing an item unless its selection is cancelled,
+ *    on outside pointerdown and on Escape, and does not implement typeahead.
  */
 
 import {
@@ -448,6 +448,8 @@ export interface MLMenuProps {
   readonly children: ReactNode;
   readonly align?: 'start' | 'end';
   readonly className?: string;
+  readonly open?: boolean;
+  readonly onOpenChange?: (open: boolean) => void;
 }
 
 /** The gutter a menu keeps from every edge of the screen. */
@@ -506,9 +508,19 @@ export function MLMenu({
   children,
   align = 'start',
   className,
+  open: controlledOpen,
+  onOpenChange,
 }: Readonly<MLMenuProps>): React.JSX.Element {
   const id = useId();
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = controlledOpen ?? internalOpen;
+  const setOpen = useCallback(
+    (next: boolean) => {
+      if (controlledOpen === undefined) setInternalOpen(next);
+      onOpenChange?.(next);
+    },
+    [controlledOpen, onOpenChange]
+  );
   const triggerRef = useRef<HTMLButtonElement | null>(null);
   const listRef = useRef<HTMLDivElement | null>(null);
   const [place, setPlace] = useState<MenuPlace | null>(null);
@@ -540,7 +552,7 @@ export function MLMenu({
     };
     document.addEventListener('pointerdown', onPointerDown);
     return () => document.removeEventListener('pointerdown', onPointerDown);
-  }, [open]);
+  }, [open, setOpen]);
 
   useEffect(() => {
     if (!open) return;
@@ -548,34 +560,37 @@ export function MLMenu({
     items[0]?.focus();
   }, [open]);
 
-  const onKeyDown = useCallback((event: KeyboardEvent<HTMLDivElement>) => {
-    const list = listRef.current;
-    if (!list) return;
-    if (event.key === 'Escape' || event.key === 'Tab') {
-      setOpen(false);
-      triggerRef.current?.focus();
-      if (event.key === 'Escape') event.preventDefault();
-      return;
-    }
-    const items = focusableWithin(list);
-    if (items.length === 0) return;
-    const index = items.findIndex((node) => node === document.activeElement);
-    const last = items.length - 1;
-    let next = index;
-    if (event.key === 'ArrowDown') next = index >= last ? 0 : index + 1;
-    else if (event.key === 'ArrowUp') next = index <= 0 ? last : index - 1;
-    else if (event.key === 'Home') next = 0;
-    else if (event.key === 'End') next = last;
-    else return;
-    event.preventDefault();
-    items[next]?.focus();
-  }, []);
+  const onKeyDown = useCallback(
+    (event: KeyboardEvent<HTMLDivElement>) => {
+      const list = listRef.current;
+      if (!list) return;
+      if (event.key === 'Escape' || event.key === 'Tab') {
+        setOpen(false);
+        triggerRef.current?.focus();
+        if (event.key === 'Escape') event.preventDefault();
+        return;
+      }
+      const items = focusableWithin(list);
+      if (items.length === 0) return;
+      const index = items.findIndex((node) => node === document.activeElement);
+      const last = items.length - 1;
+      let next = index;
+      if (event.key === 'ArrowDown') next = index >= last ? 0 : index + 1;
+      else if (event.key === 'ArrowUp') next = index <= 0 ? last : index - 1;
+      else if (event.key === 'Home') next = 0;
+      else if (event.key === 'End') next = last;
+      else return;
+      event.preventDefault();
+      items[next]?.focus();
+    },
+    [setOpen]
+  );
 
-  const onToggle = useCallback(() => setOpen((value) => !value), []);
+  const onToggle = useCallback(() => setOpen(!open), [open, setOpen]);
   const close = useCallback(() => {
     setOpen(false);
     triggerRef.current?.focus();
-  }, []);
+  }, [setOpen]);
 
   return (
     <div className={cn('relative', className)}>
@@ -634,7 +649,9 @@ export function MLMenu({
 }
 
 export interface MLMenuItemProps {
-  readonly onSelect: () => void;
+  /** Cancel default closing while an asynchronous command shows progress. */
+  readonly onSelect: (event: Event) => void;
+  readonly 'aria-busy'?: boolean;
   readonly disabled?: boolean;
   readonly selected?: boolean;
   readonly children: ReactNode;
@@ -647,6 +664,7 @@ export function MLMenuItem({
   selected,
   children,
   className,
+  'aria-busy': busy,
 }: Readonly<MLMenuItemProps>): React.JSX.Element {
   const closeMenu = useContext(MenuCloseContext);
   return (
@@ -655,9 +673,11 @@ export function MLMenuItem({
       role="menuitem"
       disabled={disabled}
       aria-current={selected ? 'true' : undefined}
+      aria-busy={busy}
       onClick={() => {
-        closeMenu?.();
-        onSelect();
+        const event = new Event('menuitemselect', { cancelable: true });
+        onSelect(event);
+        if (!event.defaultPrevented) closeMenu?.();
       }}
       className={cn(
         'ds-body-base-regular flex min-h-9 w-full items-center gap-3 rounded-control px-3 py-2 text-left',

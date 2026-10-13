@@ -17,6 +17,8 @@
   "tenant.switcher.add": "Add a business",
   "tenant.switcher.apps": "Apps",
   "tenant.switcher.apps.add": "Add {app}",
+  "tenant.switcher.apps.added": "{app} added",
+  "tenant.switcher.apps.adding": "Adding {app}…",
   "tenant.switcher.apps.leave": "Leave {app}",
   "tenant.switcher.apps.leave.body": "You will no longer see {app} here. Your other apps stay, and the owner can add you back.",
   "tenant.switcher.apps.leave.title": "Leave {app} at {business}?",
