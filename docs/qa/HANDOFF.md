@@ -11,12 +11,11 @@ owner asks.
 
 **Done and pushed** (each has a commit naming it — `git log --grep "B26"` etc.):
 B1, B2, B3, B4, B5, B6, B7, B8, B9, B10, B11, B12, B13, B14, B15, B16, B17, B18, B19, B20, B21, B22, B23, B24, B25, B26, B27–B35,
-B36, B37, B38, B44, B45, B46, B47, B48, B49, B50, B51, F1, F2, F4, F6, F8, F10 (parts A and B),
+B36, B37, B38, B39, B44, B45, B46, B47, B48, B49, B50, B51, F1, F2, F4, F6, F8, F10 (parts A and B),
 F12, FB4, and DEC-019 (each app keeps its own money).
 
 **Next, in this order:**
-1. P2 bugs: B39,
-   B40, B41, B42, B43.
+1. P2 bugs: B40, B41, B42, B43.
    Apply the owner's additional [One Person, One Workspace requirements](one-person-workspace.md)
    throughout these fixes, then complete a dedicated UX16 pass across Library,
    Lending, Shop customer/supplier and Udhaar book person pages before the
@@ -254,6 +253,21 @@ Update the "Done" list in this file in the same commit as each item.
   same vocabulary failure. The final quantity-explanation adjustment and its
   extra regression were checked with the 32 targeted backend cases after that
   full run; the stock decision and writes were unchanged by that adjustment.
+
+- B39 (14 Oct) was already closed by DEC-019's accepted consequence in
+  `docs/DECISIONS.md`: an Udhaar opening balance is settled with You got in
+  that book, and is never allocated by a Shop receipt. No financial change or
+  artificial failing test was made. `e2e/opening-book-look.mjs` creates a
+  ₹2,300.50 opening and a separate ₹100 Shop invoice; Shop's allocation list
+  contains only its invoice. At 1280/360 px it shows each book separately,
+  settles the opening through the real You got drawer without a document
+  reload, and verifies Main ₹0 while Shop remains ₹100. All six screenshots
+  were read; no overflow or browser errors. All 47 existing book-page/list/
+  bucket tests pass. Application source and dependencies are unchanged after
+  B38; retain its types/lint/locales/build/bundle and full-suite results.
+  The party header's as-of/record dates lag the IST business date at the UTC
+  midnight boundary in these screenshots; this is recorded for UX18's date
+  freshness audit, not claimed fixed by this verification.
 
 ## How each item is done
 

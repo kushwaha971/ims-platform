@@ -29,3 +29,11 @@ unnecessary reloads while doing ordinary work.
 Apply these requirements during existing bug and feature work, then complete
 an explicit cross-module audit. Follow HANDOFF.md's test-first, screenshot,
 gate and per-item commit workflow. UX18 remains pending until verified.
+
+## Observation to verify during the audit
+
+B39's 14 Oct live screenshots show a party header saying "as of 13/10/2026"
+and record dates on the 13th beside a bill/repayment dated 14/10/2026 in IST.
+Audit the timestamp/date provenance and business-timezone formatting so fresh
+balances carry the correct date. B39's separate-book settlement was verified;
+this date-label issue remains pending.
