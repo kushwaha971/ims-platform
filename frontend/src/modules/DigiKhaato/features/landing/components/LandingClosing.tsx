@@ -193,7 +193,7 @@ function LandingFooterBase() {
   return (
     <UbBox as="footer" className="border-t border-border-hairline bg-surface-subtle">
       <UbBox
-        className={`${LANDING_CONTAINER} grid grid-cols-2 gap-x-8 gap-y-8 py-10 md:grid-cols-[minmax(0,2fr)_repeat(2,minmax(0,1fr))] md:py-12`}
+        className={`${LANDING_CONTAINER} grid grid-cols-2 gap-x-8 gap-y-8 py-10 md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1.4fr)] md:py-12`}
       >
         <UbStack gap={4} align="start" className="col-span-2 md:col-span-1">
           <UbLogo variant="full" size="md" label="YourKhata" />
@@ -207,18 +207,30 @@ function LandingFooterBase() {
           </UbText>
           <UbStack as="ul" gap={2}>
             <FooterLink href="/solutions">{t('landing.footer.solutions')}</FooterLink>
-            {landingAnchors().map((anchor) => (
+            {landingAnchors().filter((anchor) => anchor.href !== '#faq').map((anchor) => (
               <FooterLink key={anchor.href} href={anchor.href}>
                 {t(anchor.key)}
               </FooterLink>
             ))}
           </UbStack>
         </UbBox>
-        <UbBox as="nav" aria-label={t('landing.footer.account')}>
+        <UbBox as="nav" aria-label={t('landing.footer.contactSupport')}>
           <UbText as="h2" variant="inherit" className="ds-body-s-semibold mb-3">
-            {t('landing.footer.account')}
+            {t('landing.footer.contactSupport')}
           </UbText>
           <UbStack as="ul" gap={2}>
+            <UbBox as="li">
+              <UbLink
+                href="tel:+919794620535"
+                tone="secondary"
+                underline={false}
+                className="inline-flex min-h-8 items-center gap-2 whitespace-nowrap hover:text-text-primary hover:underline"
+              >
+                <Phone aria-hidden="true" className="h-4 w-4 shrink-0" />
+                +91-9794620535
+              </UbLink>
+            </UbBox>
+            <FooterLink href="#faq">{t('landing.nav.faq')}</FooterLink>
             <FooterLink href={ROUTES.SIGNUP}>{t('landing.footer.signup')}</FooterLink>
             <FooterLink href={ROUTES.LOGIN}>{t('landing.nav.login')}</FooterLink>
           </UbStack>
@@ -239,15 +251,6 @@ function LandingFooterBase() {
             className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#0A66C2] text-white transition-opacity hover:opacity-80"
           >
             <Linkedin aria-hidden="true" className="h-4 w-4" />
-          </UbLink>
-          <UbLink
-            href="tel:+919794620535"
-            tone="secondary"
-            underline={false}
-            className="inline-flex min-h-8 items-center gap-2 hover:text-text-primary hover:underline"
-          >
-            <Phone aria-hidden="true" className="h-4 w-4" />
-            +91-9794620535
           </UbLink>
         </UbStack>
         <UbText variant="body-sm" tone="tertiary">
