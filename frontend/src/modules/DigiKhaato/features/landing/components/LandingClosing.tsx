@@ -2,7 +2,7 @@
 
 import { memo } from 'react';
 
-import { ArrowRight, Facebook, Instagram, Linkedin, MessageCircle, Phone } from 'lucide-react';
+import { ArrowRight, Facebook, Instagram, Linkedin, Phone } from 'lucide-react';
 
 import {
   UbActionLink,
@@ -17,7 +17,7 @@ import {
 import { useTranslation } from 'src/hooks/useTranslation';
 import { ROUTES } from 'src/routes';
 
-import { FACEBOOK_URL, INSTAGRAM_URL, LINKEDIN_URL, WHATSAPP_CONTACT_URL } from '../config/contact';
+import { FACEBOOK_URL, INSTAGRAM_URL, LINKEDIN_URL } from '../config/contact';
 import { FAQ_MODULE_SCOPE, faqAnswerKey, faqIds, faqQuestionKey } from '../config/faq';
 import { ALL_MODULES_VISIBLE } from '../config/modules';
 import { SHOW_PRICING } from '../config/pricing';
@@ -268,18 +268,6 @@ function LandingFooterBase() {
               className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full sm:h-8 sm:w-8 bg-[#C13584] text-white transition-opacity hover:opacity-80"
             >
               <Instagram aria-hidden="true" className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-            </UbLink>
-            <UbLink
-              href={WHATSAPP_CONTACT_URL}
-              aria-label="Contact YourKhata on WhatsApp"
-              title="WhatsApp"
-              underline={false}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="relative inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full sm:h-8 sm:w-8 bg-[#128C7E] text-white transition-opacity hover:opacity-80"
-            >
-              <MessageCircle aria-hidden="true" className="h-4 w-4 sm:h-5 sm:w-5" />
-              <Phone aria-hidden="true" className="absolute h-2 w-2 sm:h-2.5 sm:w-2.5" />
             </UbLink>
           </UbStack>
         </UbBox>
