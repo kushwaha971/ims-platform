@@ -366,6 +366,12 @@ describe('the landing page JSON-LD', () => {
     expect(node('Organization')).toMatchObject({
       name: 'YourKhata',
       url: HOME,
+      telephone: '+91-9794620535',
+      sameAs: [
+        'https://www.linkedin.com/company/yourkhata',
+        'https://www.facebook.com/profile.php?id=61595207827417',
+        'https://www.instagram.com/yourkhata/',
+      ],
       logo: { url: 'https://yourkhata.com/icons/icon-512.png', width: 512, height: 512 },
     });
     expect(node('WebSite')).toMatchObject({ name: 'YourKhata', url: HOME });

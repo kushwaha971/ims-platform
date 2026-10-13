@@ -1,3 +1,4 @@
+import { PUBLIC_PHONE, PUBLIC_SOCIAL_PROFILES } from '../config/contact';
 import { faqAnswerKey, faqIds, faqQuestionKey } from '../config/faq';
 import { LANDING_DESCRIPTION, LOGO_IMAGE } from '../config/seo';
 
@@ -128,6 +129,8 @@ export const buildLandingJsonLd = ({
         '@id': organizationId,
         name: appName,
         url: home,
+        telephone: PUBLIC_PHONE,
+        sameAs: PUBLIC_SOCIAL_PROFILES,
         logo: {
           '@type': 'ImageObject',
           url: `${siteUrl}${LOGO_IMAGE.url}`,

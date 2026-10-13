@@ -2,7 +2,7 @@
 
 import { memo } from 'react';
 
-import { ArrowRight, Linkedin, Phone } from 'lucide-react';
+import { ArrowRight, Facebook, Instagram, Linkedin, MessageCircle, Phone } from 'lucide-react';
 
 import {
   UbActionLink,
@@ -17,6 +17,7 @@ import {
 import { useTranslation } from 'src/hooks/useTranslation';
 import { ROUTES } from 'src/routes';
 
+import { FACEBOOK_URL, INSTAGRAM_URL, LINKEDIN_URL, WHATSAPP_CONTACT_URL } from '../config/contact';
 import { FAQ_MODULE_SCOPE, faqAnswerKey, faqIds, faqQuestionKey } from '../config/faq';
 import { ALL_MODULES_VISIBLE } from '../config/modules';
 import { SHOW_PRICING } from '../config/pricing';
@@ -234,9 +235,9 @@ function LandingFooterBase() {
             </UbBox>
             <FooterLink href="#faq">{t('landing.nav.faq')}</FooterLink>
           </UbStack>
-          <UbStack direction="row" align="center" gap={3} className="mt-4" wrap>
+          <UbStack direction="row" align="center" gap={2} className="mt-4" wrap>
             <UbLink
-              href="https://www.linkedin.com/company/yourkhata"
+              href={LINKEDIN_URL}
               aria-label="YourKhata on LinkedIn"
               title="LinkedIn"
               underline={false}
@@ -245,6 +246,40 @@ function LandingFooterBase() {
               className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#0A66C2] text-white transition-opacity hover:opacity-80"
             >
               <Linkedin aria-hidden="true" className="h-4 w-4" />
+            </UbLink>
+            <UbLink
+              href={FACEBOOK_URL}
+              aria-label="YourKhata on Facebook"
+              title="Facebook"
+              underline={false}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#1877F2] text-white transition-opacity hover:opacity-80"
+            >
+              <Facebook aria-hidden="true" className="h-4 w-4" />
+            </UbLink>
+            <UbLink
+              href={INSTAGRAM_URL}
+              aria-label="YourKhata on Instagram"
+              title="Instagram"
+              underline={false}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#C13584] text-white transition-opacity hover:opacity-80"
+            >
+              <Instagram aria-hidden="true" className="h-4 w-4" />
+            </UbLink>
+            <UbLink
+              href={WHATSAPP_CONTACT_URL}
+              aria-label="Contact YourKhata on WhatsApp"
+              title="WhatsApp"
+              underline={false}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="relative inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#128C7E] text-white transition-opacity hover:opacity-80"
+            >
+              <MessageCircle aria-hidden="true" className="h-5 w-5" />
+              <Phone aria-hidden="true" className="absolute h-2.5 w-2.5" />
             </UbLink>
           </UbStack>
         </UbBox>
