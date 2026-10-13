@@ -22,44 +22,19 @@
  *     eats a click on the page beneath it; the toast itself turns them back on
  *     so its dismiss button and action are reachable by mouse and by keyboard.
  *
- * ── CR-2026-09-19-G: WHERE THE VIEWPORT IS ANCHORED ─────────────────────────
- * It was `bottom-20` on a phone and `md:bottom-6` above, and it sat on top of
- * whatever was already at the bottom of the page — the onboarding wizard's
- * sticky Continue bar, and the `(auth)` footer's legal links and language
- * picker. `bottom-20` was itself a hard-coded guess at the height of a
- * `UbBottomNav` that does not exist yet, which is the shape of the bug: a
- * number per screen, in the toast.
- *
- * It is now `bottom-toast`, which resolves to
- *
- *     calc(var(--ub-bottom-inset) + env(safe-area-inset-bottom, 0px) + gap)
- *
- * `--ub-bottom-inset` is published by `UbBottomBar` (see
- * src/hooks/useBottomInset.ts) and is `0px` on a screen with nothing at the
- * bottom, so the toast keeps its safe-area clearance on a phone and clears the
- * furniture everywhere else. The gap is 16 px, 24 px from `md`.
- *
- * ── AND WHY IT IS STILL CENTRED AT 1280 ─────────────────────────────────────
- * The review asked whether the toast should move to bottom-RIGHT from `md`,
- * where there is room beside the content column. It should not, and the reason
- * is in this codebase rather than in taste: from `sm` up, this product
- * right-aligns the primary action of every sticky bottom bar
- * (`OnboardingStepActions` is `sm:justify-end`, `UbPageShell`'s footer row is
- * the same). Bottom-right at `md` would park the toast — and its dismiss
- * button — directly above Continue / Save at exactly the widths where the
- * corner was supposed to be the empty one, trading an overlap for a mis-tap
- * next to the primary action. Centred keeps it over the content column it is
- * talking about (`max-w-[420px]`, against a `measure` page or a 400–560 px form),
- * which is also where the eye already is after a submit. The anchor is the
- * same at every width; only the inset changes, and that is the property the
- * next screen inherits.
+ * QA B19 (13 Oct 2026): on phones, `bottom-toast` clears the current
+ * bottom furniture through `--ub-bottom-inset`, including navigation, a FAB,
+ * or the editor's action bar. From lg, the toast sits at the right, below
+ * the actual page header: `useToastTop` follows wrapping, resize, scrolling
+ * and navigation so a fixed guess cannot cover a title or its actions.
  *
  * As with every stand-in: the token-backed classes, the ARIA and the keyboard
  * behaviour, and nothing else. Product behaviour belongs in `UbSnackbar`.
  */
 
-import { forwardRef, type HTMLAttributes, type ReactNode } from 'react';
+import { forwardRef, type CSSProperties, type HTMLAttributes, type ReactNode } from 'react';
 
+import { useToastTop } from 'src/hooks/useToastTop';
 import { cn } from 'src/utils/cn';
 
 export type MLToastPoliteness = 'polite' | 'assertive';
@@ -72,17 +47,19 @@ export interface MLToasterProps extends HTMLAttributes<HTMLDivElement> {
 }
 
 export const MLToaster = forwardRef<HTMLDivElement, MLToasterProps>(function MLToaster(
-  { politeness = 'polite', className, children, ...rest },
+  { politeness = 'polite', className, children, style, ...rest },
   ref
 ) {
+  const top = useToastTop(Boolean(children));
   return (
     <div
       ref={ref}
       className={cn(
-        // BrandHub CustomerSnackbar: fixed, 25 px from the top, centred.
-        'pointer-events-none fixed inset-x-0 top-[25px] z-[2000] px-4',
+        'pointer-events-none fixed inset-x-0 bottom-toast z-[2000] px-4',
+        'lg:bottom-auto lg:left-auto lg:right-0 lg:top-[var(--ub-toast-top)] lg:w-[452px]',
         className
       )}
+      style={{ ...style, '--ub-toast-top': `${top}px` } as CSSProperties}
       {...rest}
     >
       {/* Both regions are always in the DOM; only their contents change. They

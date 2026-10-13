@@ -111,7 +111,7 @@ the render props.
 | A quantity with its unit | `UbQuantityInput` (`decimals` = `unit.allow_decimal ? 3 : 0`, `signed` for "Adjust by"; the value stays a string) |
 | Editable document lines — invoice, purchase, adjustment | `UbLineItemsEditor` (caller owns `useFieldArray({ keyName: 'key' })`; one `Controller` per cell; Enter/↑↓/Alt+N/Alt+Backspace/Ctrl+Enter; cards below `md` by default). Wide invoice/purchase forms use `tableFrom={1536}` to fit all fields beside the totals panel without sideways scrolling (QA B17, 13 Oct 2026). Follows the BrandHub table row + mobile card form; INV-06 is the first caller |
 | A USB/Bluetooth barcode scanner outside a text field | `useScannerListener` in `src/hooks` |
-| Toasts | dispatch to the snackbar; it renders top-centre |
+| Toasts | dispatch to the snackbar; below the measured page header at desktop right, above the published bottom furniture inset on phones (QA B19, 13 Oct 2026) |
 | A failure's request id | `UbRequestId` — "Reference 3f2b…", label from `common.error.reference`; `UbEmptyState` / `UbSnackbar` / `UbDataGrid` error copy take `requestId` + `requestIdLabel` (the type requires the label with the id); a banner's text uses `formatRequestReference` |
 | A phone number on screen | `formatPhoneForDisplay` ("+91 98123 45678"); `tel:` hrefs and Copy use `toDialableNumber` ("+919812345678"), both in `src/utils/share.ts` |
 | Multi-line text with a character counter | `UbTextArea` (`counterLabel` takes an ICU string with `{count}`/`{max}`; used by bill header/footer and reminder templates) |

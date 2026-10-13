@@ -169,21 +169,16 @@ describe('the toast viewport reads the custom property', () => {
     return viewport;
   };
 
-  it('is anchored top-centre, 25 px down — BrandHub CustomerSnackbar', () => {
+  it('clears bottom furniture on mobile and uses the measured desktop header (QA B19)', () => {
     const viewport = toastViewport();
 
-    /* The owner moved it (Sep 2026): top-centre at every width, the way
-       BrandHub's snackbar sits, clear of every bottom bar by construction.
-       The bottom-inset arithmetic below is kept: `UbBottomBar` still
-       publishes its height and a bottom-anchored overlay can use it. */
-    expect(viewport.className).toContain('top-[25px]');
+    expect(viewport.className).toContain('bottom-toast');
+    expect(viewport.className).toContain('lg:top-[var(--ub-toast-top)]');
     // The offsets it used to carry. `bottom-20` was a guess at the height of a
     // `UbBottomNav` that does not exist yet — a number per screen, in the toast.
     expect(viewport.className).not.toContain('bottom-20');
     expect(viewport.className).not.toContain('md:bottom-6');
-    // Bottom-centre at every width is a decision, not an oversight: see
-    // mlToastPrimitives.tsx. Nothing may quietly re-anchor it to a corner.
-    expect(viewport.className).not.toContain('right-0');
+    expect(viewport.className).toContain('lg:right-0');
     expect(viewport.className).toContain('inset-x-0');
   });
 

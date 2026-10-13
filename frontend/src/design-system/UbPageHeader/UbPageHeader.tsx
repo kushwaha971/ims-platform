@@ -123,7 +123,7 @@ function UbPageHeaderBase({
      * body with it. The `<header>` element stays, because it is still the
      * page's banner to a screen reader.
      */
-    <header className={cn('flex flex-col gap-3', className)}>
+    <header data-ub-page-header="" className={cn('flex flex-col gap-3', className)}>
       {/* ── One row at every width (owner, 23 Sep 2026) ─────────────────────
           Title on the left, actions on the right — on a phone too. It was a
           column below `lg`, so a phone spent three lines on a title, a

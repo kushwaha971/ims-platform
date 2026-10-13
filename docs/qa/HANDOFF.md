@@ -10,12 +10,12 @@ owner asks.
 ## Status (13 Oct 2026)
 
 **Done and pushed** (each has a commit naming it — `git log --grep "B26"` etc.):
-B1, B2, B3, B4, B5, B6, B7, B8, B9, B10, B11, B12, B13, B14, B15, B16, B17, B18, B22, B23, B25, B26, B27–B35,
+B1, B2, B3, B4, B5, B6, B7, B8, B9, B10, B11, B12, B13, B14, B15, B16, B17, B18, B19, B22, B23, B25, B26, B27–B35,
 B44, B45, B46, B47, B48, B49, B50, B51, F1, F2, F4, F6, F8, F10 (parts A and B),
 F12, FB4, and DEC-019 (each app keeps its own money).
 
 **Next, in this order:**
-1. P2 bugs: B19, B20, B21 (auth call storm), B24, B36, B37, B38, B39,
+1. P2 bugs: B20, B21 (auth call storm), B24, B36, B37, B38, B39,
    B40, B41, B42, B43.
 2. P2 features: F3 (advance applied at renewal), F5, F7, F9, F11, F13;
    owner-editable message templates; per-app wording (no "You gave / You got"
@@ -116,6 +116,22 @@ Update the "Done" list in this file in the same commit as each item.
   node_modules path if needed. App manifests/lockfiles were not changed.
   Puppeteer must attach with `defaultViewport: null`: its default otherwise
   resizes the Playwright page and corrupts the layout measurements.
+
+- B19: a real customer-save toast covered the title at 1280/360 px and a
+  mobile top action. A new placement regression failed first. Mobile now uses
+  the existing bottom inset, clearing navigation, FAB and sticky action bars;
+  desktop is right-aligned below the measured page header, including wrapped
+  actions. The measurement follows resize, scrolling and header replacement,
+  with observers active only while a toast is present. The old top-centre
+  expectation and design-system documentation now follow B19's requested
+  positioning. All 23 targeted tests pass. `e2e/toast-placement-look.mjs`
+  passes 12 geometry/browser checks at 1280/360; before/after screenshots
+  were read. Types, changed-file ESLint, locales, build and bundle gates pass.
+  Header measurement adds about 0.3 KB to shared code; 36 exceeded limits use
+  measured + 0.5 KB with a dated note. Full frontend before a subsequent
+  footer-only rebase: 3,981 passed and the same three landing-page failures;
+  the affected landing tests were checked again afterward (34 passed, the
+  same three failed). The integrated build/budgets pass. Backend is unchanged.
 
 ## How each item is done
 
