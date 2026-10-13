@@ -2,7 +2,7 @@
 
 import { memo } from 'react';
 
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, Linkedin, Phone } from 'lucide-react';
 
 import {
   UbActionLink,
@@ -193,27 +193,13 @@ function LandingFooterBase() {
   return (
     <UbBox as="footer" className="border-t border-border-hairline bg-surface-subtle">
       <UbBox
-        className={`${LANDING_CONTAINER} grid gap-10 py-12 md:grid-cols-[minmax(0,2fr)_repeat(2,minmax(0,1fr))] md:py-16`}
+        className={`${LANDING_CONTAINER} grid grid-cols-2 gap-10 py-12 md:grid-cols-[minmax(0,2fr)_repeat(2,minmax(0,1fr))] md:py-16`}
       >
-        <UbStack gap={4} align="start">
+        <UbStack gap={4} align="start" className="col-span-2 md:col-span-1">
           <UbLogo variant="full" size="md" label="YourKhata" />
           <UbText variant="inherit" tone="tertiary" className="ds-body-base-regular max-w-xs">
             {t('landing.footer.tagline')}
           </UbText>
-          <UbStack gap={2} align="start">
-            <UbLink href="tel:+919794620535" tone="secondary" underline={false}>
-              +91-9794620535
-            </UbLink>
-            <UbLink
-              href="https://www.linkedin.com/company/yourkhata"
-              tone="secondary"
-              underline={false}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              LinkedIn
-            </UbLink>
-          </UbStack>
         </UbStack>
         <UbBox as="nav" aria-label={t('landing.footer.product')}>
           <UbText as="h2" variant="inherit" className="ds-body-s-semibold mb-3">
@@ -238,11 +224,36 @@ function LandingFooterBase() {
           </UbStack>
         </UbBox>
       </UbBox>
-      <UbBox className={`${LANDING_CONTAINER} border-t border-border-hairline py-6`}>
+      <UbStack
+        className={`${LANDING_CONTAINER} border-t border-border-hairline py-6 md:flex-row md:items-center md:justify-between`}
+        gap={5}
+      >
+        <UbStack direction="row" align="center" gap={4} wrap>
+          <UbLink
+            href="https://www.linkedin.com/company/yourkhata"
+            aria-label="YourKhata on LinkedIn"
+            title="LinkedIn"
+            underline={false}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-[#0A66C2] text-white transition-opacity hover:opacity-80"
+          >
+            <Linkedin aria-hidden="true" className="h-5 w-5" />
+          </UbLink>
+          <UbLink
+            href="tel:+919794620535"
+            tone="secondary"
+            underline={false}
+            className="inline-flex min-h-10 items-center gap-2 hover:text-text-primary hover:underline"
+          >
+            <Phone aria-hidden="true" className="h-4 w-4" />
+            +91-9794620535
+          </UbLink>
+        </UbStack>
         <UbText variant="body-sm" tone="tertiary">
           {t('landing.footer.copyright', { year: String(year) })}
         </UbText>
-      </UbBox>
+      </UbStack>
     </UbBox>
   );
 }
