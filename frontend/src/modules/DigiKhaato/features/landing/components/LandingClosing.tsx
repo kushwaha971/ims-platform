@@ -200,6 +200,20 @@ function LandingFooterBase() {
           <UbText variant="inherit" tone="tertiary" className="ds-body-base-regular max-w-xs">
             {t('landing.footer.tagline')}
           </UbText>
+          <UbStack gap={2} align="start">
+            <UbLink href="tel:+919794620535" tone="secondary" underline={false}>
+              +91-9794620535
+            </UbLink>
+            <UbLink
+              href="https://www.linkedin.com/company/yourkhata"
+              tone="secondary"
+              underline={false}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              LinkedIn
+            </UbLink>
+          </UbStack>
         </UbStack>
         <UbBox as="nav" aria-label={t('landing.footer.product')}>
           <UbText as="h2" variant="inherit" className="ds-body-s-semibold mb-3">
