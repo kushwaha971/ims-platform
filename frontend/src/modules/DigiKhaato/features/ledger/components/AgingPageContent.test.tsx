@@ -268,6 +268,18 @@ afterEach(() => {
 });
 
 describe('the report a merchant opens', () => {
+  it.each(['as_of=2026-09-01', 'tag=Camp+Area', 'type=payable&tag=Camp+Area'])(
+    'B36 keeps the selected headline scoped to the report: %s',
+    async (query) => {
+      // A whole-book position must not head a filtered/date-scoped table.
+      mockSearch = query;
+      agingService.getLedgerAging.mockImplementation(answer([RAMESH], RAMESH.amounts));
+      renderWithProviders(<AgingPageContent />);
+      const label = query.startsWith('type=payable') ? /You will give/ : /You will get/;
+      const tab = await screen.findByRole('tab', { name: label });
+      await waitFor(() => expect(tab).toHaveTextContent('₹1,600.00'));
+    }
+  );
   it("asks for today's receivables in the tenant's zone and shows the four buckets", async () => {
     /* The defaults are the report: "who owes me, and how old is it, as of
        now", oldest money first (§8). A default that asked for the payable
@@ -301,8 +313,8 @@ describe('the report a merchant opens', () => {
     expect(tileFigure('90+ days')).toHaveTextContent('₹1,200.00');
   });
 
-  it('puts the two positions on the tabs, and the other tab asks for payables', async () => {
-    /* The tabs ARE the position (the component's own docstring): "You will
+  it('puts the scoped position on the selected tab, and switching asks for payables', async () => {
+    /* The selected tab IS the scoped position: "You will
        get ₹4,900.00" is read and chosen in one glance. The defect this pins is
        the half-wired tab — a label that changes colour while the list keeps
        showing customers under the heading "You will give". */
@@ -312,10 +324,14 @@ describe('the report a merchant opens', () => {
     const get = await screen.findByRole('tab', { name: /You will get/ });
     const give = screen.getByRole('tab', { name: /You will give/ });
     await waitFor(() => expect(get).toHaveTextContent('₹4,900.00'));
-    expect(give).toHaveTextContent('₹1,850.50');
+    expect(give).not.toHaveTextContent('₹');
     expect(get).toHaveAttribute('aria-selected', 'true');
 
     await user.click(give);
+
+    // The selected side receives the scoped report's figure, not the summary cache.
+    await waitFor(() => expect(give).toHaveTextContent('₹4,900.00'));
+    expect(get).not.toHaveTextContent('₹');
 
     // `replace`, not `push`: switching sides is looking at one screen.
     expect(mockReplace).toHaveBeenCalledWith('?type=payable', { scroll: false });

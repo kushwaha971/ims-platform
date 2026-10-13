@@ -66,8 +66,8 @@ const PartyTagFilterLazy = dynamic(
  * FR-1 puts "You will get" and "You will give" on stat cards, and FR-3 puts a
  * Receivable · Payable switch under them. On a phone that is two rows saying
  * the same two words, and the second row is the one that does something. So
- * the two figures are the tab labels: the merchant reads their position and
- * picks a side in the same glance, and the list starts 90 px higher.
+ * the selected tab carries the report's own total: the merchant reads the
+ * same scoped position as the rows beneath it and picks a side in one glance.
  *
  * ── The four bucket totals are over the FILTERED set ─────────────────────
  * BR-5. With a tag applied, the cards answer "what is Camp Area owed, and how
@@ -198,13 +198,15 @@ export function AgingPageContent(): React.JSX.Element {
             <UbText as="span" variant="inherit" tone="inherit">
               {t(`ledger.aging.${kind}`)}
             </UbText>
-            <UbText as="span" variant="inherit" tone="inherit" className="ds-num-base-semibold">
-              {aging.summary ? formatInr(aging.summary[kind]) : '—'}
-            </UbText>
+            {kind === filters.kind && (
+              <UbText as="span" variant="inherit" tone="inherit" className="ds-num-base-semibold">
+                {aging.totals ? formatInr(aging.totals.total) : '—'}
+              </UbText>
+            )}
           </UbBox>
         ),
       })),
-    [t, aging.summary]
+    [t, filters.kind, aging.totals]
   );
 
   const emptyBook =

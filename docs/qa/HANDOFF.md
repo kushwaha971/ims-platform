@@ -11,11 +11,11 @@ owner asks.
 
 **Done and pushed** (each has a commit naming it — `git log --grep "B26"` etc.):
 B1, B2, B3, B4, B5, B6, B7, B8, B9, B10, B11, B12, B13, B14, B15, B16, B17, B18, B19, B20, B21, B22, B23, B24, B25, B26, B27–B35,
-B44, B45, B46, B47, B48, B49, B50, B51, F1, F2, F4, F6, F8, F10 (parts A and B),
+B36, B44, B45, B46, B47, B48, B49, B50, B51, F1, F2, F4, F6, F8, F10 (parts A and B),
 F12, FB4, and DEC-019 (each app keeps its own money).
 
 **Next, in this order:**
-1. P2 bugs: B36, B37, B38, B39,
+1. P2 bugs: B37, B38, B39,
    B40, B41, B42, B43.
 2. P2 features: F3 (advance applied at renewal), F5, F7, F9, F11, F13;
    owner-editable message templates; per-app wording (no "You gave / You got"
@@ -178,6 +178,19 @@ Update the "Done" list in this file in the same commit as each item.
   pass; 41 exceeded limits use measured + 0.5 KB with a dated note for about
   0.2 KB of shared menu/copy. Full frontend: 3,987 passed and the same three
   landing-page failures. Backend source is unchanged.
+
+- B36: DEC-019 already excludes Lending from this book, verified with a loan
+  alongside two opening debts. However, selecting an older report date showed
+  a ₹1,000 headline above ₹250 of rows at both widths. Three date/tag/payable
+  regressions failed first. The selected tab now uses the filtered report's
+  total, and the other side carries its amount when selected; today's cached
+  whole-book position no longer heads historical or filtered rows. All 35
+  targeted tests pass. `e2e/aging-scope-look.mjs` verifies headline, bucket and
+  row reconciliation for current/historical reports at 1280/360 px, with no
+  overflow/browser errors; all four final screenshots were read. Types,
+  changed-file ESLint, locales, build and unchanged bundle budgets pass.
+  Full frontend: 3,990 passed and the same three landing-page failures.
+  Backend source remains unchanged since its recorded full run.
 
 ## How each item is done
 
