@@ -221,6 +221,8 @@
   "purchases.supplier.noAccess": "You cannot search parties.",
   "purchases.supplier.noMatch": "No supplier matches. Add them in Parties as a supplier.",
   "purchases.supplier.results": "Suppliers",
+  "purchases.supplierState.fix": "Add the supplier's state",
+  "purchases.supplierState.missing": "The supplier's state is missing. GST uses your business's state until you add it.",
   "purchases.tab.all": "All",
   "purchases.tab.draft": "Drafts",
   "purchases.tab.label": "Bills by status",

@@ -1,5 +1,8 @@
 {
  "//": [
+  "13 Oct 2026, QA B20: plain invoice checklists and localized supplier-state",
+  "guidance add about 0.6 KB on bill routes. Only the 20 exceeded limits",
+  "are adjusted to measured gzip size + 0.5 KB.",
   "13 Oct 2026, QA B19: measuring the page header keeps desktop toasts below",
   "wrapped titles/actions; mobile toasts clear the existing bottom inset.",
   "This adds about 0.3 KB to shared code. Only the 36 exceeded limits are",
@@ -1351,8 +1354,8 @@
    "firstLoad": 308.3
   },
   "/purchases/debit-notes/[id]": {
-   "route": 65,
-   "firstLoad": 304
+   "route": 65.5,
+   "firstLoad": 304.5
   },
   "/purchases/debit-notes": {
    "route": 75,
@@ -1367,16 +1370,16 @@
    "firstLoad": 317.6
   },
   "/sales/challans/new": {
-   "route": 149.6,
-   "firstLoad": 388
+   "route": 150.1,
+   "firstLoad": 389.1
   },
   "/sales/challans/[id]/edit": {
-   "route": 149.6,
-   "firstLoad": 388
+   "route": 150.1,
+   "firstLoad": 389.1
   },
   "/purchases/orders/[id]": {
-   "route": 65,
-   "firstLoad": 304
+   "route": 65.5,
+   "firstLoad": 304.5
   },
   "/purchases/orders": {
    "route": 75,
@@ -1399,12 +1402,12 @@
    "firstLoad": 317.6
   },
   "/sales/orders/new": {
-   "route": 149.6,
-   "firstLoad": 388
+   "route": 150.1,
+   "firstLoad": 389.1
   },
   "/sales/orders/[id]/edit": {
-   "route": 149.6,
-   "firstLoad": 388
+   "route": 150.1,
+   "firstLoad": 389.1
   },
   "/parties": {
    "route": 109,
@@ -1415,12 +1418,12 @@
    "firstLoad": 336
   },
   "/sales/invoices/new": {
-   "route": 149.6,
-   "firstLoad": 388
+   "route": 150.1,
+   "firstLoad": 389.1
   },
   "/sales/invoices/[id]/edit": {
-   "route": 149.6,
-   "firstLoad": 388
+   "route": 150.1,
+   "firstLoad": 389.1
   },
   "/sales/invoices": {
    "route": 98,
@@ -1435,11 +1438,11 @@
    "firstLoad": 356
   },
   "/sales/estimates/new": {
-   "route": 149.6,
+   "route": 150.1,
    "firstLoad": 400
   },
   "/sales/estimates/[id]/edit": {
-   "route": 149.6,
+   "route": 150.1,
    "firstLoad": 400
   },
   "/sales/estimates/[id]": {
@@ -1587,8 +1590,8 @@
    "firstLoad": 296
   },
   "/purchases/bills/[id]": {
-   "route": 65,
-   "firstLoad": 304
+   "route": 65.5,
+   "firstLoad": 304.5
   },
   "/purchases/bills/[id]/edit": {
    "route": 149.7,

@@ -10,12 +10,12 @@ owner asks.
 ## Status (13 Oct 2026)
 
 **Done and pushed** (each has a commit naming it — `git log --grep "B26"` etc.):
-B1, B2, B3, B4, B5, B6, B7, B8, B9, B10, B11, B12, B13, B14, B15, B16, B17, B18, B19, B22, B23, B25, B26, B27–B35,
+B1, B2, B3, B4, B5, B6, B7, B8, B9, B10, B11, B12, B13, B14, B15, B16, B17, B18, B19, B20, B22, B23, B25, B26, B27–B35,
 B44, B45, B46, B47, B48, B49, B50, B51, F1, F2, F4, F6, F8, F10 (parts A and B),
 F12, FB4, and DEC-019 (each app keeps its own money).
 
 **Next, in this order:**
-1. P2 bugs: B20, B21 (auth call storm), B24, B36, B37, B38, B39,
+1. P2 bugs: B21 (auth call storm), B24, B36, B37, B38, B39,
    B40, B41, B42, B43.
 2. P2 features: F3 (advance applied at renewal), F5, F7, F9, F11, F13;
    owner-editable message templates; per-app wording (no "You gave / You got"
@@ -133,6 +133,22 @@ Update the "Done" list in this file in the same commit as each item.
   the affected landing tests were checked again afterward (34 passed, the
   same three failed). The integrated build/budgets pass. Backend is unchanged.
 
+- B20: the invoice's unexplained Rule 46 count and the supplier warning's raw
+  state code reproduced at 1280/360. Three regression tests failed first.
+  Invoice details now open a padded, bounded checklist naming each missing
+  field, its line where applicable, and whether it blocks issue or is a
+  recommendation. The supplier warning explains the tax assumption in English
+  and Hindi and links to the currently selected supplier's record; it hides
+  when that state has been filled. No financial calculation/API changed.
+  All 20 targeted tests pass. `e2e/invoice-guidance-look.mjs` passes 20 live
+  checks including opening the correct supplier at both widths; final four
+  screenshots were read. The corrected purchase fixture in `layout-look.mjs`
+  passes all 99 checks. Types, changed-file ESLint, locales, build and bundle
+  checks pass; 20 exceeded limits use measured + 0.5 KB with a dated note for
+  about 0.6 KB of bill guidance. Full frontend: 3,984 passed and the same three
+  landing-page failures; the final spacing change was checked with the build,
+  focused tests and live screenshots. Backend source is unchanged.
+
 ## How each item is done
 
 1. **Verify first** — reproduce on a live stack; some items are already fixed.
@@ -188,6 +204,9 @@ node e2e/<name>-look.mjs
 - Run the build/type checks separately from the full Jest suite: the party
   fetch lint test creates and removes temporary TypeScript probe files, which
   can disappear while a simultaneous build is checking them.
+- Purchase drafts use `party_id`, not `supplier_id` (the latter is ignored).
+  Purchase warnings are returned on save, not recomputed by a draft GET; save
+  through the UI to reproduce the missing-supplier-state warning.
 - No raw `div`/`span` in feature code; errors go through the global snackbar;
   nothing a merchant's customer receives names the product.
 - Commit messages end with the agent's own attribution lines; no model names.

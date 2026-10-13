@@ -7,6 +7,7 @@ import {
   UbDivider,
   UbField,
   UbInfoRow,
+  UbLink,
   UbMoneyInput,
   UbPanel,
   UbStack,
@@ -15,6 +16,7 @@ import {
   UbTextArea,
 } from 'src/design-system';
 import { useTranslation } from 'src/hooks/useTranslation';
+import { ROUTES } from 'src/routes';
 import { formatInr } from 'src/utils/money';
 
 import type { EngineResult } from '../../sales/view-model/taxEngine';
@@ -49,6 +51,8 @@ export function PurchaseBillTotalsPanel({
   const { watch, setValue } = form;
   const discountType = watch('discountType');
   const roundOff = watch('roundOffEnabled');
+  const supplierId = watch('partyId');
+  const supplierState = watch('partyStateCode');
   const row = (label: string, value: string) => (
     <UbInfoRow label={label} value={<UbText className="ds-num">{value}</UbText>} />
   );
@@ -116,11 +120,24 @@ export function PurchaseBillTotalsPanel({
         <UbText variant="caption" tone="tertiary">
           {t('purchases.totals.costHint')}
         </UbText>
-        {warnings.map((warning) => (
-          <UbText key={warning.code} variant="caption" tone="warning" role="status">
-            {warning.message}
-          </UbText>
-        ))}
+        {warnings.map((warning) =>
+          warning.code === 'supplier_state_unknown' ? (
+            supplierId && !supplierState ? (
+              <UbStack key={warning.code} gap={1} role="status">
+                <UbText variant="caption" tone="warning">
+                  {t('purchases.supplierState.missing')}
+                </UbText>
+                <UbLink href={`${ROUTES.PARTIES}/${supplierId}`} variant="body-sm">
+                  {t('purchases.supplierState.fix')}
+                </UbLink>
+              </UbStack>
+            ) : null
+          ) : (
+            <UbText key={warning.code} variant="caption" tone="warning" role="status">
+              {warning.message}
+            </UbText>
+          )
+        )}
         <UbField
           name="notes"
           label={t('purchases.editor.notes')}

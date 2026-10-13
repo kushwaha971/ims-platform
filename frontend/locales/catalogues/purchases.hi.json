@@ -221,6 +221,8 @@
   "purchases.supplier.noAccess": "आप पार्टियाँ नहीं खोज सकते।",
   "purchases.supplier.noMatch": "कोई सप्लायर नहीं मिला। पार्टियों में उन्हें सप्लायर के रूप में जोड़ें।",
   "purchases.supplier.results": "सप्लायर",
+  "purchases.supplierState.fix": "सप्लायर का राज्य जोड़ें",
+  "purchases.supplierState.missing": "सप्लायर का राज्य नहीं मिला। इसे जोड़ने तक GST की गणना आपके कारोबार के राज्य से होगी।",
   "purchases.tab.all": "सभी",
   "purchases.tab.draft": "ड्राफ्ट",
   "purchases.tab.label": "स्थिति के अनुसार बिल",

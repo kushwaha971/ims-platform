@@ -35,7 +35,7 @@ const invoice = await must('POST', '/sales/invoices', {
   party_id: person.id, lines: [{ item_id: item.id, qty: '2.5' }],
 }, owner.token);
 const bill = await must('POST', '/purchases/bills', {
-  supplier_id: person.id, lines: [{ item_id: item.id, qty: '2.5', unit_cost: '80.00' }],
+  party_id: person.id, lines: [{ item_id: item.id, qty: '2.5', unit_cost: '80.00' }],
 }, owner.token);
 const issued = await must('POST', `/sales/invoices/${invoice.id}/issue`, { version: invoice.version }, owner.token);
 const draft = await must('POST', '/sales/invoices', {
