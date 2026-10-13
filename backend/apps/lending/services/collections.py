@@ -426,7 +426,9 @@ def today_round(tenant: Any, route_id: Any = None) -> dict:
         if due_today + arrears <= ZERO and got <= ZERO:
             continue
         visit = visits.get(loan.id)
-        totals["due"] += due_today + arrears + got
+        # QA B12: figures already subtracts payments allocated to due instalments.
+        # Today's cash can also pay future instalments; adding it back invents debt.
+        totals["due"] += due_today + arrears
         totals["collected"] += got
         totals["stops"] += 1
         totals["done"] += 1 if (got > ZERO or visit is not None) else 0
@@ -469,7 +471,7 @@ def today_round(tenant: Any, route_id: Any = None) -> dict:
         "totals": {
             "due": f"{q2(totals['due']):.2f}",
             "collected": f"{q2(totals['collected']):.2f}",
-            "short": f"{q2(totals['due'] - totals['collected']):.2f}",
+            "short": f"{q2(totals['due']):.2f}",
             "stops": totals["stops"],
             "done": totals["done"],
         },

@@ -64,6 +64,49 @@ def test_three_missed_days_show_as_arrears_on_todays_round(book: dict) -> None:
     assert day["meta"]["stops"] == 1 and day["meta"]["collected"] == "0.00"
 
 
+@pytest.mark.parametrize(
+    ("first_due_offset", "paid", "due"),
+    [(1, "36.00", "0.00"), (0, "5.00", "7.00"), (-2, "40.00", "0.00")],
+)
+def test_today_counts_only_unpaid_due_instalments_not_advance_collections(
+    api_as: Any, lending_on: Any, first_due_offset: int, paid: str, due: str
+) -> None:
+    """QA B12: a payment of tomorrow's instalments must not become money to collect today,
+    and paying today's debt must reduce it once, without making the shortfall negative."""
+    client, _ = api_as(lending_on, role="owner")
+    today = tenant_today(lending_on)
+    first_due = today + dt.timedelta(days=first_due_offset)
+    made = client.post(
+        reverse("v1:lending-loans"),
+        {
+            "plan_type": "fixed_daily",
+            "principal": "120.00",
+            "frequency": "daily",
+            "instalment_count": 10,
+            "per_instalment_amount": "12.00",
+            "collection_weekdays": EVERY_DAY,
+            "disbursed_on": (min(today, first_due) - dt.timedelta(days=1)).isoformat(),
+            "first_due_on": first_due.isoformat(),
+            "party": {"name": "Advance Borrower", "mobile": "9820011224"},
+        },
+        format="json",
+        HTTP_IDEMPOTENCY_KEY="advance-loan",
+    )
+    assert made.status_code == 201, made.json()
+    loan = made.json()["data"]
+    collected = client.post(
+        _url("collections", loan),
+        {"amount": paid, "mode": "cash"},
+        format="json",
+        HTTP_IDEMPOTENCY_KEY="advance-collection",
+    )
+    assert collected.status_code == 201, collected.json()
+    round_data = client.get(reverse("v1:lending-today")).json()
+    assert round_data["meta"]["due"] == due
+    assert round_data["meta"]["collected"] == paid
+    assert round_data["meta"]["short"] == due
+
+
 def test_a_lump_sum_after_a_gap_clears_the_oldest_first_and_pays_ahead(book: dict) -> None:
     """₹2,500 = 3 missed days + today + 1 day ahead, said before it is recorded."""
     loan = book["loan"]
