@@ -383,9 +383,8 @@ def _collect_fees(ctx: Any, m: LibraryMembership, block: dict, charges: list) ->
     """One payment IN allocated to these fee charges, oldest first (FR-4)."""
     from apps.payments.services.record import record_payment
 
-    due = sum((Decimal(c.amount_due) for c in charges), ZERO)
-    if block["total"] > due:
-        raise ValidationFailed({"collect_fees": ["More than the fees due."]})
+    # QA F2 — any amount: part leaves the rest owed, more keeps the extra as the student's
+    # advance (the payment's unallocated remainder), which the next fee draws from.
     left = block["total"]
     allocations = []
     for charge in charges:
@@ -410,6 +409,37 @@ def _collect_fees(ctx: Any, m: LibraryMembership, block: dict, charges: list) ->
     return record_payment(ctx=ctx, payload=payload)["payment"]
 
 
+def _money_field(errors: Errors, data: dict, field: str) -> Decimal | None:
+    """An optional amount in rupees, two places, never negative; absent or zero is None."""
+    raw = data.get(field)
+    if raw in (None, ""):
+        return None
+    try:
+        value = q2(Decimal(str(raw)))
+    except Exception:  # noqa: BLE001
+        errors.add(field, "Enter an amount.")
+        return None
+    if value < ZERO:
+        errors.add(field, "Enter 0 or more.")
+        return None
+    return value if value > ZERO else None
+
+
+def _old_dues(errors: Errors, data: dict, today: dt.date) -> tuple[Decimal, dt.date] | None:
+    """QA F1 — `old_dues: {amount, on}`: what an existing student still owed on paper."""
+    raw = data.get("old_dues")
+    if raw in (None, {}):
+        return None
+    if not isinstance(raw, dict):
+        errors.add("old_dues", "Give the amount and the date.")
+        return None
+    amount = _money_field(errors, {"old_dues.amount": raw.get("amount")}, "old_dues.amount")
+    on = date(errors, {"old_dues.on": raw.get("on")}, "old_dues.on") or today
+    if on > today:
+        errors.add("old_dues.on", "Old dues cannot be dated in the future.")
+    return (amount, on) if amount is not None else None
+
+
 def _collect_deposit(ctx: Any, deposit: Any, block: dict) -> Any:
     from apps.payments.services.deposits import receive_deposit
 
@@ -427,10 +457,12 @@ def _collect_deposit(ctx: Any, deposit: Any, block: dict) -> Any:
     )["payment"]
 
 
-def _open_deposit(ctx: Any, m: LibraryMembership) -> Any:
+def _open_deposit(ctx: Any, m: LibraryMembership, at_least: Decimal | None = None) -> Any:
     from apps.payments.services.deposits import open_deposit
 
-    amount = Decimal(m.membership_type.deposit_amount)
+    # QA F1 — an existing student's deposit is what they actually handed over, even when
+    # the plan's figure has changed since.
+    amount = max(Decimal(m.membership_type.deposit_amount), at_least or ZERO)
     if amount <= ZERO:
         return None
     return open_deposit(
@@ -623,6 +655,14 @@ def enrol(*, ctx: Any, data: Any) -> dict:
     group = text(errors, data, "group_label", GROUP_LABEL_MAX)
     fees_block = _block(errors, data, "collect_fees")
     deposit_block = _block(errors, data, "collect_deposit")
+    # QA F1 — an existing student moved from the paper register: already paid till
+    # `valid_until`, so no fee is charged and no money is recorded today. A deposit they
+    # handed over long ago and any dues they still owe come in as what they are.
+    is_existing_student = data.get("existing_student") is True
+    deposit_held = _money_field(errors, data, "deposit_held") if is_existing_student else None
+    old_dues = _old_dues(errors, data, today) if is_existing_student else None
+    if is_existing_student and fees_block is not None:
+        errors.add("collect_fees", "An existing student has already paid; there is no fee today.")
     placement = _placement(ctx, data, errors)
     party = _party(ctx, data, errors)
     errors.raise_if_any()
@@ -663,12 +703,43 @@ def enrol(*, ctx: Any, data: Any) -> dict:
             details={"status": "active"},
         ) from None
     _guardian(ctx, party, data.get("guardian"))
-    admission = _fee(ctx, m, ChargeKind.ADMISSION_FEE, kind.admission_fee, "Admission", today)
-    fee = _fee(ctx, m, ChargeKind.MEMBERSHIP_FEE, kind.fee_amount, "Fee", today)
-    _period(ctx, m, PeriodKind.ENROL, on=today, fee=fee)
-    deposit = _open_deposit(ctx, m)
-    charges = [c for c in (admission, fee) if c is not None]
+    if is_existing_student:
+        admission = fee = None
+        dues = (
+            create_charge(
+                ctx=ctx,
+                membership=m,
+                kind=ChargeKind.OTHER,
+                amount=old_dues[0],
+                description=f"Old dues – {m.member_number}",
+                charge_date=old_dues[1],
+            )
+            if old_dues is not None
+            else None
+        )
+        _period(ctx, m, PeriodKind.ENROL, on=today, reason="Existing student")
+    else:
+        admission = _fee(ctx, m, ChargeKind.ADMISSION_FEE, kind.admission_fee, "Admission", today)
+        fee = _fee(ctx, m, ChargeKind.MEMBERSHIP_FEE, kind.fee_amount, "Fee", today)
+        dues = None
+        _period(ctx, m, PeriodKind.ENROL, on=today, fee=fee)
+    deposit = _open_deposit(ctx, m, at_least=deposit_held)
+    charges = [c for c in (admission, fee, dues) if c is not None]
     payments = []
+    if deposit_held is not None and deposit is not None:
+        from apps.payments.services.deposits import receive_deposit
+
+        # R37's opening deposit: an adjustment, so no cashbook or collection shows the
+        # paper-era money as today's — "Security held", with no receipt for today.
+        payments.append(
+            receive_deposit(
+                ctx=ctx,
+                deposit_id=deposit.id,
+                amount=str(deposit_held),
+                payment_date=start.isoformat() if start <= today else today.isoformat(),
+                opening=True,
+            )["payment"]
+        )
     if fees_block is not None:
         payments.append(_collect_fees(ctx, m, fees_block, charges))
     if deposit_block is not None:
@@ -703,11 +774,25 @@ def patch(*, ctx: Any, membership_id: Any, data: Any) -> LibraryMembership:
         changes["group_label"] = text(errors, data, "group_label", GROUP_LABEL_MAX)
     if "notes" in data:
         changes["notes"] = text(errors, data, "notes", 2000)
+    # QA F1 — "Joined" is editable after admission too (a register copied in with the
+    # wrong date); the audit row records the change like every other field.
+    start = m.starts_on
+    if "starts_on" in data:
+        start = date(errors, data, "starts_on")
+        if start is None:
+            errors.add("starts_on", "Enter the date they joined.")
+            start = m.starts_on
+        elif start < EARLIEST_START:
+            errors.add("starts_on", "Enter a date after 2000.")
+        else:
+            changes["starts_on"] = start
     if "valid_until" in data:
         until = date(errors, data, "valid_until")
-        if until is not None and until < m.starts_on:
+        if until is not None and until < start:
             errors.add("valid_until", "The end date is before the start date.")
         changes["valid_until"] = until
+    elif "starts_on" in changes and m.valid_until is not None and m.valid_until < start:
+        errors.add("starts_on", "They joined after their plan ends. Change the plan end too.")
     typed = _typed_number(errors, data) if "member_number" in data else None
     placement = _placement(ctx, data, errors)
     errors.raise_if_any()

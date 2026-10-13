@@ -31,8 +31,14 @@ const VALUES: EnrolFormValues = {
   shiftId: '',
   seatId: '',
   lockerLabel: '',
-  paymentMode: 'cash',
   collectNow: true,
+  lines: [{ mode: 'cash', upiApp: '', amount: '150.00', reference: '' }],
+  existingStudent: false,
+  startsOn: '',
+  validUntil: '',
+  depositHeld: '',
+  oldDuesAmount: '',
+  oldDuesOn: '',
 };
 
 describe('memberDisplay', () => {
@@ -68,6 +74,56 @@ describe('memberDisplay', () => {
     const owed = toEnrolBody({ ...VALUES, collectNow: false }, STUDENT, '2026-10-04');
     expect(owed.collect_fees).toBeUndefined();
     expect(owed.collect_deposit).toBeUndefined();
+  });
+
+  it('takes the fee as the merchant split it, and the deposit in the first line’s mode (QA F2)', () => {
+    const body = toEnrolBody(
+      {
+        ...VALUES,
+        lines: [
+          { mode: 'upi', upiApp: 'phonepe', amount: '100.00', reference: '' },
+          { mode: 'cash', upiApp: '', amount: '50.00', reference: '' },
+        ],
+      },
+      STUDENT,
+      '2026-10-04'
+    );
+    expect(body.collect_fees).toEqual({
+      mode_breakup: [
+        { mode: 'upi', amount: '100.00', upi_app: 'phonepe' },
+        { mode: 'cash', amount: '50.00' },
+      ],
+      payment_date: '2026-10-04',
+    });
+    expect(body.collect_deposit).toMatchObject({
+      mode_breakup: [{ mode: 'upi', amount: '500.00', upi_app: 'phonepe' }],
+    });
+  });
+
+  it('brings an existing student in with their dates and no money today (QA F1)', () => {
+    const body = toEnrolBody(
+      {
+        ...VALUES,
+        existingStudent: true,
+        startsOn: '2026-08-01',
+        validUntil: '2026-10-31',
+        depositHeld: '500.00',
+        oldDuesAmount: '300.00',
+        oldDuesOn: '2026-09-01',
+      },
+      STUDENT,
+      '2026-10-04'
+    );
+    expect(body).toMatchObject({
+      existing_student: true,
+      starts_on: '2026-08-01',
+      valid_until: '2026-10-31',
+      deposit_held: '500.00',
+      old_dues: { amount: '300.00', on: '2026-09-01' },
+    });
+    // No fee today and no money today: nothing to collect, even with "Collect now" on.
+    expect(body.collect_fees).toBeUndefined();
+    expect(body.collect_deposit).toBeUndefined();
   });
 
   it('reads the empty optional fields the resolver hands over as null (QA-F04-1)', () => {

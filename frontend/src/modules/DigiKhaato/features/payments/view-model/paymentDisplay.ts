@@ -286,3 +286,5 @@ export const voidConsequences = (payment: Payment): readonly VoidConsequence[] =
   }
   return rows;
 };
+
+export { toModeBreakup } from './modeBreakup';

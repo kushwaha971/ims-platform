@@ -3,6 +3,8 @@ import { api, ubConfig } from 'src/api/AxiosInstances';
 import type { PaymentMode, UpiApp } from 'src/types/domain.types';
 import { toQueryString } from 'src/utils/queryString';
 
+import { toModeBreakup } from '../view-model/modeBreakup';
+
 import type {
   AllocateResult,
   CollectQr,
@@ -198,12 +200,7 @@ export const toWireBody = (values: PaymentFormValues): Record<string, unknown> =
   party_id: values.partyId || null,
   payment_date: values.paymentDate,
   note: values.note.trim(),
-  mode_breakup: values.lines.map((line) => ({
-    mode: line.mode,
-    amount: line.amount,
-    ...(line.mode !== 'cash' && line.reference.trim() ? { reference: line.reference.trim() } : {}),
-    ...(line.mode === 'upi' && line.upiApp ? { upi_app: line.upiApp } : {}),
-  })),
+  mode_breakup: toModeBreakup(values.lines),
   allocations: values.autoAllocate
     ? 'auto'
     : values.allocations

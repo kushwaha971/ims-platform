@@ -2,7 +2,10 @@ import { useMemo } from 'react';
 
 import * as Yup from 'yup';
 
+import { useTranslation } from 'src/hooks/useTranslation';
 import { useValidationSchemas } from 'src/hooks/useValidationSchemas';
+
+import { buildPaymentLineSchema } from 'modules/DigiKhaato/features/payments/validation/paymentLineSchema';
 
 import type {
   CloseFormValues,
@@ -36,8 +39,10 @@ const LOCKER_MAX = 16;
 
 export const useMemberSchemas = (): MemberSchemas => {
   const v = useValidationSchemas();
+  const { t } = useTranslation();
 
   return useMemo(() => {
+    const line = buildPaymentLineSchema(v, t);
     const enrolSchema = Yup.object({
       partyMode: Yup.mixed<'existing' | 'new'>().oneOf(['existing', 'new']).defined(),
       partyId: Yup.string()
@@ -59,8 +64,27 @@ export const useMemberSchemas = (): MemberSchemas => {
       shiftId: Yup.string().defined().default(''),
       seatId: Yup.string().defined().default(''),
       lockerLabel: v.boundedText(LOCKER_MAX),
-      paymentMode: Yup.mixed<'cash' | 'upi'>().oneOf(['cash', 'upi']).defined(),
       collectNow: Yup.boolean().defined(),
+      lines: Yup.array(line)
+        .defined()
+        .default([])
+        .when(['collectNow', 'existingStudent'], {
+          is: (collect: boolean, existing: boolean) => collect && !existing,
+          then: (schema) => schema.min(1),
+          otherwise: () => Yup.array().defined().default([]),
+        }),
+      existingStudent: Yup.boolean().defined(),
+      startsOn: Yup.string()
+        .defined()
+        .default('')
+        .when('existingStudent', {
+          is: true,
+          then: () => v.businessDateValidation({ allowFuture: true }),
+        }),
+      validUntil: Yup.string().defined().default(''),
+      depositHeld: v.optionalAmountValidation().defined().default(''),
+      oldDuesAmount: v.optionalAmountValidation().defined().default(''),
+      oldDuesOn: Yup.string().defined().default(''),
     }) as Yup.ObjectSchema<EnrolFormValues>;
 
     const reasonSchema = (required: boolean): Yup.ObjectSchema<ReasonFormValues> =>
@@ -92,5 +116,5 @@ export const useMemberSchemas = (): MemberSchemas => {
       });
 
     return { enrolSchema, reasonSchema, closeSchema, editSchema, depositSchema };
-  }, [v]);
+  }, [v, t]);
 };

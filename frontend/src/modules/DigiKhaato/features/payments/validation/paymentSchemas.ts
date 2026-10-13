@@ -4,7 +4,6 @@ import * as Yup from 'yup';
 
 import { useTranslation } from 'src/hooks/useTranslation';
 import { useValidationSchemas } from 'src/hooks/useValidationSchemas';
-import { PAYMENT_MODES, UPI_APPS } from 'src/types/domain.types';
 import { formatAmount } from 'src/utils/money';
 
 import { MAX_MODE_LINES } from '../constants/paymentConstants';
@@ -14,6 +13,8 @@ import {
   linesTotal,
   manualTotals,
 } from '../view-model/paymentDisplay';
+
+import { buildPaymentLineSchema } from './paymentLineSchema';
 
 import type { ApplyFormValues, PaymentFormValues } from '../types/payment.types';
 
@@ -44,19 +45,7 @@ export const usePaymentSchemas = (): PaymentSchemas => {
   const { t } = useTranslation();
 
   return useMemo(() => {
-    const line = Yup.object({
-      mode: Yup.mixed<(typeof PAYMENT_MODES)[number] | ''>()
-        .oneOf([...PAYMENT_MODES, ''])
-        .defined()
-        .default('')
-        .test('chosen', t('payments.mode.required'), (value) => !!value),
-      upiApp: Yup.mixed<(typeof UPI_APPS)[number] | ''>()
-        .oneOf([...UPI_APPS, ''])
-        .defined()
-        .default(''),
-      amount: v.amountValidation().defined().default(''),
-      reference: v.boundedText(64),
-    });
+    const line = buildPaymentLineSchema(v, t);
 
     const paymentSchema = Yup.object({
       direction: Yup.mixed<'in' | 'out'>().oneOf(['in', 'out']).defined().default('in'),
@@ -138,3 +127,5 @@ export const usePaymentSchemas = (): PaymentSchemas => {
     return { paymentSchema, voidReasonSchema, applySchemaFor };
   }, [v, t]);
 };
+
+export { buildPaymentLineSchema } from './paymentLineSchema';

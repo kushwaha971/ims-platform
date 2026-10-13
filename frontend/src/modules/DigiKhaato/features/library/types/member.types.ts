@@ -1,3 +1,4 @@
+import type { PaymentLineForm } from 'modules/DigiKhaato/features/payments/types/payment.types';
 /**
  * F04 (LIB-04 §6) — members: the list row (`MemberSummary`, also the counter's),
  * the page (`MemberDetail`), the membership types a member is enrolled on, and
@@ -142,10 +143,25 @@ export interface EnrolFormValues {
   shiftId: string;
   seatId: string;
   lockerLabel: string;
-  /** How the money collected now was paid: cash or UPI at a reading-room desk. */
-  paymentMode: 'cash' | 'upi';
-  /** Collect the fees and the deposit now, in cash; otherwise they are owed. */
+  /** Collect the fees and the deposit now; otherwise they are owed. */
   collectNow: boolean;
+  /**
+   * QA F2 — what is paid now and how: the payment editor's lines (every mode Take
+   * fee offers, split across up to four). Less than the fees leaves the rest owed;
+   * more is kept as the student's advance.
+   */
+  lines: PaymentLineForm[];
+  /**
+   * QA F1 — a student who already studies here, moved from the paper register: no
+   * fee today and no money recorded today. Their real dates, a deposit they handed
+   * over long ago, and any dues they still owe come in as what they are.
+   */
+  existingStudent: boolean;
+  startsOn: string;
+  validUntil: string;
+  depositHeld: string;
+  oldDuesAmount: string;
+  oldDuesOn: string;
 }
 
 export interface ReasonFormValues {

@@ -1,17 +1,19 @@
 'use client';
 
-import { useId, useMemo } from 'react';
+import { useEffect, useId, useMemo } from 'react';
 
 import { yupResolver } from '@hookform/resolvers/yup';
-import { useForm, useWatch } from 'react-hook-form';
+import { useForm, useWatch, type UseFormReturn } from 'react-hook-form';
 
 import {
   UbButton,
   UbCard,
   UbChoiceChips,
+  UbDateInput,
   UbDrawer,
   UbField,
   UbForm,
+  UbMoneyInput,
   UbNativeSelect,
   UbPhoneInput,
   UbStack,
@@ -24,6 +26,8 @@ import { formatInr } from 'src/utils/money';
 
 import { PartyPickerField } from 'modules/DigiKhaato/features/parties/components/PartyPickerField';
 import { useCanSearchParties } from 'modules/DigiKhaato/features/parties/hooks/usePartySearch';
+import { PaymentModeEditor } from 'modules/DigiKhaato/features/payments/components/PaymentModeEditor';
+import type { PaymentFormValues } from 'modules/DigiKhaato/features/payments/types/payment.types';
 
 import { useSeats } from '../hooks/useSeats';
 import { useMemberSchemas } from '../validation/memberSchemas';
@@ -32,9 +36,20 @@ import { enrolCost, isNonZero, shiftHours } from '../view-model/memberDisplay';
 import type { EnrolFormValues, MembershipType } from '../types/member.types';
 import type { UseFormSetError } from 'react-hook-form';
 
-// Loaded with dynamic(), so its words come with its own chunk.
+// Loaded with dynamic(), so its words come with its own chunk — the payment
+// editor's too (QA F2), or its chips print raw message ids.
+import 'src/i18n/catalogues/ledger';
 import 'src/i18n/catalogues/library';
+import 'src/i18n/catalogues/payments';
 import 'src/i18n/catalogues/validation';
+
+/** One empty payment line — the editor's starting row. */
+const FIRST_LINE: EnrolFormValues['lines'][number] = {
+  mode: 'cash',
+  upiApp: '',
+  amount: '',
+  reference: '',
+};
 
 const DEFAULTS: EnrolFormValues = {
   partyMode: 'new',
@@ -50,8 +65,14 @@ const DEFAULTS: EnrolFormValues = {
   shiftId: '',
   seatId: '',
   lockerLabel: '',
-  paymentMode: 'cash',
   collectNow: true,
+  lines: [FIRST_LINE],
+  existingStudent: false,
+  startsOn: '',
+  validUntil: '',
+  depositHeld: '',
+  oldDuesAmount: '',
+  oldDuesOn: '',
 };
 
 /**
@@ -82,11 +103,23 @@ export function EnrolMemberDrawer({
   const form = useForm<EnrolFormValues>({
     resolver: yupResolver(enrolSchema),
     mode: 'onTouched',
-    defaultValues: { ...DEFAULTS, membershipTypeId: active[0]?.id ?? '' },
+    defaultValues: {
+      ...DEFAULTS,
+      membershipTypeId: active[0]?.id ?? '',
+      lines: [{ ...FIRST_LINE, amount: enrolCost(active[0]).fees }],
+    },
   });
-  const [mode, _partyId, partyName, typeId, collectNow, shiftId] = useWatch({
+  const [mode, _partyId, partyName, typeId, collectNow, shiftId, existingStudent] = useWatch({
     control: form.control,
-    name: ['partyMode', 'partyId', 'partyName', 'membershipTypeId', 'collectNow', 'shiftId'],
+    name: [
+      'partyMode',
+      'partyId',
+      'partyName',
+      'membershipTypeId',
+      'collectNow',
+      'shiftId',
+      'existingStudent',
+    ],
   });
   // W03 — the desks free in the chosen shift ('' = free all day).
   const seating = useSeats(shiftId ?? '');
@@ -111,6 +144,17 @@ export function EnrolMemberDrawer({
     [t]
   );
   const asksMoney = isNonZero(cost.fees) || isNonZero(cost.deposit);
+
+  /* QA F2 — a new plan's fees become the amount offered, as long as the merchant
+     has not split the payment or typed their own figure. */
+  const { getFieldState, getValues, setValue } = form;
+  useEffect(() => {
+    const lines = getValues('lines');
+    const [only] = lines;
+    if (only && lines.length === 1 && !getFieldState('lines').isDirty) {
+      setValue('lines', [{ ...only, amount: cost.fees }]);
+    }
+  }, [cost.fees, getFieldState, getValues, setValue]);
 
   return (
     <UbDrawer
@@ -209,6 +253,91 @@ export function EnrolMemberDrawer({
             />
           )}
         </UbField>
+
+        {/* QA F1 — moving the paper register in: an existing student's real dates,
+            with no fee today and no money recorded today. */}
+        <UbField name="existingStudent" label={t('library.enrol.existing')} controlOwnsLabel>
+          {(field) => (
+            <UbSwitch
+              id={field.id}
+              checked={Boolean(field.value)}
+              onCheckedChange={field.onChange}
+              label={t('library.enrol.existing')}
+              description={t('library.enrol.existing.hint')}
+              disabled={busy}
+            />
+          )}
+        </UbField>
+        {existingStudent && (
+          <UbCard padded>
+            <UbStack gap={3} data-testid="library-enrol-existing">
+              <UbStack direction="row" gap={3} className="max-sm:flex-col">
+                <UbField
+                  name="startsOn"
+                  label={t('library.enrol.joinedOn')}
+                  className="flex-1"
+                  required
+                >
+                  {(field) => <UbDateInput {...field} value={field.value as string} />}
+                </UbField>
+                <UbField
+                  name="validUntil"
+                  label={t('library.enrol.paidTill')}
+                  hint={t('library.enrol.paidTill.hint')}
+                  optionalLabel={t('common.field.optional')}
+                  className="flex-1"
+                >
+                  {(field) => <UbDateInput {...field} value={field.value as string} />}
+                </UbField>
+              </UbStack>
+              <UbField
+                name="depositHeld"
+                label={t('library.enrol.depositHeld')}
+                hint={t('library.enrol.depositHeld.hint')}
+                optionalLabel={t('common.field.optional')}
+              >
+                {(field) => (
+                  <UbMoneyInput
+                    id={field.id}
+                    value={(field.value as string) ?? ''}
+                    onChange={field.onChange}
+                    onBlur={field.onBlur}
+                    invalid={field.invalid}
+                    disabled={busy}
+                  />
+                )}
+              </UbField>
+              <UbStack direction="row" gap={3} className="max-sm:flex-col">
+                <UbField
+                  name="oldDuesAmount"
+                  label={t('library.enrol.oldDues')}
+                  hint={t('library.enrol.oldDues.hint')}
+                  optionalLabel={t('common.field.optional')}
+                  className="flex-1"
+                >
+                  {(field) => (
+                    <UbMoneyInput
+                      id={field.id}
+                      value={(field.value as string) ?? ''}
+                      onChange={field.onChange}
+                      onBlur={field.onBlur}
+                      invalid={field.invalid}
+                      disabled={busy}
+                    />
+                  )}
+                </UbField>
+                <UbField
+                  name="oldDuesOn"
+                  label={t('library.enrol.oldDuesOn')}
+                  optionalLabel={t('common.field.optional')}
+                  className="flex-1"
+                >
+                  {(field) => <UbDateInput {...field} value={field.value as string} />}
+                </UbField>
+              </UbStack>
+            </UbStack>
+          </UbCard>
+        )}
 
         {(seating.activeShifts.length > 0 || hasSeats) && (
           <UbStack direction="row" gap={3} className="max-sm:flex-col">
@@ -323,7 +452,7 @@ export function EnrolMemberDrawer({
           </UbField>
         </UbStack>
 
-        {asksMoney && (
+        {asksMoney && !existingStudent && (
           <UbCard padded>
             <UbStack data-testid="library-enrol-fees" gap={2}>
               {isNonZero(cost.fees) && (
@@ -352,23 +481,16 @@ export function EnrolMemberDrawer({
                   />
                 )}
               </UbField>
-              {collectNow && (
-                <UbField name="paymentMode" label={t('library.enrol.paidBy')} controlOwnsLabel>
-                  {(field) => (
-                    <UbChoiceChips<'cash' | 'upi'>
-                      id={field.id}
-                      ariaLabel={t('library.enrol.paidBy')}
-                      value={field.value as 'cash' | 'upi'}
-                      onChange={(next) => field.onChange(next)}
-                      onBlur={field.onBlur}
-                      options={[
-                        { value: 'cash', label: t('library.enrol.paidBy.cash') },
-                        { value: 'upi', label: t('library.enrol.paidBy.upi') },
-                      ]}
-                      disabled={busy}
-                    />
-                  )}
-                </UbField>
+              {/* QA F2 — any amount, every mode Take fee has, split if need be. The
+                  editor touches only `lines`, which this form shares with the
+                  payment form, so the cast is to that one field's shape. */}
+              {collectNow && isNonZero(cost.fees) && (
+                <PaymentModeEditor
+                  form={form as unknown as UseFormReturn<PaymentFormValues>}
+                  target={cost.fees}
+                  t={t}
+                  disabled={busy}
+                />
               )}
             </UbStack>
           </UbCard>

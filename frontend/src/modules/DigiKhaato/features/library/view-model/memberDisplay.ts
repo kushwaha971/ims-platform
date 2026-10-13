@@ -1,6 +1,8 @@
 import type { UbStatusBadgeTone } from 'src/design-system';
 import { formatInr } from 'src/utils/money';
 
+import { toModeBreakup } from 'modules/DigiKhaato/features/payments/view-model/modeBreakup';
+
 import type {
   EnrolFormValues,
   EffectiveStatus,
@@ -97,10 +99,16 @@ export const toEnrolBody = (
   today: string
 ): Record<string, unknown> => {
   const cost = enrolCost(type);
-  const cash = (amount: string) => ({
-    mode_breakup: [{ mode: values.paymentMode || 'cash', amount }],
+  /* QA F2 — the deposit is taken in full with the first line's mode (it is not part
+     of the fee and cannot be part-paid here); the fee is whatever the lines add up to. */
+  const first = values.lines[0];
+  const deposit = (amount: string) => ({
+    mode_breakup: toModeBreakup([
+      { mode: first?.mode || 'cash', upiApp: first?.upiApp ?? '', amount, reference: '' },
+    ]),
     payment_date: today,
   });
+  const linesPaid = values.lines.some((line) => isNonZero(line.amount));
   const guardian = clean(values.guardianName)
     ? { name: clean(values.guardianName), mobile: clean(values.guardianMobile) || undefined }
     : undefined;
@@ -115,7 +123,24 @@ export const toEnrolBody = (
     seat_id: values.seatId || undefined,
     locker_label: clean(values.lockerLabel) || undefined,
     guardian,
-    collect_fees: values.collectNow && isNonZero(cost.fees) ? cash(cost.fees) : undefined,
-    collect_deposit: values.collectNow && isNonZero(cost.deposit) ? cash(cost.deposit) : undefined,
+    ...(values.existingStudent
+      ? {
+          // QA F1 — already paid till `valid_until`: no fee today, no money today.
+          existing_student: true,
+          starts_on: values.startsOn || undefined,
+          valid_until: values.validUntil || undefined,
+          deposit_held: isNonZero(values.depositHeld) ? values.depositHeld : undefined,
+          old_dues: isNonZero(values.oldDuesAmount)
+            ? { amount: values.oldDuesAmount, on: values.oldDuesOn || today }
+            : undefined,
+        }
+      : {
+          collect_fees:
+            values.collectNow && isNonZero(cost.fees) && linesPaid
+              ? { mode_breakup: toModeBreakup(values.lines), payment_date: today }
+              : undefined,
+          collect_deposit:
+            values.collectNow && isNonZero(cost.deposit) ? deposit(cost.deposit) : undefined,
+        }),
   };
 };

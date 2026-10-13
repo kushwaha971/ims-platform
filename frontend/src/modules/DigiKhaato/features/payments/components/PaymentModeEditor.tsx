@@ -30,6 +30,12 @@ import {
 
 import type { PaymentFormValues } from '../types/payment.types';
 
+// The mode and UPI-app chips are the `money` catalogue's words. The editor loads
+// them itself so a drawer that reuses it (the library's admission, QA F2) cannot
+// forget and print raw message ids.
+import 'src/i18n/catalogues/money';
+import 'src/i18n/catalogues/payments';
+
 /** A reference placeholder by mode (PAY-02 §7): what the merchant would copy in. */
 const REFERENCE_PLACEHOLDER: Readonly<Partial<Record<PaymentMode, string>>> = {
   upi: 'payments.reference.upi',
@@ -200,7 +206,9 @@ export function PaymentModeEditor({
         />
       )}
 
-      <UbStack direction="row" justify="between" align="center" className="gap-2">
+      {/* Wraps rather than running off a narrow card (the library's admission at
+          360 px cut the total mid-figure). */}
+      <UbStack direction="row" justify="between" align="center" className="flex-wrap gap-2">
         {fields.length < MAX_MODE_LINES ? (
           <UbButton
             variant="secondary"

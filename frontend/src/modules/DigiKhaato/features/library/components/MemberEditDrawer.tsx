@@ -31,6 +31,8 @@ import type { MemberDetail, MemberEditFormValues } from '../types/member.types';
 
 // Loaded with dynamic(), so its words come with its own chunk.
 import 'src/i18n/catalogues/library';
+// useMemberSchemas builds the admission schema too, whose payment lines speak payments.*.
+import 'src/i18n/catalogues/payments';
 import 'src/i18n/catalogues/validation';
 
 const EDIT_FIELDS = ['memberNumber', 'groupLabel', 'validUntil', 'notes'] as const;

@@ -760,7 +760,8 @@
   "12 Oct 2026 SEO/GA4: allow the small controlled public acquisition tracker on the homepage; preserve all newer app budgets. No app-wide analytics SDK added.",
   "12 Oct 2026 measured performance follow-up: homepage route 40 -> 40.6 KB (measured 40.5) for cancellable after-load/idle analytics scheduling. Both GA4 and PostHog remain enabled; third-party execution is delayed, not hidden.",
   "DEC-019 phase 2 and the 12 Oct QA fixes (12 Oct 2026) — shared app 110 -> 112. Measured 111.0 on bff44e7 (the commit before phase 2, built in place from a stash) and 111.1 with it: the shell had already crossed its ceiling during the QA fixes, which never raised it — B47/B48/B49's single-flight refresh, the once-per-document session bootstrap and the signed-in gate are shell code by design (they run on every route), and the date fix reads the session's timezone in useValidationSchemas. Phase 2 itself adds 0.1 to the shell (the Udhaar book's manifest beside the other three, the `book` default on the party-list slice) and 0.4-1.0 KB on the party screens (the Shop's words, the `book` plumbing through the list, the timeline and the statement). /khata is new and is the /parties screen, so it has /parties' budget. Every other route whose ceiling those moves crossed was raised by the measured + 0.5 rule. /parties/[id]'s route chunk 103 -> 104 (measured 103.0 after the live look's word fixes; phase 2 added 0.8 KB there).",
-  "QA B50 (13 Oct 2026) — shared app 111.1 -> 111.3: `ServiceWorkerRegistrar` (registers /sw.js after load and tells it which business is open) mounts in AppProviders on every route, by design: the installed app's cache has to be set up whichever page it is opened on. Raised by the measured + 0.5 rule: /items/[id] route -> 102; /library/attendance route -> 68; /items/price-lists firstLoad -> 289; /onboarding firstLoad -> 244. The two route chunks sat exactly on their ceilings and the one-shot app-switch latch in useNavigation tipped them."
+  "QA B50 (13 Oct 2026) — shared app 111.1 -> 111.3: `ServiceWorkerRegistrar` (registers /sw.js after load and tells it which business is open) mounts in AppProviders on every route, by design: the installed app's cache has to be set up whichever page it is opened on. Raised by the measured + 0.5 rule: /items/[id] route -> 102; /library/attendance route -> 68; /items/price-lists firstLoad -> 289; /onboarding firstLoad -> 244. The two route chunks sat exactly on their ceilings and the one-shot app-switch latch in useNavigation tipped them.",
+  "QA F1/F2 (13 Oct 2026, library admission: an existing student's dates and dues, any amount in any mode) — the library routes moved 0.1-0.3 KB: the ten new words in the library catalogue every library route loads. The shared mode-line schema and wire mapping were first imported from the payments modules that hold them and cost those routes 2.7-3.4 KB; they now live in two modules that import almost nothing (`payments/validation/paymentLineSchema.ts`, `payments/view-model/modeBreakup.ts`) — the PTY-01 lesson, a fourth time. Raised by the measured + 0.5 rule: /library/members route -> 81; /library/counter firstLoad -> 314; /library/members/[membershipId] route -> 75; /library firstLoad -> 311; /library/seats firstLoad -> 309; /library/messages route -> 66; /library/catalogue/categories route -> 65; /library/catalogue/locations route -> 65."
  ],
  "//shared": [
   "WHERE THESE DIVERGE FROM §19.9.2, AND WHY. Both numbers below are above the",
@@ -1629,11 +1630,11 @@
    "firstLoad": 352
   },
   "/library/members": {
-   "route": 80,
+   "route": 81,
    "firstLoad": 319
   },
   "/library/members/[membershipId]": {
-   "route": 74,
+   "route": 75,
    "firstLoad": 313
   },
   "/library/catalogue/[titleId]": {
@@ -1641,20 +1642,20 @@
    "firstLoad": 305
   },
   "/library/catalogue/categories": {
-   "route": 64,
+   "route": 65,
    "firstLoad": 303
   },
   "/library/catalogue/locations": {
-   "route": 64,
+   "route": 65,
    "firstLoad": 303
   },
   "/library/counter": {
    "route": 75,
-   "firstLoad": 313
+   "firstLoad": 314
   },
   "/library/seats": {
    "route": 70,
-   "firstLoad": 308
+   "firstLoad": 309
   },
   "/library/fees": {
    "route": 71,
@@ -1702,14 +1703,14 @@
   },
   "/library": {
    "route": 72,
-   "firstLoad": 310
+   "firstLoad": 311
   },
   "/library/attendance": {
    "route": 68,
    "firstLoad": 306
   },
   "/library/messages": {
-   "route": 65,
+   "route": 66,
    "firstLoad": 304
   },
   "/lending/loans/new": {
