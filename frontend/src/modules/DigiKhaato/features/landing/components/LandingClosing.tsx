@@ -193,13 +193,27 @@ function LandingFooterBase() {
   return (
     <UbBox as="footer" className="border-t border-border-hairline bg-surface-subtle">
       <UbBox
-        className={`${LANDING_CONTAINER} grid gap-10 py-12 md:grid-cols-[minmax(0,2fr)_repeat(3,minmax(0,1fr))] md:py-16`}
+        className={`${LANDING_CONTAINER} grid gap-10 py-12 md:grid-cols-[minmax(0,2fr)_repeat(2,minmax(0,1fr))] md:py-16`}
       >
         <UbStack gap={4} align="start">
           <UbLogo variant="full" size="md" label="YourKhata" />
           <UbText variant="inherit" tone="tertiary" className="ds-body-base-regular max-w-xs">
             {t('landing.footer.tagline')}
           </UbText>
+          <UbStack gap={2} align="start">
+            <UbLink href="tel:+919794620535" tone="secondary" underline={false}>
+              +91-9794620535
+            </UbLink>
+            <UbLink
+              href="https://www.linkedin.com/company/yourkhata"
+              tone="secondary"
+              underline={false}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              LinkedIn
+            </UbLink>
+          </UbStack>
         </UbStack>
         <UbBox as="nav" aria-label={t('landing.footer.product')}>
           <UbText as="h2" variant="inherit" className="ds-body-s-semibold mb-3">
@@ -221,15 +235,6 @@ function LandingFooterBase() {
           <UbStack as="ul" gap={2}>
             <FooterLink href={ROUTES.SIGNUP}>{t('landing.footer.signup')}</FooterLink>
             <FooterLink href={ROUTES.LOGIN}>{t('landing.nav.login')}</FooterLink>
-          </UbStack>
-        </UbBox>
-        <UbBox as="nav" aria-label={t('landing.footer.legal')}>
-          <UbText as="h2" variant="inherit" className="ds-body-s-semibold mb-3">
-            {t('landing.footer.legal')}
-          </UbText>
-          <UbStack as="ul" gap={2}>
-            <FooterLink href={ROUTES.LEGAL_TERMS}>{t('landing.footer.terms')}</FooterLink>
-            <FooterLink href={ROUTES.LEGAL_PRIVACY}>{t('landing.footer.privacy')}</FooterLink>
           </UbStack>
         </UbBox>
       </UbBox>
