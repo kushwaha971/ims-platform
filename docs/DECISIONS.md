@@ -573,6 +573,13 @@ ADR-021 ↔ §26.14 contradiction recorded as `CR-j`.
   The party list takes `?book=shop` too (rows, chips, header and sort all read
   `shop_balance`), and the Shop's home reads `shop_balance` for To collect / To pay / top
   debtors and drops Due today and Upcoming (the udhaar book's promise dates).
+  Expenses (QA B10): each carries the `app` it was recorded in (`expenses/0003`; old rows
+  filed under the Shop, or the Library / Lending for a business without the Shop). Each
+  app's Expenses page lists its own; the Library's profit reads only its own through the
+  spend seam; the Shop's profit, charts, day book, cashbook and home read only the Shop's.
+  An expense ON CREDIT is owed to a supplier in the Shop's book, so only the Shop records
+  one — the Library and Lending record an expense when it is paid.
   Not yet done: manual You gave / You got is not refused by the server for a business
-  without `khata` (the client offers it nowhere else); expenses still have no `app`.
+  without `khata` (the client offers it nowhere else); the cashbook still counts payments
+  of every bucket (a library fee taken in cash is in the Shop's till figure).
 - **Links:** ADR-043 (buckets), ADR-044 (deposits), DEC-016 (apps chosen at sign-up).

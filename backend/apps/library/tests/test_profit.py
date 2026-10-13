@@ -47,7 +47,8 @@ def room(api_as: Any, library_on: Any) -> dict:
     return {"client": owner, "tenant": library_on, "admit": admit}
 
 
-def spend(room: dict, amount: str, code: str) -> dict:
+def spend(room: dict, amount: str, code: str, app: str = "library") -> dict:
+    """An expense recorded from the Library's Expenses page, which sends its app."""
     category = ExpenseCategory.objects.for_tenant(room["tenant"]).get(system_code=code)
     made = room["client"].post(
         reverse("v1:expense-list"),
@@ -56,6 +57,7 @@ def spend(room: dict, amount: str, code: str) -> dict:
             "expense_date": tenant_today(room["tenant"]).isoformat(),
             "category_id": str(category.id),
             "mode": "cash",
+            "app": app,
         },
         format="json",
         HTTP_IDEMPOTENCY_KEY=str(uuid.uuid4()),
@@ -73,6 +75,17 @@ def test_fees_paid_less_expenses_is_the_months_profit(room: dict) -> None:
     assert page["expenses_total"] == "500.00" and len(page["expenses"]) == 1
     assert page["profit"] == "400.00"
     assert all(row["amount"] != "0.00" for row in page["income"])
+
+
+def test_the_shops_expenses_are_not_the_librarys(room: dict) -> None:
+    """QA B10 / DEC-019 — the Shop's rent was being subtracted from the reading room's
+    fees. An expense belongs to the app it was recorded in, and only the Library's own
+    is the Library's spend."""
+    code = ExpenseCategory.objects.for_tenant(room["tenant"]).first().system_code
+    spend(room, "900.00", code, app="shop")
+    spend(room, "300.00", code)
+    page = room["client"].get(reverse("v1:library-profit")).json()["data"]
+    assert page["expenses_total"] == "300.00"
 
 
 def test_a_void_expense_was_never_spent_and_a_bad_period_is_refused(room: dict) -> None:

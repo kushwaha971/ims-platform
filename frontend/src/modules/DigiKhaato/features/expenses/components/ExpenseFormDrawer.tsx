@@ -221,12 +221,14 @@ export function ExpenseFormDrawer({
           )}
         </UbField>
 
-        <UbSwitch
-          checked={paid}
-          onCheckedChange={(next) => setValue('paid', next, { shouldDirty: true })}
-          label={t('expenses.paidNow')}
-          description={t('expenses.paidNowHint')}
-        />
+        {expenseForm.canOwe && (
+          <UbSwitch
+            checked={paid}
+            onCheckedChange={(next) => setValue('paid', next, { shouldDirty: true })}
+            label={t('expenses.paidNow')}
+            description={t('expenses.paidNowHint')}
+          />
+        )}
 
         {paid && (
           <UbField name="mode" label={t('expenses.mode')} required>

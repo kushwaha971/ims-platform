@@ -280,8 +280,9 @@ def expenses_total(*, tenant: Any, date_from: dt.date, date_to: dt.date) -> Deci
     from apps.expenses.models import Expense
 
     return (
+        # DEC-019 (QA B10) — the Shop's profit counts the Shop's expenses only.
         Expense.objects.filter(
-            tenant=tenant, expense_date__gte=date_from, expense_date__lte=date_to
+            tenant=tenant, app="shop", expense_date__gte=date_from, expense_date__lte=date_to
         )
         .exclude(status="void")
         .aggregate(total=Coalesce(Sum("amount"), Decimal("0.00")))["total"]

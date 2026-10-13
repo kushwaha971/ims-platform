@@ -38,6 +38,8 @@ class ExpenseFilterSet(BaseTenantFilterSet):
     paid = django_filters.BooleanFilter(field_name="paid")
     party = django_filters.UUIDFilter(field_name="party_id")
     q = django_filters.CharFilter(method="filter_search")
+    #: DEC-019 (QA B10) — each app's Expenses page lists its own: `?app=library`.
+    app = django_filters.CharFilter(field_name="app")
 
     class Meta:
         model = Expense

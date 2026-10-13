@@ -39,7 +39,7 @@ def has_any_money(tenant: Any) -> bool:
         tenant=tenant, document_type="library_charge", payment__status="recorded"
     ).exists():
         return True
-    return bool(spend_by_category(tenant, dt.date.min, dt.date.max))
+    return bool(spend_by_category(tenant, dt.date.min, dt.date.max, app="library"))
 
 
 def profit(tenant: Any, start: dt.date, end: dt.date) -> dict:
@@ -52,7 +52,7 @@ def profit(tenant: Any, start: dt.date, end: dt.date) -> dict:
         if figures["collected"] > ZERO
     ]
     income_total = sum((figures["collected"] for figures in summary.values()), ZERO)
-    spend = spend_by_category(tenant, start, end)
+    spend = spend_by_category(tenant, start, end, app="library")  # DEC-019 (QA B10)
     spend_total = sum((Decimal(row["amount"]) for row in spend), ZERO)
     return {
         "from": start.isoformat(),

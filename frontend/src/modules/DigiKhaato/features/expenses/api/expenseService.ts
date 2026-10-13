@@ -139,6 +139,7 @@ export const expenseListQuery = (filters: ExpenseFilters): string =>
     status: filters.tab === 'void' ? 'void' : undefined,
     paid: filters.tab === 'unpaid' ? 'false' : undefined,
     q: filters.q.trim() || undefined,
+    app: filters.app || undefined,
     page: filters.page > 1 ? filters.page : undefined,
   });
 
@@ -207,11 +208,13 @@ export const createExpenseCategory = async (name: string): Promise<ExpenseCatego
  */
 export const createExpense = async (
   values: ExpenseFormValues,
-  idempotencyKey: string
+  idempotencyKey: string,
+  /** DEC-019 (QA B10) — the app it is recorded in; absent, the server decides. */
+  app?: string
 ): Promise<ExpenseSaveResult> => {
   const response = await api.post<ExpenseWriteApiResponse>(
     API_PATHS.EXPENSES,
-    toWireBody(values),
+    { ...toWireBody(values), ...(app ? { app } : {}) },
     ubConfig({ headers: { 'Idempotency-Key': idempotencyKey } })
   );
   return {

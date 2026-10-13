@@ -12,6 +12,9 @@ import type { ApiErrorShape, RequestStatus } from 'src/types/api.types';
 import type { PaymentMode } from 'src/types/domain.types';
 import { todayInTenantTz } from 'src/utils/dates';
 
+import { useNavigation } from 'modules/DigiKhaato/features/navigation/useNavigation';
+
+import { expenseAppOf } from '../constants/expenseApps';
 import {
   expenseFiltersChanged,
   selectExpenseError,
@@ -94,9 +97,14 @@ export const useExpenseList = (): UseExpenseListResult => {
      render, and a memo on it re-dispatches forever (LED-04's "Maximum update
      depth exceeded"). */
   const queryString = search?.toString() ?? '';
+  /* DEC-019 (QA B10) — each app's Expenses page lists its own expenses. */
+  const expenseApp = expenseAppOf(useNavigation().app);
   const filters = useMemo(
-    () => expenseFiltersFromQuery(new URLSearchParams(queryString), today),
-    [queryString, today]
+    () => ({
+      ...expenseFiltersFromQuery(new URLSearchParams(queryString), today),
+      ...(expenseApp ? { app: expenseApp } : {}),
+    }),
+    [queryString, today, expenseApp]
   );
 
   useEffect(() => {

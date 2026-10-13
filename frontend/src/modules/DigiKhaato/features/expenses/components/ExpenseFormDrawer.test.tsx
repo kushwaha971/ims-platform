@@ -25,6 +25,7 @@ const form = (overrides: Partial<UseExpenseFormResult> = {}): UseExpenseFormResu
   isSaving: false,
   canWrite: true,
   canVoid: true,
+  canOwe: true,
   draft: null,
   formErrors: [],
   categories: [
@@ -121,4 +122,13 @@ it('does not offer a New category to a role that cannot record', () => {
   renderWithProviders(<ExpenseFormDrawer form={form({ canWrite: false })} />);
   expect(screen.queryByRole('button', { name: 'New category' })).not.toBeInTheDocument();
   expect(screen.getByText('You can view expenses but not record them')).toBeInTheDocument();
+});
+
+it('offers no "I still owe this" in an app that records only paid expenses', () => {
+  // DEC-019 (QA B10) — an unpaid expense is owed to a supplier in the Shop's book,
+  // so the Library and Lending record an expense when it is paid. A switch the
+  // server would refuse is a form that cannot say why it will not save.
+  renderWithProviders(<ExpenseFormDrawer form={form({ canOwe: false })} />);
+  expect(screen.queryByRole('switch', { name: /Paid now/ })).not.toBeInTheDocument();
+  expect(screen.getByRole('radiogroup', { name: 'Paid by' })).toBeInTheDocument();
 });

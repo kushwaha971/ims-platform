@@ -89,3 +89,10 @@ BUCKETS: tuple[str, ...] = (CASH_BUCKET, BANK_BUCKET)
 
 #: EXP-03 §10 — a year is the longest range one request may ask for.
 CASHBOOK_MAX_DAYS = 366
+
+
+#: DEC-019 (QA B10) — the apps that record expenses, each its own. An expense ON
+#: CREDIT posts to a supplier's Shop balance, so only the Shop records one; the
+#: others record an expense when it is paid.
+EXPENSE_APPS: tuple[str, ...] = ("shop", "library", "lending")
+CREDIT_EXPENSE_APPS: frozenset[str] = frozenset({"shop"})

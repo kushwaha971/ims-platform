@@ -68,6 +68,8 @@ class ExpenseSerializer(serializers.ModelSerializer):
             "paid",
             "due_on",
             "status",
+            # DEC-019 (QA B10) — the app it was recorded in.
+            "app",
             "void_reason",
             "voided_at",
             "voided_by",
@@ -123,6 +125,9 @@ class ExpenseWriteSerializer(serializers.Serializer):
     paid = serializers.BooleanField(required=False, default=True)
     due_on = serializers.CharField(max_length=10, required=False, allow_blank=True, allow_null=True)
     party_id = serializers.UUIDField(required=False, allow_null=True)
+    #: DEC-019 (QA B10) — the app the merchant has open; the service checks it is one
+    #: this business runs and defaults it for an older client that sends none.
+    app = serializers.CharField(max_length=32, required=False, allow_blank=True)
 
 
 class ExpenseVoidSerializer(serializers.Serializer):

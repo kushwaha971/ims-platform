@@ -115,7 +115,10 @@ class ExpenseSource:
 
     @staticmethod
     def _base(tenant: Any) -> Any:
-        return Expense.objects.for_tenant(tenant).filter(status=ExpenseStatus.RECORDED, paid=True)
+        # DEC-019 (QA B10) — the cashbook is the Shop's till: the Shop's expenses only.
+        return Expense.objects.for_tenant(tenant).filter(
+            status=ExpenseStatus.RECORDED, paid=True, app="shop"
+        )
 
     def exists(self, *, tenant: Any) -> bool:
         return self._base(tenant).exists()
@@ -279,6 +282,7 @@ def _voided_counts(*, tenant: Any, date_from: dt.date, date_to: dt.date) -> dict
         .filter(
             status=ExpenseStatus.VOID,
             paid=True,
+            app="shop",
             expense_date__gte=date_from,
             expense_date__lte=date_to,
         )

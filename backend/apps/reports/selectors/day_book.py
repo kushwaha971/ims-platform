@@ -216,6 +216,7 @@ SELECT 6,
   JOIN expenses_category c ON c.id = e.category_id
   LEFT JOIN parties_party pp ON pp.id = e.party_id
  WHERE e.tenant_id = %(tenant)s
+   AND e.app = 'shop'
    AND (%(include_void)s OR e.status <> 'void')
    AND e.expense_date BETWEEN %(lo)s AND %(hi)s
 """

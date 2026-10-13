@@ -43,7 +43,13 @@ from apps.common.audit import AuditAction, write_audit
 from apps.common.constants import MONEY_PAYMENT_MODES, PaymentMode, UpiApp
 from apps.common.context import Ctx
 from apps.common.exceptions import BusinessRuleViolation, NotFound, ValidationFailed
-from apps.expenses.constants import NOTE_MAX_LENGTH, REFERENCE_MAX_LENGTH, ExpenseStatus
+from apps.expenses.constants import (
+    CREDIT_EXPENSE_APPS,
+    EXPENSE_APPS,
+    NOTE_MAX_LENGTH,
+    REFERENCE_MAX_LENGTH,
+    ExpenseStatus,
+)
 from apps.expenses.models import Expense, ExpenseCategory
 from apps.expenses.services.ledger_link import post_expense_payable
 from apps.expenses.services.numbering import allocate_expense_number
@@ -135,6 +141,11 @@ def validate_expense_payload(payload: dict, *, tenant: Any) -> dict:
     if len(note) > NOTE_MAX_LENGTH:
         details["note"] = [f"Keep the note under {NOTE_MAX_LENGTH} characters."]
 
+    app = _expense_app(payload.get("app"), tenant=tenant, details=details)
+    if app is not None and app not in CREDIT_EXPENSE_APPS and not paid:
+        # An expense on credit is owed to a supplier in the Shop's book (DEC-019).
+        details["paid"] = ["Record this expense when you pay it. Only the Shop keeps bills to pay."]
+
     if details:
         raise ValidationFailed(details)
 
@@ -149,7 +160,23 @@ def validate_expense_payload(payload: dict, *, tenant: Any) -> dict:
         "due_on": due_on,
         "party_id": party_id,
         "note": note,
+        "app": app,
     }
+
+
+def _expense_app(raw: Any, *, tenant: Any, details: dict[str, list[str]]) -> str | None:
+    """DEC-019 (QA B10) — the app the expense is recorded in, which the client sends
+    as the app the merchant has open. Absent (an older client) is the Shop when the
+    business runs it, else the first expense-keeping app it runs."""
+    from apps.platform_app.apps_registry import apps_of_business
+
+    running = {a.code for a in apps_of_business(tenant)}
+    if raw in (None, ""):
+        return next((code for code in EXPENSE_APPS if code in running), EXPENSE_APPS[0])
+    if raw not in EXPENSE_APPS or raw not in running:
+        details["app"] = ["Choose an app this business uses."]
+        return None
+    return str(raw)
 
 
 def expense_snapshot(expense: Expense) -> dict:
@@ -168,6 +195,7 @@ def expense_snapshot(expense: Expense) -> dict:
         "paid": expense.paid,
         "due_on": expense.due_on.isoformat() if expense.due_on else None,
         "status": expense.status,
+        "app": expense.app,
     }
 
 
@@ -252,6 +280,7 @@ def record_expense(*, ctx: Ctx, payload: dict) -> dict:
         paid=cleaned["paid"],
         due_on=cleaned["due_on"],
         status=ExpenseStatus.RECORDED,
+        app=cleaned["app"],
     )
 
     balance: Decimal | None = None

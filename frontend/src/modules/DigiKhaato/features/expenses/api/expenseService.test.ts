@@ -1,3 +1,5 @@
+import { expenseAppOf } from '../constants/expenseApps';
+
 import { expenseListQuery, toWireBody } from './expenseService';
 
 import type { ExpenseFilters, ExpenseFormValues } from '../types/expense.types';
@@ -81,5 +83,30 @@ describe('expenseListQuery', () => {
     expect(
       expenseListQuery({ ...FILTERS, categoryId: 'c', mode: 'cash', q: ' rent ', page: 3 })
     ).toBe('?date_from=2026-09-01&date_to=2026-09-24&category=c&mode=cash&q=rent&page=3');
+  });
+});
+
+describe('the app an expense belongs to (DEC-019, QA B10)', () => {
+  const FILTERS_BASE: ExpenseFilters = {
+    preset: 'thisMonth',
+    dateFrom: '2026-09-01',
+    dateTo: '2026-09-24',
+    tab: 'all',
+    categoryId: null,
+    mode: null,
+    q: '',
+    page: 1,
+  };
+
+  it('asks for the open app’s expenses only, and nothing extra when there is none', () => {
+    // The Library's rent was in the Shop's lists because nothing said whose it was.
+    expect(expenseListQuery({ ...FILTERS_BASE, app: 'library' })).toContain('app=library');
+    expect(expenseListQuery(FILTERS_BASE)).not.toContain('app=');
+  });
+
+  it('files the open app’s code under `app` only for an app that keeps expenses', () => {
+    expect(expenseAppOf('library')).toBe('library');
+    expect(expenseAppOf('khata')).toBeUndefined();
+    expect(expenseAppOf(null)).toBeUndefined();
   });
 });

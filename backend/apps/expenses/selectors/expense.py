@@ -115,11 +115,12 @@ def list_categories(*, tenant: Any, include_archived: bool) -> QuerySet:
     ).order_by("-recent_uses", "sort_order", "name", "id")
 
 
-def spend_by_category(tenant: Any, start: Any, end: Any) -> list[dict]:
+def spend_by_category(tenant: Any, start: Any, end: Any, app: str | None = None) -> list[dict]:
     """Recorded expenses dated in `[start, end]`, summed by category, largest first.
 
     The spend seam's reader (`apps.common.seams.spend`): what a vertical's profit view
-    subtracts from what came in. A void expense was never spent.
+    subtracts from what came in. A void expense was never spent. DEC-019 (QA B10) — `app`
+    narrows to the expenses that app recorded: the Library's profit is not the Shop's rent.
     """
     from django.db.models import Sum
 
@@ -132,6 +133,7 @@ def spend_by_category(tenant: Any, start: Any, end: Any) -> list[dict]:
             status=ExpenseStatus.RECORDED,
             expense_date__gte=start,
             expense_date__lte=end,
+            **({"app": app} if app else {}),
         )
         .values("category__name")
         .annotate(total=Sum("amount"))

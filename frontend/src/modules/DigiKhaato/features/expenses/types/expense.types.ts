@@ -78,6 +78,8 @@ export interface ExpenseFilters {
   readonly mode: PaymentMode | null;
   readonly q: string;
   readonly page: number;
+  /** DEC-019 (QA B10) — the app whose expenses these are; set by the page, not the URL. */
+  readonly app?: string;
 }
 
 export interface ExpensePage {

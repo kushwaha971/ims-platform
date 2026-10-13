@@ -358,7 +358,7 @@ def recent_activity(*, tenant: Any) -> list[dict[str, Any]]:
             )
         )
 
-    expenses = Expense.objects.filter(tenant=tenant).select_related("party", "category")
+    expenses = Expense.objects.filter(tenant=tenant, app="shop").select_related("party", "category")
     for expense in expenses.order_by("-created_at", "-id")[:limit]:
         events.append(
             _event(

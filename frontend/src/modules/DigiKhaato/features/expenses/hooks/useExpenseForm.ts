@@ -11,6 +11,9 @@ import type { ApiErrorShape } from 'src/types/api.types';
 import { applyServerErrors } from 'src/utils/applyServerErrors';
 import { formatAmount } from 'src/utils/money';
 
+import { useNavigation } from 'modules/DigiKhaato/features/navigation/useNavigation';
+
+import { expenseAppOf } from '../constants/expenseApps';
 import { EXPENSE_FORM_FIELDS, SERVER_FIELD_TO_FORM } from '../constants/expenseFormFields';
 import {
   expenseDetailClosed,
@@ -50,6 +53,12 @@ export interface UseExpenseFormResult {
   readonly isSaving: boolean;
   readonly canWrite: boolean;
   readonly canVoid: boolean;
+  /**
+   * DEC-019 (QA B10) — whether an expense may be left to pay later. Only the Shop
+   * keeps bills to pay (an unpaid expense is owed to a supplier in its book); the
+   * Library and Lending record an expense when it is paid, so they offer no switch.
+   */
+  readonly canOwe: boolean;
   readonly draft: ExpenseFormValues | null;
   readonly formErrors: readonly string[];
   readonly categories: readonly ExpenseCategory[];
@@ -117,6 +126,8 @@ export const useExpenseForm = (): UseExpenseFormResult => {
     dispatch(expenseDrawerClosed());
   }, [dispatch]);
   const discardDraft = useCallback(() => dispatch(expenseDraftDiscarded()), [dispatch]);
+  /* DEC-019 (QA B10) — an expense is recorded in the app the merchant has open. */
+  const expenseApp = expenseAppOf(useNavigation().app);
 
   const submit = useCallback(
     async (
@@ -126,7 +137,9 @@ export const useExpenseForm = (): UseExpenseFormResult => {
     ): Promise<boolean> => {
       setFormErrors([]);
       try {
-        const saved = await dispatch(createExpense({ values, idempotencyKey: key })).unwrap();
+        const saved = await dispatch(
+          createExpense({ values, idempotencyKey: key, app: expenseApp })
+        ).unwrap();
         // The key now names the expense just written; the next save is a new one.
         rotate();
         /* FR-8 — "Saved ₹500 — Food". `formatAmount`, not `formatInr`: the
@@ -173,7 +186,7 @@ export const useExpenseForm = (): UseExpenseFormResult => {
         return false;
       }
     },
-    [dispatch, key, rotate]
+    [dispatch, key, rotate, expenseApp]
   );
 
   const addCategory = useCallback(
@@ -234,6 +247,7 @@ export const useExpenseForm = (): UseExpenseFormResult => {
       isSaving: status === 'loading',
       canWrite,
       canVoid,
+      canOwe: !expenseApp || expenseApp === 'shop',
       draft,
       formErrors,
       categories,
@@ -259,6 +273,7 @@ export const useExpenseForm = (): UseExpenseFormResult => {
       status,
       canWrite,
       canVoid,
+      expenseApp,
       draft,
       formErrors,
       categories,

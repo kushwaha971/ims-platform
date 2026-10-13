@@ -141,6 +141,10 @@ class Expense(TenantModel):
     note = models.CharField(max_length=NOTE_MAX_LENGTH, blank=True, default="")
     paid = models.BooleanField(default=True)
     due_on = models.DateField(null=True, blank=True)
+    #: DEC-019 (QA B10) — the app this expense was recorded in: `shop`, `library` or
+    #: `lending` (`EXPENSE_APPS`). Each app's profit, cashbook and reports read only
+    #: their own; there is no shared expense. The Library's rent is not the Shop's.
+    app = models.CharField(max_length=32, default="shop")
     status = models.CharField(
         max_length=10, choices=ExpenseStatus.choices, default=ExpenseStatus.RECORDED
     )

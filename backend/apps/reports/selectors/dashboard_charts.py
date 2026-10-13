@@ -110,7 +110,7 @@ def _first_record(tenant: Any) -> dt.date | None:
         .exclude(status=DRAFT)
         .aggregate(d=Min("document_date"))["d"],
         Payment.objects.filter(tenant=tenant).aggregate(d=Min("payment_date"))["d"],
-        Expense.objects.filter(tenant=tenant).aggregate(d=Min("expense_date"))["d"],
+        Expense.objects.filter(tenant=tenant, app="shop").aggregate(d=Min("expense_date"))["d"],
     ]
     known = [day for day in firsts if day is not None]
     return min(known) if known else None
@@ -267,9 +267,10 @@ def profit_series(span: _Span) -> tuple[list[Decimal], int]:
 def expense_series(span: _Span) -> list[Decimal]:
     from apps.expenses.models import Expense
 
-    expenses = Expense.objects.filter(tenant=span.tenant, **span.between("expense_date")).exclude(
-        status="void"
-    )
+    # DEC-019 (QA B10) — the Shop's charts count the Shop's expenses only.
+    expenses = Expense.objects.filter(
+        tenant=span.tenant, app="shop", **span.between("expense_date")
+    ).exclude(status="void")
     return _series(_grouped(expenses, "expense_date", "amount", span.group), span.starts)
 
 
@@ -290,7 +291,7 @@ def money_series(span: _Span) -> tuple[list[Decimal], list[Decimal]]:
         span.starts,
     )
     paid_expenses = Expense.objects.filter(
-        tenant=span.tenant, paid=True, **span.between("expense_date")
+        tenant=span.tenant, app="shop", paid=True, **span.between("expense_date")
     ).exclude(status="void")
     spent = _series(_grouped(paid_expenses, "expense_date", "amount", span.group), span.starts)
     return money_in, [p + e for p, e in zip(paid_out, spent, strict=True)]

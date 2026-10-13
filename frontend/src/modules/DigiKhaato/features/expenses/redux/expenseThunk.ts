@@ -68,11 +68,15 @@ export const createExpenseCategory = createAsyncThunk<
 /** MUTATION. Record one expense, with the key the hook minted for this save. */
 export const createExpense = createAsyncThunk<
   ExpenseSaveResult,
-  { readonly values: ExpenseFormValues; readonly idempotencyKey: string },
+  {
+    readonly values: ExpenseFormValues;
+    readonly idempotencyKey: string;
+    readonly app?: string;
+  },
   { rejectValue: ApiErrorShape }
->('expenseForm/createExpense', async ({ values, idempotencyKey }, { rejectWithValue }) => {
+>('expenseForm/createExpense', async ({ values, idempotencyKey, app }, { rejectWithValue }) => {
   try {
-    return await (await service()).createExpense(values, idempotencyKey);
+    return await (await service()).createExpense(values, idempotencyKey, app);
   } catch (error) {
     return rejectWithValue(toApiError(error, 'expenses.save.error'));
   }

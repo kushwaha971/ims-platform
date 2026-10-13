@@ -21,7 +21,7 @@ class SpendLine(TypedDict):
     amount: Decimal
 
 
-SpendReader = Callable[[Any, dt.date, dt.date], list[SpendLine]]
+SpendReader = Callable[..., list[SpendLine]]
 _reader: list[SpendReader] = []
 
 
@@ -32,6 +32,11 @@ def register_spend_reader(reader: SpendReader) -> None:
         _reader.append(reader)
 
 
-def spend_by_category(tenant: Any, start: dt.date, end: dt.date) -> list[SpendLine]:
-    """Recorded spend in `[start, end]` by category, largest first; [] with no reader."""
-    return _reader[0](tenant, start, end) if _reader else []
+def spend_by_category(
+    tenant: Any, start: dt.date, end: dt.date, app: str | None = None
+) -> list[SpendLine]:
+    """Recorded spend in `[start, end]` by category, largest first; [] with no reader.
+
+    DEC-019 (QA B10) — `app` is the vertical asking: it is told only its own spend.
+    """
+    return _reader[0](tenant, start, end, app=app) if _reader else []
