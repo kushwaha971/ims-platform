@@ -10,12 +10,12 @@ owner asks.
 ## Status (as of commit 61051cd, 13 Oct 2026)
 
 **Done and pushed** (each has a commit naming it — `git log --grep "B26"` etc.):
-B1, B2, B3, B4, B5, B6, B7, B8, B10, B13, B14, B22, B23, B25, B26, B27–B35,
+B1, B2, B3, B4, B5, B6, B7, B8, B9, B10, B13, B14, B22, B23, B25, B26, B27–B35,
 B44, B45, B46, B47, B48, B49, B50, B51, F1, F2, F4, F6, F8, F10 (parts A and B),
 F12, FB4, and DEC-019 (each app keeps its own money).
 
 **Next, in this order:**
-1. P2 bugs: B9 (verify only — B3/DEC-019 may have closed it), B11, B12, B15,
+1. P2 bugs: B11, B12, B15,
    B16, B17, B18, B19, B20, B21 (auth call storm), B24, B36, B37, B38, B39,
    B40, B41, B42, B43.
 2. P2 features: F3 (advance applied at renewal), F5, F7, F9, F11, F13;
@@ -29,6 +29,22 @@ F12, FB4, and DEC-019 (each app keeps its own money).
    verify first).
 
 Update the "Done" list in this file in the same commit as each item.
+
+## Verification on 13 Oct 2026
+
+- B9 was already closed by DEC-019. `e2e/library-book-look.mjs` creates a person
+  with a ₹900 Library fee and a ₹250 opening balance in the Udhaar book, then
+  verifies the Shop shows ₹0 and neither entry. Desktop 1280 px and phone
+  360 px pass without overflow or browser errors; screenshots were read.
+- Baseline gates: the backend suite with `config.settings.test` reports
+  4,493 passed, 16 skipped, two documented timing tests deselected, and one
+  failure: `test_every_appendix_a_code_is_registered_with_its_status` omits
+  B5's existing `library_plan_no_end` code from its expected set. The frontend
+  suite reports 3,957 passed and three failures in the landing-page tests:
+  the footer now says "Terms of service" rather than "Terms", and FAQ is no
+  longer in its Product links. These expectations predate this QA pass.
+  Type checking and the production build pass. The untouched build also
+  exceeded three Library bundle limits by at most 0.1 KB.
 
 ## How each item is done
 
@@ -47,7 +63,8 @@ Update the "Done" list in this file in the same commit as each item.
 
 ```bash
 service postgresql start                      # Postgres stops when the container recycles
-cd backend && python3 -m pytest -p no:cacheprovider        # full suite ~20 min, no -q (it hides the summary)
+cd backend && DJANGO_SETTINGS_MODULE=config.settings.test python3 -m pytest -p no:cacheprovider
+# full suite ~20 min, no -q (it hides the summary); do not inherit local startup settings
 #   two timing tests fail on slow machines regardless of changes; deselect:
 #   apps/library/tests/test_verification.py::test_close_over_twenty_thousand_copies_takes_under_five_seconds
 #   -k "not test_five_thousand_schedules_run_under_a_minute"
