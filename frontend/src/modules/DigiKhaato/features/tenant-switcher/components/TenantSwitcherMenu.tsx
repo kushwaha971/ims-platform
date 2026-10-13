@@ -129,14 +129,13 @@ export function TenantSwitcherMenu({
     }
   }, [app, appAction, dispatch, router]);
 
-  // Remembered by the server, per person per business, so every device opens
-  // the same app next time; then straight to that app's home.
+  // The committed route's useNavigation sync remembers the app on the server.
+  // Sending another switch here doubles both the mutation and session read (B21).
   const openApp = useCallback(
-    (code: string, href: string) => {
-      if (code !== app) void dispatch(switchApp({ app: code }));
+    (href: string) => {
       router.push(href);
     },
-    [app, dispatch, router]
+    [router]
   );
 
   // Before `/auth/me` lands there is no name to show; a placeholder chevron
@@ -214,7 +213,7 @@ export function TenantSwitcherMenu({
               <MLMenuItem
                 key={item.code}
                 selected={item.code === app}
-                onSelect={() => openApp(item.code, item.href)}
+                onSelect={() => openApp(item.href)}
               >
                 <UbText as="span" variant="inherit" tone="inherit" className="min-w-0 flex-1">
                   {t(item.labelId)}

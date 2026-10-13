@@ -7,6 +7,8 @@ import { store } from 'src/redux/store';
 import { renderWithProviders } from 'src/tests/renderWithProviders';
 import type { PermissionCode } from 'src/types/domain.types';
 
+import { resetNavigationSyncForTests } from '../../navigation/useNavigation';
+
 import { TenantSwitcherMenu } from './TenantSwitcherMenu';
 
 /**
@@ -25,10 +27,11 @@ const authService = jest.requireMock('../../auth/api/authService') as {
 };
 
 const push = jest.fn();
+let mockPath = '/library';
 jest.mock('next/navigation', () => ({
   useRouter: () => ({ push, replace: jest.fn(), back: jest.fn(), prefetch: jest.fn() }),
   useSearchParams: () => new URLSearchParams(''),
-  usePathname: () => '/library',
+  usePathname: () => mockPath,
 }));
 
 const APPS: SessionApp[] = [
@@ -86,6 +89,8 @@ const load = (
   );
 
 beforeEach(() => {
+  mockPath = '/library';
+  resetNavigationSyncForTests();
   jest.clearAllMocks();
   authService.switchApp.mockImplementation(() => new Promise(() => undefined));
 });
@@ -172,14 +177,19 @@ describe('choosing an app', () => {
     expect(screen.queryByText('YourKhata')).toBeNull();
   });
 
-  it('lists the business’s apps first in the switcher and opens the one chosen', async () => {
+  it('routes to the chosen app and lets path sync send the only switch request (QA B21)', async () => {
+    // The menu and useNavigation used to each switch, doubling both POST and /auth/me.
     load(APPS);
-    renderWithProviders(<TenantSwitcherMenu rail caption="YourKhata" />);
+    const { rerender } = renderWithProviders(<TenantSwitcherMenu rail caption="YourKhata" />);
     await userEvent.click(screen.getByRole('button', { name: /Verma Finance/ }));
     expect(await screen.findByText('Apps')).toBeInTheDocument();
     await userEvent.click(screen.getByRole('menuitem', { name: 'Lending' }));
-    await waitFor(() => expect(authService.switchApp).toHaveBeenCalledWith('lending'));
+    expect(authService.switchApp).not.toHaveBeenCalled();
     expect(push).toHaveBeenCalledWith('/lending');
+    mockPath = '/lending';
+    rerender(<TenantSwitcherMenu rail caption="YourKhata" />);
+    await waitFor(() => expect(authService.switchApp).toHaveBeenCalledWith('lending'));
+    expect(authService.switchApp).toHaveBeenCalledTimes(1);
   });
 
   it('offers no app group to a person who can open one app', async () => {
