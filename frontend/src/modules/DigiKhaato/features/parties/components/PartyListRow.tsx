@@ -107,12 +107,18 @@ export const PartyBalanceCell = memo(PartyBalanceCellBase);
 
 export interface PartyMetaCellProps {
   readonly text: string;
+  readonly wrap?: boolean;
 }
 
 /** The supporting facts: how stale the party is, and how to reach them. */
-function PartyMetaCellBase({ text }: Readonly<PartyMetaCellProps>) {
+function PartyMetaCellBase({ text, wrap = false }: Readonly<PartyMetaCellProps>) {
   return (
-    <UbText as="span" variant="inherit" truncate>
+    <UbText
+      as="span"
+      variant="inherit"
+      truncate={!wrap}
+      className={wrap ? 'whitespace-normal break-words' : undefined}
+    >
       {text}
     </UbText>
   );

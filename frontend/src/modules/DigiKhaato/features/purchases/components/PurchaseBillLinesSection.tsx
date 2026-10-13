@@ -169,7 +169,7 @@ export function PurchaseBillLinesSection({
         id: 'qty',
         header: t('purchases.line.qty'),
         field: 'qty',
-        track: 'minmax(6rem,1fr)',
+        track: 'minmax(7rem,1fr)',
         align: 'end',
         render: ({ field, id, label, invalid, index }) => (
           <UbQuantityInput
@@ -304,6 +304,7 @@ export function PurchaseBillLinesSection({
 
   return (
     <UbLineItemsEditor<PurchaseBillFormValues, 'lines'>
+      tableFrom={1536}
       control={control}
       name="lines"
       fieldArray={fieldArray}

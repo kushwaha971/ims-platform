@@ -122,14 +122,16 @@ describe('the bill editor', () => {
   });
 });
 
-describe('the line table at a 1280 desktop (QA S-D5)', () => {
+describe('the line table at a 1536 desktop (QA S-D5 / B17)', () => {
   it("fits every column's minimum in the editor column, so Total is never clipped", async () => {
-    // S-D5: the tracks' minimums summed to 52rem against 43.5rem (696 px) of
-    // editor column at 1280, so the last "Total" column was cut off in en and hi.
+    // B17: wider quantity fields need cards at 1280; the table starts at
+    // 1536, where the editor beside its totals has at least 53.5rem.
     const original = window.matchMedia;
     window.matchMedia = ((query: string) => ({
       ...original(query),
-      matches: /min-width/.test(query),
+      matches:
+        /min-width/.test(query) &&
+        1536 >= Number(/min-width:\s*(\d+)/.exec(query)?.[1] ?? Infinity),
     })) as typeof window.matchMedia;
     signIn(['sales.invoice.read', 'sales.invoice.write']);
     renderWithProviders(<InvoiceEditorPageContent documentId={null} />);
@@ -143,7 +145,7 @@ describe('the line table at a 1280 desktop (QA S-D5)', () => {
     expect(header).toHaveClass('gap-2'); // the 0.5rem gap counted below
     expect(tracks.length).toBe(7); // item, qty, rate, disc, GST, total, remove
     expect(tracks.reduce((sum, track) => sum + rem(track), 0) + gaps + padding).toBeLessThanOrEqual(
-      43.5
+      53.5
     );
   });
 });

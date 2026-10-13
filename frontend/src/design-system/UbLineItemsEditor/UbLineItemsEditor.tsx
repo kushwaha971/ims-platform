@@ -15,7 +15,7 @@ import {
   type UseFieldArrayReturn,
 } from 'react-hook-form';
 
-import { useGridTier } from 'src/design-system/UbDataGrid/useGridTier';
+import { useMediaQuery } from 'src/design-system/motion/useMediaQuery';
 import { cn } from 'src/utils/cn';
 
 /**
@@ -105,6 +105,8 @@ export interface UbLineItemsEditorProps<TForm extends FieldValues, TName extends
   readonly footer?: ReactNode;
   /** Force a layout (tests, a print preview); otherwise from the viewport. */
   readonly layout?: UbLineCellLayout;
+  /** Wide forms keep labelled cards until their columns have room. */
+  readonly tableFrom?: number;
   readonly className?: string;
 }
 
@@ -137,10 +139,11 @@ export function UbLineItemsEditor<TForm extends FieldValues, TName extends Array
   disabled = false,
   footer,
   layout: forcedLayout,
+  tableFrom = 768,
   className,
 }: UbLineItemsEditorProps<TForm, TName>): React.JSX.Element {
-  const tier = useGridTier();
-  const layout: UbLineCellLayout = forcedLayout ?? (tier === 'cards' ? 'card' : 'table');
+  const tableFits = useMediaQuery(`(min-width: ${tableFrom}px)`);
+  const layout: UbLineCellLayout = forcedLayout ?? (tableFits ? 'table' : 'card');
   const containerRef = useRef<HTMLDivElement>(null);
   const baseId = useId();
   const { fields, append, remove } = fieldArray;

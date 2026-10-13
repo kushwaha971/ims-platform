@@ -320,7 +320,7 @@ export function NewLoanPageContent(): React.JSX.Element {
                   >
                     {(field) => <UbTextInput {...field} autoComplete="off" disabled={saving} />}
                   </UbField>
-                  <UbStack direction="row" gap={3} className="max-sm:flex-col">
+                  <UbStack direction="row" gap={3} className="max-xl:flex-col">
                     <UbField
                       name="mobile"
                       label={t('lending.form.mobile')}

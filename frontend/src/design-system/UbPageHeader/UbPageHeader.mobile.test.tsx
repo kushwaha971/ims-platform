@@ -30,6 +30,12 @@ const setPhone = (phone: boolean): void => {
     }) as unknown as MediaQueryList;
 };
 
+it('lets a complete document number wrap instead of cutting its suffix (QA B17)', () => {
+  // The issued bill's identity must remain readable beside a crowded action row.
+  render(<UbPageHeader title="INV/26-27/0001" wrapTitle />);
+  expect(screen.getByRole('heading', { name: 'INV/26-27/0001' })).not.toHaveClass('truncate');
+});
+
 const header = (onAdd = jest.fn(), onExport = jest.fn()) =>
   render(
     <UbPageHeader

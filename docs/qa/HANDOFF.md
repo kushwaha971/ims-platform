@@ -7,15 +7,15 @@ this file, then the item in `docs/qa/2026-10-12-prompt-pack.md`.
 Branch: `dev`. Push with `git push -u origin dev`. No pull request unless the
 owner asks.
 
-## Status (as of commit 61051cd, 13 Oct 2026)
+## Status (13 Oct 2026)
 
 **Done and pushed** (each has a commit naming it — `git log --grep "B26"` etc.):
-B1, B2, B3, B4, B5, B6, B7, B8, B9, B10, B11, B12, B13, B14, B15, B16, B22, B23, B25, B26, B27–B35,
+B1, B2, B3, B4, B5, B6, B7, B8, B9, B10, B11, B12, B13, B14, B15, B16, B17, B22, B23, B25, B26, B27–B35,
 B44, B45, B46, B47, B48, B49, B50, B51, F1, F2, F4, F6, F8, F10 (parts A and B),
 F12, FB4, and DEC-019 (each app keeps its own money).
 
 **Next, in this order:**
-1. P2 bugs: B17, B18, B19, B20, B21 (auth call storm), B24, B36, B37, B38, B39,
+1. P2 bugs: B18, B19, B20, B21 (auth call storm), B24, B36, B37, B38, B39,
    B40, B41, B42, B43.
 2. P2 features: F3 (advance applied at renewal), F5, F7, F9, F11, F13;
    owner-editable message templates; per-app wording (no "You gave / You got"
@@ -82,6 +82,22 @@ Update the "Done" list in this file in the same commit as each item.
   gates pass; the full frontend suite has 3,972 passed and the same three
   existing landing-page failures.
 
+- B17: money, fee badges, contacts, document headings and invoice/purchase
+  fields reproduced clipped at 1057/1024 px; the larger fixture also exposed
+  fee and purchase-line clipping at 1280 px. Three new regression assertions
+  failed first. Student grids keep primary columns below 1280 and give dues
+  more space; contact details and document numbers wrap; the loan phone field
+  gets its own row below 1280. Invoice/purchase lines use existing labelled
+  cards below 1536, preserving room beside totals, and wider quantity tracks
+  when the table fits. Existing invoice-fit tests now check that breakpoint.
+  `e2e/layout-look.mjs` passes all 99 checks at 1024, 1057, 1280, 1440, 1536
+  and 360 px. Desktop/mobile screenshots and the original failure width were
+  read, as were the wide line tables. Types, changed-file ESLint, locales,
+  build and bundle gates pass. Only eight exceeded bundle limits were raised
+  to measured + 0.5 KB with a dated note. The full frontend run has 3,977
+  passed and the same three existing landing-page failures; backend source
+  remains unchanged since its recorded full run.
+
 ## How each item is done
 
 1. **Verify first** — reproduce on a live stack; some items are already fixed.
@@ -134,6 +150,9 @@ node e2e/<name>-look.mjs
   (`tests/architecture/test_import_rules.py`).
 - `UbCard` drops `data-testid`; put it on an inner `UbStack`.
 - Prettier on a whole folder reformats unrelated files; `git checkout` them.
+- Run the build/type checks separately from the full Jest suite: the party
+  fetch lint test creates and removes temporary TypeScript probe files, which
+  can disappear while a simultaneous build is checking them.
 - No raw `div`/`span` in feature code; errors go through the global snackbar;
   nothing a merchant's customer receives names the product.
 - Commit messages end with the agent's own attribution lines; no model names.

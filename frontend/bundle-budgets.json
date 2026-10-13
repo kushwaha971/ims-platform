@@ -1,5 +1,8 @@
 {
  "//": [
+  "13 Oct 2026, QA B17: responsive forms, full document headings and wrapping",
+  "contacts add at most 0.1 KB on affected routes. Only exceeded limits",
+  "are adjusted to their measured gzip size + 0.5 KB.",
   "13 Oct 2026, QA B16: account-menu and More feedback replace the floating",
   "tab. The callback availability and menu icon add about 0.2 KB to affected",
   "app routes; the SDK stays lazy. Exceeded limits use measured + 0.5 KB.",
@@ -1550,7 +1553,7 @@
   },
   "/imports/[id]": {
    "route": 50.6,
-   "firstLoad": 289
+   "firstLoad": 289.5
   },
   "/admin": {
    "route": 11,
@@ -1609,11 +1612,11 @@
    "firstLoad": 340.7
   },
   "/reports/purchase-register": {
-   "route": 107,
+   "route": 107.6,
    "firstLoad": 346
   },
   "/reports/sales-register": {
-   "route": 107,
+   "route": 107.6,
    "firstLoad": 346
   },
   "/login": {
@@ -1645,11 +1648,11 @@
    "firstLoad": 352.6
   },
   "/library/members": {
-   "route": 83.4,
+   "route": 83.9,
    "firstLoad": 322.5
   },
   "/library/members/[membershipId]": {
-   "route": 76.7,
+   "route": 77.2,
    "firstLoad": 315.8
   },
   "/library/catalogue/[titleId]": {
@@ -1673,7 +1676,7 @@
    "firstLoad": 310.4
   },
   "/library/fees": {
-   "route": 72.1,
+   "route": 72.6,
    "firstLoad": 311.3
   },
   "/signup": {
@@ -1730,7 +1733,7 @@
   },
   "/lending/loans/new": {
    "route": 131.8,
-   "firstLoad": 370.4
+   "firstLoad": 370.9
   },
   "/lending": {
    "route": 65.7,
@@ -1742,7 +1745,7 @@
   },
   "/lending/loans": {
    "route": 68.7,
-   "firstLoad": 307.3
+   "firstLoad": 307.8
   },
   "/customers": {
    "route": 110,

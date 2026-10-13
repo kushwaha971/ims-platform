@@ -43,7 +43,7 @@ export const createMemberColumns = ({
     header: t('library.members.column.member'),
     priority: 1,
     cardSlot: 'title',
-    widthShare: 26,
+    widthShare: 24,
     cell: (row) => (
       <UbListItemText
         primary={
@@ -62,7 +62,7 @@ export const createMemberColumns = ({
     header: t('library.members.column.seat'),
     priority: 1,
     cardSlot: 'meta',
-    widthShare: 18,
+    widthShare: 14,
     cell: (row) => (
       <UbText as="span" variant="body-sm" tone={placeLine(row) ? undefined : 'tertiary'}>
         {placeLine(row) || t('library.members.noSeat')}
@@ -74,7 +74,7 @@ export const createMemberColumns = ({
     header: t('library.members.column.plan'),
     priority: 2,
     cardSlot: 'none',
-    widthShare: 16,
+    widthShare: 14,
     cell: (row) => (
       <UbStack gap={0}>
         <UbText as="span" variant="body-sm" className="line-clamp-1">
@@ -117,7 +117,7 @@ export const createMemberColumns = ({
     priority: 1,
     cardSlot: 'none',
     align: 'end',
-    widthShare: 12,
+    widthShare: 18,
     cell: (row) =>
       isNonZero(row.duesAmount) ? (
         <UbAmount value={row.duesAmount} tone="receivable" label={t('library.member.owes')} />
@@ -132,7 +132,7 @@ export const createMemberColumns = ({
     header: t('library.members.column.fee'),
     priority: 1,
     cardSlot: 'trailing',
-    widthShare: 12,
+    widthShare: 14,
     cell: (row) => (
       <UbStatusBadge
         tone={FEE_TONE[row.feeState]}

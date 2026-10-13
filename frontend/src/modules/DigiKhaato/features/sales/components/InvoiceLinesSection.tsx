@@ -197,7 +197,7 @@ export function InvoiceLinesSection({
         id: 'qty',
         header: t('sales.line.qty'),
         field: 'qty',
-        track: 'minmax(5.25rem,1fr)',
+        track: 'minmax(7rem,1fr)',
         align: 'end',
         render: ({ field, id, label, invalid, index }) => (
           <UbQuantityInput
@@ -357,6 +357,7 @@ export function InvoiceLinesSection({
 
   return (
     <UbLineItemsEditor<InvoiceFormValues, 'lines'>
+      tableFrom={1536}
       control={control}
       name="lines"
       fieldArray={fieldArray}

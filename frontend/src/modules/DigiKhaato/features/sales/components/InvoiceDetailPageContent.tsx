@@ -108,6 +108,7 @@ export function InvoiceDetailPageContent({
       <UbPageHeader
         className="ub-print-hide"
         title={doc.number ?? t('sales.status.draft')}
+        wrapTitle
         subtitle={partyLabel(doc) ?? t('sales.walkIn.customer')}
         controls={
           // The controls row is full-width; the badge sizes to its label.

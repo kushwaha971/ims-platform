@@ -25,6 +25,18 @@ let seq = 0;
 export const uniq = () => `${Date.now().toString(36)}${(seq++).toString(36)}${Math.random().toString(36).slice(2, 6)}`;
 /** A ten-digit Indian mobile nobody else holds (starts 6–9, as the validator wants). */
 export const uniqMobile = () => `9${String(Date.now()).slice(-5)}${String(Math.floor(Math.random() * 1e4)).padStart(4, '0')}`;
+/** A fresh, locally checked GSTIN for fixture businesses; never a real business identifier. */
+export const fixtureGstin = () => {
+  const alphabet = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  const stamp = String(Date.now());
+  const letters = [...stamp.slice(-5)].map((digit) => alphabet[10 + Number(digit)]).join('');
+  const body = `27${letters}${stamp.slice(-4)}F1Z`;
+  const sum = [...body].reduce((total, char, index) => {
+    const product = alphabet.indexOf(char) * (index % 2 ? 2 : 1);
+    return total + Math.floor(product / 36) + product % 36;
+  }, 0);
+  return body + alphabet[(36 - sum % 36) % 36];
+};
 const daysAgo = (n) => new Date(Date.now() - n * 86_400_000).toISOString().slice(0, 10);
 
 export async function api(method, path, body, token, extra = {}) {

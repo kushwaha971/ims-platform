@@ -65,11 +65,13 @@ function Harness({
   layout = 'table',
   onSubmit,
   maxLines,
+  responsive = false,
 }: Readonly<{
   initial: Line[];
   layout?: UbLineCellLayout;
   onSubmit?: () => void;
   maxLines?: number;
+  responsive?: boolean;
 }>) {
   const { control } = useForm<FormShape>({ defaultValues: { lines: initial } });
   const fieldArray = useFieldArray({ control, name: 'lines', keyName: 'key' });
@@ -80,7 +82,8 @@ function Harness({
       fieldArray={fieldArray}
       columns={COLUMNS}
       newLine={() => ({ name: '', qty: '' })}
-      layout={layout}
+      layout={responsive ? undefined : layout}
+      tableFrom={responsive ? 1536 : undefined}
       maxLines={maxLines}
       onSubmitShortcut={onSubmit}
       labels={{
@@ -173,6 +176,29 @@ describe('keyboard-first entry', () => {
 });
 
 describe('the phone layout', () => {
+  it.each([1057, 1280, 1440])(
+    'uses labelled card fields when a full invoice cannot fit at %i px (QA B17)',
+    (width) => {
+      // The sidebar and six editable tracks used to force a horizontal form at this width.
+      const original = window.matchMedia;
+      window.matchMedia = (query) =>
+        ({
+          matches: width >= Number(/min-width:\s*(\d+)/.exec(query)?.[1] ?? Infinity),
+          media: query,
+          addEventListener: () => undefined,
+          removeEventListener: () => undefined,
+        }) as unknown as MediaQueryList;
+      try {
+        render(<Harness responsive initial={[{ name: 'Rice', qty: '2.5' }]} />);
+        expect(screen.queryByRole('table')).toBeNull();
+        const card = screen.getByRole('region', { name: 'line 1' });
+        expect(within(card).getAllByLabelText('Qty, line 1')).toHaveLength(1);
+        expect(within(card).getByLabelText('Qty, line 1')).toHaveValue('2.5');
+      } finally {
+        window.matchMedia = original;
+      }
+    }
+  );
   it('renders each line as a card with the title column on top and one input per field', () => {
     // Both layouts in the DOM at once would give every field two inputs and
     // two Controllers fighting over one value.

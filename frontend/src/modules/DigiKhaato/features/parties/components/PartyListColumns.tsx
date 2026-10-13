@@ -149,7 +149,7 @@ export const createPartyColumns = ({
      * is the shape that survives selection being switched on.
      */
     widthShare: 18,
-    cell: (party) => <PartyMetaCell text={contactLine(party)} />,
+    cell: (party) => <PartyMetaCell text={contactLine(party)} wrap />,
   },
   {
     id: 'status',

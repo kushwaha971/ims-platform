@@ -38,6 +38,8 @@ export type UbPageHeaderWidth = 'measure' | 'full';
 
 export interface UbPageHeaderProps {
   readonly title: string;
+  /** Document identifiers must remain readable in full beside their actions. */
+  readonly wrapTitle?: boolean;
   readonly subtitle?: string;
   /** Scope controls: a tab bar, a date range, a search box. */
   readonly controls?: ReactNode;
@@ -86,6 +88,7 @@ export interface UbPageHeaderProps {
 
 function UbPageHeaderBase({
   title,
+  wrapTitle = false,
   subtitle,
   controls,
   actions,
@@ -136,7 +139,11 @@ function UbPageHeaderBase({
           top inset is the header's. */}
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
         <div className="flex min-w-[8rem] flex-1 flex-col gap-0.5">
-          <h1 className="ds-body-xl-semibold truncate leading-8 text-text-primary">{title}</h1>
+          <h1
+            className={`ds-body-xl-semibold ${wrapTitle ? 'break-words' : 'truncate'} leading-8 text-text-primary`}
+          >
+            {title}
+          </h1>
           {subtitle && (
             // QA D8 — the subtitle is a sentence, and on a phone Branding's and
             // Activity's were cut to an ellipsis mid-thought. It wraps; the

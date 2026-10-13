@@ -18,6 +18,7 @@ import {
   UbActiveFilters,
   UbFilterSelect,
   UbFilterSheet,
+  useMediaQuery,
   type UbFilterSpec,
   type UbFilterValues,
 } from 'src/design-system';
@@ -93,6 +94,8 @@ export function MemberListPageContent(): React.JSX.Element {
   const dispatch = useAppDispatch();
   const list = useMemberList();
   const tier = useGridTier();
+  const wideTable = useMediaQuery('(min-width: 1280px)');
+  const tableTier = tier === 'cards' ? 'cards' : wideTable ? 'full' : 'compact';
   const labels = useLibraryGridLabels();
   const timezone = useAppSelector(selectTenantTimezone);
   const today = todayInTenantTz(timezone ?? undefined);
@@ -388,6 +391,8 @@ export function MemberListPageContent(): React.JSX.Element {
               }}
             />
             <UbDataGrid
+              tier={tableTier}
+              compactCutoff={1}
               rows={list.rows}
               columns={columns}
               rowId={rowId}
