@@ -841,13 +841,25 @@ def renew(*, ctx: Any, membership_id: Any, data: Any) -> dict:
     m = _locked(ctx, membership_id)
     _not_closed(m)
     months = m.membership_type.validity_months
-    if months is None or m.valid_until is None:
-        raise ValidationFailed({"membership_type_id": ["This membership does not expire."]})
+    if months is None:
+        # QA B5 — a 409 in words, not a 400 "check the highlighted fields" over a
+        # dialog with no fields: nothing ends, so the way on is another plan.
+        raise BusinessRuleViolation(
+            "library_plan_no_end",
+            "This plan has no end date, so there is nothing to renew. Change the plan instead.",
+            details={"membership_type_id": str(m.membership_type_id)},
+        )
     errors = Errors()
     block = _block(errors, data, "collect")
     errors.raise_if_any()
     today = tenant_today(ctx.tenant)
-    start = m.valid_until + dt.timedelta(days=1) if today <= m.valid_until else today
+    # A student moved onto this plan from one with no end date has no end to run
+    # on from: their first term starts today (QA B5, found running Change plan).
+    start = (
+        m.valid_until + dt.timedelta(days=1)
+        if m.valid_until is not None and today <= m.valid_until
+        else today
+    )
     m.valid_until = valid_until_for(start, months)
     m.version += 1
     m.save(update_fields=["valid_until", "version", "updated_at"])

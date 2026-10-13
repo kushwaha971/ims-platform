@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { sessionLoaded } from 'src/redux/slice/sessionSlice';
@@ -93,6 +93,7 @@ const signIn = (permissions: PermissionCode[], role: string = 'owner'): void => 
 };
 
 beforeEach(() => {
+  jest.clearAllMocks();
   jest.mocked(service.getMember).mockResolvedValue(ASHA);
   jest.mocked(service.listMembershipTypes).mockResolvedValue([]);
 });
@@ -109,6 +110,69 @@ describe('MemberDetailPageContent', () => {
     // QA-F04-2 — the label says "Valid until"; the value is the date, not the sentence again.
     expect(screen.getByText('31/03/2027')).toBeInTheDocument();
     expect(screen.queryByText('Valid until 31/03/2027')).not.toBeInTheDocument();
+  });
+
+  it('offers Change plan instead of Renew on a plan with no end date (QA B5)', async () => {
+    /* Renew on the free "Standard" plan answered "Please check the highlighted
+       fields" over a dialog with no fields. Nothing ends, so nothing renews. */
+    signIn(['library.member.read', 'library.member.write', 'library.member.close']);
+    jest.mocked(service.getMember).mockResolvedValue({
+      ...ASHA,
+      validUntil: null,
+      validityMonths: null,
+      planFee: '0.00',
+    });
+    jest.mocked(service.listMembershipTypes).mockResolvedValue([
+      {
+        id: 'ty1',
+        name: 'Student',
+        maxCopies: 2,
+        loanDays: 14,
+        feeAmount: '0.00',
+        admissionFee: '0.00',
+        depositAmount: '0.00',
+        validityMonths: null,
+        isActive: true,
+        version: 1,
+      },
+      {
+        id: 'ty2',
+        name: 'Monthly',
+        maxCopies: 2,
+        loanDays: 14,
+        feeAmount: '900.00',
+        admissionFee: '0.00',
+        depositAmount: '0.00',
+        validityMonths: 1,
+        isActive: true,
+        version: 1,
+      },
+    ]);
+    jest.mocked(service.actOnMember).mockResolvedValue(ASHA);
+    renderWithProviders(<MemberDetailPageContent id="m1" />);
+    await screen.findByTestId('library-member-number');
+    expect(screen.queryByTestId('library-member-renew')).not.toBeInTheDocument();
+    await userEvent.click(screen.getByTestId('library-member-change-plan'));
+    expect(await screen.findByRole('combobox', { name: 'New plan' })).toHaveValue('ty2');
+    await userEvent.type(screen.getByLabelText(/^Reason/), 'Starts paying monthly');
+    await userEvent.click(screen.getByTestId('library-member-confirm'));
+    await waitFor(() => expect(service.actOnMember).toHaveBeenCalledTimes(1));
+    expect(jest.mocked(service.actOnMember).mock.calls[0]?.slice(0, 3)).toEqual([
+      'm1',
+      'changePlan',
+      { membership_type_id: 'ty2', reason: 'Starts paying monthly' },
+    ]);
+  });
+
+  it('says what a renewal adds and until when, before it is pressed (QA B5)', async () => {
+    signIn(['library.member.read', 'library.member.write', 'library.member.close']);
+    renderWithProviders(<MemberDetailPageContent id="m1" />);
+    await screen.findByTestId('library-member-number');
+    await userEvent.click(screen.getByTestId('library-member-renew'));
+    // Valid until 31/03/2027 on a six-month plan: the next term runs to 30/09/2027.
+    expect(await screen.findByTestId('library-renew-preview')).toHaveTextContent(
+      'Adds ₹150.00 · valid till 30/09/2027'
+    );
   });
 
   it('refuses to close while a book is out, in the dialog, without a request', async () => {

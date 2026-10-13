@@ -214,6 +214,8 @@ _REGISTRY: dict[str, tuple[int, bool]] = {
     "library_category_in_use": (409, False),  # D count
     "library_location_in_use": (409, False),  # D count
     "library_membership_exists": (409, False),  # D membership_id, status
+    # QA B5 — Renew on a plan with no end date; the way on is Change plan.
+    "library_plan_no_end": (409, False),  # D membership_type_id
     "library_member_number_taken": (409, False),  # D number, membership_id
     "library_membership_closed": (409, False),  # D closed_on
     "library_membership_has_loans": (409, False),  # D count

@@ -219,10 +219,14 @@ export const enrolMember = async (body: Wire, key: string): Promise<MemberDetail
   return toMemberDetail(response.data.data);
 };
 
-export type MemberAction = 'renew' | 'suspend' | 'reactivate' | 'close' | 'rejoin' | 'deposit';
+export type MemberAction =
+  'renew' | 'suspend' | 'reactivate' | 'close' | 'rejoin' | 'deposit' | 'changePlan';
 
 /** QA B4 — taking a deposit later is `deposit/receive`; the rest are their own path. */
-const ACTION_PATH: Partial<Record<MemberAction, string>> = { deposit: 'deposit/receive' };
+const ACTION_PATH: Partial<Record<MemberAction, string>> = {
+  deposit: 'deposit/receive',
+  changePlan: 'change-type',
+};
 
 export const actOnMember = async (
   id: string,

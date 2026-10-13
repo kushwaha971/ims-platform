@@ -80,3 +80,48 @@ def test_a_suspended_student_reads_on_hold(api_as: Any, library_on: Any) -> None
     )
     detail = client.get(reverse("v1:library-member", args=[membership_id])).json()["data"]
     assert detail["fee_state"] == "on_hold"
+
+
+def test_renewing_a_plan_with_no_end_says_so_in_words(api_as: Any, library_on: Any) -> None:
+    """QA B5: Renew on the free "Standard" plan answered 400 "Please check the
+    highlighted fields." over a dialog with no fields. It is a 409 that says why
+    and what to do, and moving to another plan is the way on."""
+    client, _ = api_as(library_on, role="owner")
+    free = _type(
+        library_on,
+        fee_amount=D("0"),
+        admission_fee=D("0"),
+        deposit_amount=D("0"),
+        validity_months=None,
+    )
+    membership_id = _enrol(client, library_on, kind=free).json()["data"]["membership_id"]
+    refused = client.post(
+        reverse("v1:library-member-renew", args=[membership_id]),
+        {},
+        format="json",
+        HTTP_IDEMPOTENCY_KEY="r",
+    )
+    assert refused.status_code == 409, refused.content
+    error = refused.json()["error"]
+    assert error["code"] == "library_plan_no_end"
+    assert "Change the plan" in error["message"]
+
+    monthly = _type(library_on, fee_amount=D("900.00"), admission_fee=D("0"), validity_months=1)
+    moved = client.post(
+        reverse("v1:library-member-change-type", args=[membership_id]),
+        {"membership_type_id": str(monthly.id), "reason": "Starts paying monthly"},
+        format="json",
+        HTTP_IDEMPOTENCY_KEY="c",
+    )
+    assert moved.status_code == 200, moved.content
+    # Moved onto a plan with an end, the first renewal starts their term today —
+    # without it a "Standard" student could never start paying (found live).
+    renewed = client.post(
+        reverse("v1:library-member-renew", args=[membership_id]),
+        {},
+        format="json",
+        HTTP_IDEMPOTENCY_KEY="r2",
+    )
+    assert renewed.status_code == 200, renewed.content
+    today = tenant_today(library_on)
+    assert renewed.json()["data"]["valid_until"] > today.isoformat()

@@ -10,6 +10,7 @@ import type {
   EffectiveStatus,
   FeeState,
   MemberBlock,
+  MemberDetail,
   MemberSummary,
   MembershipType,
 } from '../types/member.types';
@@ -158,4 +159,41 @@ export const toEnrolBody = (
             values.collectNow && isNonZero(cost.deposit) ? deposit(cost.deposit) : undefined,
         }),
   };
+};
+
+/** `2026-01-31` plus `months`, the day clamped to the month's end — the server's
+ *  `add_months`, so the date the dialog promises is the date the renewal writes. */
+const addMonthsIso = (iso: string, months: number): Date => {
+  const [y, m, d] = iso.split('-').map(Number) as [number, number, number];
+  const index = m - 1 + months;
+  const year = y + Math.floor(index / 12);
+  const month = index % 12;
+  const last = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
+  return new Date(Date.UTC(year, month, Math.min(d, last)));
+};
+
+const shiftDays = (iso: string, days: number): string => {
+  const date = new Date(`${iso}T00:00:00Z`);
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
+};
+
+/**
+ * QA B5 — what Renew will do, said before it is pressed: the new end date (from the
+ * old end when renewed on or before it, else from today — LIB-04 BR-3) and the fee.
+ * A student with no end date on a plan that has one (moved from a free plan) starts
+ * their first term today. `null` for a plan with no end: nothing to renew, and the page offers
+ * Change plan instead of a Renew that can only be refused.
+ */
+export const renewalPreview = (
+  member: Pick<MemberDetail, 'validUntil' | 'validityMonths' | 'planFee'>,
+  today: string
+): { readonly until: string; readonly fee: string } | null => {
+  if (!member.validityMonths) return null;
+  // Moved here from a plan with no end date: the first term starts today.
+  const start =
+    member.validUntil && today <= member.validUntil ? shiftDays(member.validUntil, 1) : today;
+  const end = addMonthsIso(start, member.validityMonths);
+  end.setUTCDate(end.getUTCDate() - 1);
+  return { until: end.toISOString().slice(0, 10), fee: member.planFee };
 };

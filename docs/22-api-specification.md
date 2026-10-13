@@ -272,6 +272,7 @@ Ownership is recorded as **T-16** in Part 0 §0.12.2. No other chapter may carry
 | `library_category_in_use` | 409 | D `count` | LIB-02: a category that titles still use was deleted. | "Titles still use this category." | `errors.library_category_in_use` | no |
 | `library_location_in_use` | 409 | D `count` | LIB-02: a location that copies still use was deleted. | "Copies are still kept here." | `errors.library_location_in_use` | no |
 | `library_membership_exists` | 409 | D `membership_id`, `status` | LIB-04: a party who is already a member was enrolled, or a member who is not closed re-joined. | "This person is already a member." | `errors.library_membership_exists` | no |
+| `library_plan_no_end` | 409 | D `membership_type_id` | LIB-04 FR-5 (QA B5): Renew on a membership whose plan has no end date. | "This plan has no end date, so there is nothing to renew. Change the plan instead." | `errors.library_plan_no_end` | no |
 | `library_member_number_taken` | 409 | D `number`, `membership_id` | LIB-04: a typed member number is already another member's. | "Member number {number} is already used." | `errors.library_member_number_taken` | no |
 | `library_membership_closed` | 409 | D `closed_on` | LIB-04: a closed membership was renewed or changed (re-join is the way back). | "This membership is closed." | `errors.library_membership_closed` | no |
 | `library_membership_has_loans` | 409 | D `count` | LIB-04: a membership with books still out was closed. | "This member still has books out." | `errors.library_membership_has_loans` | no |

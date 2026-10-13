@@ -5,6 +5,7 @@ import {
   enrolCost,
   feeLabel,
   owesFee,
+  renewalPreview,
   toEnrolBody,
   validityLine,
 } from './memberDisplay';
@@ -193,5 +194,28 @@ describe('the fee badge (QA B26)', () => {
     const occ = (feeState: 'part_paid' | 'no_fee') => ({ occupants: [{ feeState }] }) as never;
     expect(seatState(occ('part_paid'))).toBe('unpaid');
     expect(seatState(occ('no_fee'))).toBe('paid');
+  });
+});
+
+describe('renewalPreview (QA B5)', () => {
+  const base = { planFee: '900.00', validityMonths: 1 };
+  it('runs from the old end when renewed before it, clamping the month end', () => {
+    expect(renewalPreview({ ...base, validUntil: '2026-01-30' }, '2026-01-15')).toEqual({
+      until: '2026-02-27',
+      fee: '900.00',
+    });
+  });
+  it('runs from today when the plan has already lapsed', () => {
+    expect(renewalPreview({ ...base, validUntil: '2026-09-30' }, '2026-10-13')?.until).toBe(
+      '2026-11-12'
+    );
+  });
+  it('starts today for a student moved onto this plan from one with no end', () => {
+    expect(renewalPreview({ ...base, validUntil: null }, '2026-10-13')?.until).toBe('2026-11-12');
+  });
+  it('is null for a plan with no end date', () => {
+    expect(
+      renewalPreview({ ...base, validUntil: null, validityMonths: null }, '2026-10-13')
+    ).toBeNull();
   });
 });

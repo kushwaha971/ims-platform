@@ -6,6 +6,7 @@ import dynamic from 'next/dynamic';
 
 import {
   Armchair,
+  ArrowLeftRight,
   Ban,
   CirclePlay,
   DoorClosed,
@@ -49,6 +50,7 @@ import {
   FEE_TONE,
   feeLabel,
   owesFee,
+  renewalPreview,
   isNonZero,
   shiftHours,
   STATUS_TONE,
@@ -155,6 +157,7 @@ export function MemberDetailPageContent({ id }: Readonly<{ id: string }>): React
   if (!member) return <UbPageSkeleton variant="card" />;
 
   const closed = member.effectiveStatus === 'closed';
+  const renewable = renewalPreview(member, today) !== null;
   const suspended = member.effectiveStatus === 'suspended';
   const busy = detail.actionStatus === 'loading';
   // Shop P0 — what the fee QR asks for: what is owed, else the plan's fee (a renewal).
@@ -201,13 +204,26 @@ export function MemberDetailPageContent({ id }: Readonly<{ id: string }>): React
         title={member.name}
         actions={
           <UbStack direction="row" gap={2}>
-            {!closed && detail.canWrite && (
+            {/* QA B5 — a plan with no end date has nothing to renew: Renew
+                answered "Please check the highlighted fields" over a dialog with
+                no fields. Such a student is offered Change plan instead. */}
+            {!closed && detail.canWrite && renewable && (
               <UbButton
                 icon={<RefreshCw className="h-4 w-4" aria-hidden />}
                 onClick={() => setDialog('renew')}
                 data-testid="library-member-renew"
               >
                 {t('library.member.renew')}
+              </UbButton>
+            )}
+            {!closed && detail.canWrite && !renewable && (
+              <UbButton
+                variant="secondary"
+                icon={<ArrowLeftRight className="h-4 w-4" aria-hidden />}
+                onClick={() => setDialog('changePlan')}
+                data-testid="library-member-change-plan"
+              >
+                {t('library.member.changePlan')}
               </UbButton>
             )}
             <CatalogueActionsMenu
@@ -286,6 +302,15 @@ export function MemberDetailPageContent({ id }: Readonly<{ id: string }>): React
                   label: t('library.member.edit'),
                   icon: Pencil,
                   action: detail.canEdit ? () => setEditing(true) : undefined,
+                },
+                {
+                  key: 'changePlan',
+                  label: t('library.member.changePlan'),
+                  icon: ArrowLeftRight,
+                  action:
+                    detail.canWrite && !closed && renewable
+                      ? () => setDialog('changePlan')
+                      : undefined,
                 },
                 {
                   key: 'suspend',
@@ -578,6 +603,7 @@ export function MemberDetailPageContent({ id }: Readonly<{ id: string }>): React
           kind={dialog}
           member={member}
           types={types}
+          today={today}
           busy={busy}
           onClose={() => setDialog(null)}
           onSubmit={(body) => detail.act(dialog, body)}

@@ -766,7 +766,8 @@
   "QA F6 (13 Oct 2026, the seat map across the whole day) — the library catalogue every library route loads gained the seat map's words (part taken, full, other shift, the filters, the panel's actions). The seat panel is dynamic(): imported statically, its free-seat confirmation, member thunks and message-dialog loader moved webpack's shared groupings and put 0.2-0.4 KB on 71 unrelated routes (the sales and purchase forms, settings, admin); lazily loaded, it is one library route over by 0.1. Raised by the measured + 0.5 rule: /library/copies/[copyId] route -> 69.6.",
   "QA F8 (13 Oct 2026, a loan brought in from the old book) — /lending/loans/new gained the 'Loan already running' switch (UbSwitch is new to that route), the instalments-or-amount choice and its field. The form is the page itself, so it cannot be dynamic(). Raised by the measured + 0.5 rule: /lending/loans/new route -> 131.8; /lending/loans/new firstLoad -> 370.4.",
   "QA F10 phase B (13 Oct 2026, students and running loans from a file) — /library/members and /lending/loans gained the Import action, which renders `imports.action.import` and so loads the `exports` catalogue with the list (the same thing /parties and /items already pay); the wizard itself is a different route. /imports and /imports/[id] gained two kinds' preview columns and words. Raised by the measured + 0.5 rule: /library/members route -> 82.8, firstLoad -> 321.4; /lending/loans route -> 68.7, firstLoad -> 307.3; /imports and /imports/[id] firstLoad -> 289.",
-  "QA B26 (13 Oct 2026, the fee badge from money and dates; how a student pays) — the library catalogue every library route loads gained the badge words (No fee, Part paid, On hold, Paid till {date}) and the admission question's three answers and hints; the seat map gained the table folding the badge's eight states onto its four colours. Raised by the measured + 0.5 rule: /library/catalogue route -> 76.6; /library route -> 72.6; /library/seats route -> 71.2, firstLoad -> 309.8; /library/attendance route -> 68.7."
+  "QA B26 (13 Oct 2026, the fee badge from money and dates; how a student pays) — the library catalogue every library route loads gained the badge words (No fee, Part paid, On hold, Paid till {date}) and the admission question's three answers and hints; the seat map gained the table folding the badge's eight states onto its four colours. Raised by the measured + 0.5 rule: /library/catalogue route -> 76.6; /library route -> 72.6; /library/seats route -> 71.2, firstLoad -> 309.8; /library/attendance route -> 68.7.",
+  "QA B5 (13 Oct 2026, Renew on a plan with no end date) — the library catalogue every library route loads gained the Change plan dialog's words, the renewal preview (\"Adds ₹900.00 · valid till …\") and the new refusal's text; /library/members/[membershipId] also gained the dialog's plan picker (the dialog itself is dynamic()). Raised by the measured + 0.5 rule: /library/settings route -> 113.6; /library/members route -> 83.4; /library/members firstLoad -> 321.9; /library/catalogue firstLoad -> 315.4; /library/members/[membershipId] route -> 76.7; /library/members/[membershipId] firstLoad -> 315.3; /library/counter route -> 76.1; /library/counter firstLoad -> 314.7; /library/copies route -> 75.6; /library/copies firstLoad -> 314.2; /library firstLoad -> 311.5; /library/fees route -> 72.1; /library/fees firstLoad -> 310.7; /library/attendance firstLoad -> 307.6; /library/messages route -> 66.7."
  ],
  "//shared": [
   "WHERE THESE DIVERGE FROM §19.9.2, AND WHY. Both numbers below are above the",
@@ -1620,27 +1621,27 @@
   },
   "/library/catalogue": {
    "route": 76.6,
-   "firstLoad": 314.8
+   "firstLoad": 315.4
   },
   "/library/copies": {
-   "route": 75,
-   "firstLoad": 313.7
+   "route": 75.6,
+   "firstLoad": 314.2
   },
   "/library/copies/[copyId]": {
    "route": 69.6,
    "firstLoad": 308
   },
   "/library/settings": {
-   "route": 113,
+   "route": 113.6,
    "firstLoad": 352
   },
   "/library/members": {
-   "route": 82.8,
-   "firstLoad": 321.4
+   "route": 83.4,
+   "firstLoad": 321.9
   },
   "/library/members/[membershipId]": {
-   "route": 76.0,
-   "firstLoad": 314.6
+   "route": 76.7,
+   "firstLoad": 315.3
   },
   "/library/catalogue/[titleId]": {
    "route": 66.5,
@@ -1655,16 +1656,16 @@
    "firstLoad": 303.6
   },
   "/library/counter": {
-   "route": 75.5,
-   "firstLoad": 314
+   "route": 76.1,
+   "firstLoad": 314.7
   },
   "/library/seats": {
    "route": 71.2,
    "firstLoad": 309.8
   },
   "/library/fees": {
-   "route": 71.6,
-   "firstLoad": 310
+   "route": 72.1,
+   "firstLoad": 310.7
   },
   "/signup": {
    "route": 57,
@@ -1708,14 +1709,14 @@
   },
   "/library": {
    "route": 72.6,
-   "firstLoad": 311
+   "firstLoad": 311.5
   },
   "/library/attendance": {
    "route": 68.7,
-   "firstLoad": 306.9
+   "firstLoad": 307.6
   },
   "/library/messages": {
-   "route": 66,
+   "route": 66.7,
    "firstLoad": 304.9
   },
   "/lending/loans/new": {

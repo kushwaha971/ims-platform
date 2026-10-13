@@ -129,6 +129,7 @@ export type ApiErrorCode =
   // F04 (LIB-04 §6) — enrol's conflicts, said on the field they are about.
   | 'library_member_number_taken'
   | 'library_membership_exists'
+  | 'library_plan_no_end'
   // F05 (LIB-06 §6) — the counter's refusals it turns into prompts.
   | 'library_member_blocked'
   | 'library_copy_unavailable'

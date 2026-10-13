@@ -20,10 +20,11 @@ import {
   UbTextArea,
 } from 'src/design-system';
 import { useTranslation } from 'src/hooks/useTranslation';
+import { formatBusinessDate } from 'src/utils/dates';
 import { formatInr } from 'src/utils/money';
 
 import { useMemberSchemas } from '../validation/memberSchemas';
-import { isNonZero } from '../view-model/memberDisplay';
+import { isNonZero, renewalPreview } from '../view-model/memberDisplay';
 
 import type { MemberAction } from '../api/libraryMemberService';
 import type { ActOutcome } from '../hooks/useMemberDetail';
@@ -47,6 +48,8 @@ interface Props {
   readonly kind: MemberDialogKind;
   readonly member: MemberDetail;
   readonly types: readonly MembershipType[];
+  /** The business's today, for what a renewal will run until. */
+  readonly today: string;
   readonly busy: boolean;
   readonly onClose: () => void;
   readonly onSubmit: (body: Readonly<Record<string, unknown>>) => Promise<ActOutcome>;
@@ -64,6 +67,7 @@ export function MemberActionDialog(props: Props): React.JSX.Element {
   if (props.kind === 'suspend') return <SuspendDialog {...props} />;
   if (props.kind === 'rejoin') return <RejoinDialog {...props} />;
   if (props.kind === 'deposit') return <DepositDialog {...props} />;
+  if (props.kind === 'changePlan') return <ChangePlanDialog {...props} />;
   return <ConfirmDialog {...props} />;
 }
 
@@ -100,8 +104,10 @@ function Footer({
   );
 }
 
-function ConfirmDialog({ kind, member, busy, onClose, onSubmit }: Props): React.JSX.Element {
+function ConfirmDialog({ kind, member, today, busy, onClose, onSubmit }: Props): React.JSX.Element {
   const { t } = useTranslation();
+  // QA B5 — "Adds ₹900.00 · valid till 11/12/2026", before the press, not after.
+  const renewal = kind === 'renew' ? renewalPreview(member, today) : null;
   const formId = useId();
   const [failure, setFailure] = useState<string | null>(null);
   const form = useForm<Record<string, never>>({ defaultValues: {} });
@@ -124,6 +130,16 @@ function ConfirmDialog({ kind, member, busy, onClose, onSubmit }: Props): React.
         <UbText variant="body-sm" tone="secondary">
           {t(`library.member.${kind}.body`, { type: member.type.name })}
         </UbText>
+        {renewal && (
+          <UbText variant="body-sm-medium" data-testid="library-renew-preview">
+            {isNonZero(renewal.fee)
+              ? t('library.member.renew.preview', {
+                  fee: formatInr(renewal.fee),
+                  date: formatBusinessDate(renewal.until),
+                })
+              : t('library.member.renew.previewFree', { date: formatBusinessDate(renewal.until) })}
+          </UbText>
+        )}
         <UbForm
           id={formId}
           form={form}
@@ -338,6 +354,82 @@ function RejoinDialog({ member, types, busy, onClose, onSubmit }: Props): React.
           </UbText>
         )}
       </UbStack>
+    </UbDialog>
+  );
+}
+
+/**
+ * QA B5 — move a student to another plan. The way out of a plan with no end date,
+ * whose Renew could only be refused, and how a "Standard" student starts paying.
+ * The server keeps the reason with the change (LIB-04 FR-6).
+ */
+function ChangePlanDialog({ member, types, busy, onClose, onSubmit }: Props): React.JSX.Element {
+  const { t } = useTranslation();
+  const formId = useId();
+  const others = types.filter((type) => type.isActive && type.id !== member.type.id);
+  const [typeId, setTypeId] = useState(others[0]?.id ?? '');
+  const { reasonSchema } = useMemberSchemas();
+  const schema = useMemo(() => reasonSchema(true), [reasonSchema]);
+  const [failure, setFailure] = useState<string | null>(null);
+  const form = useForm<ReasonFormValues>({
+    resolver: yupResolver(schema),
+    mode: 'onTouched',
+    defaultValues: { reason: '', until: '' },
+  });
+  return (
+    <UbDialog
+      open
+      onOpenChange={(next) => !next && onClose()}
+      title={t('library.member.changePlan.title', { name: member.name })}
+      closeLabel={t('common.action.close')}
+      footer={
+        others.length ? (
+          <Footer
+            formId={formId}
+            busy={busy}
+            onClose={onClose}
+            label={t('library.member.changePlan.confirm')}
+          />
+        ) : (
+          <UbButton variant="secondary" onClick={onClose}>
+            {t('common.action.close')}
+          </UbButton>
+        )
+      }
+    >
+      {others.length === 0 ? (
+        <UbText variant="body-sm">{t('library.member.changePlan.none')}</UbText>
+      ) : (
+        <UbStack gap={3}>
+          <UbText variant="body-sm" tone="secondary">
+            {t('library.member.changePlan.body', { type: member.type.name })}
+          </UbText>
+          <UbNativeSelect
+            name="library-change-plan"
+            aria-label={t('library.member.changePlan.to')}
+            value={typeId}
+            onChange={setTypeId}
+            options={others.map((type) => ({ value: type.id, label: type.name }))}
+          />
+          <UbForm
+            id={formId}
+            form={form}
+            formErrors={failure ? [failure] : undefined}
+            onSubmit={async (values) => {
+              const outcome = await onSubmit({
+                membership_type_id: typeId,
+                reason: values.reason.trim(),
+              });
+              if (outcome.ok) onClose();
+              else setFailure(outcome.error?.message ?? null);
+            }}
+          >
+            <UbField name="reason" label={t('library.member.reason')} required>
+              {(field) => <UbTextArea {...field} rows={2} maxLength={160} disabled={busy} />}
+            </UbField>
+          </UbForm>
+        </UbStack>
+      )}
     </UbDialog>
   );
 }
