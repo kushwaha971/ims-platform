@@ -2068,6 +2068,9 @@ describe('one book: Suppliers', () => {
     unmount();
     renderWithProviders(<PartyListPageContent book="main" />);
     await waitFor(() => expect(lastParams().book).toBe('main'));
+    // Its people are everyone the merchant gave to or got from, not "Customers" —
+    // those are the Shop's tab (the live look found this page titled Customers).
+    expect(screen.getByRole('heading', { name: 'People' })).toBeInTheDocument();
   });
 
   // ── The approved list designs (owner, 12 Oct 2026) ─────────────────────────

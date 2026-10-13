@@ -38,7 +38,7 @@ import {
 } from 'modules/DigiKhaato/features/imports/components/ListHeaderActions';
 
 import { partyExportPath } from '../api/partyService';
-import { SHOP_BOOK_WORDS } from '../constants/partyFilters';
+import { KHATA_BOOK_WORDS, SHOP_BOOK_WORDS } from '../constants/partyFilters';
 import { PAGE_SIZE_OPTIONS } from '../constants/partyListDefaults';
 import { TAG_CHIPS_PER_ROW } from '../constants/partyTags';
 import { useBulkArchive } from '../hooks/usePartyArchive';
@@ -154,9 +154,18 @@ export function PartyListPageContent({
 }> = {}): React.JSX.Element {
   const { t: baseT, n } = useTranslation();
   /* DEC-019 — on the Shop's lists the money words are the Shop's ("To collect",
-     "To pay"); everything else, and every other list, is untouched. */
+     "To pay"); the Udhaar book's own list (`book="main"`, `/khata`) is "People";
+     `/parties`, which passes no book, is untouched. */
   const t = useCallback<TranslateFn>(
-    (id, values) => baseT(book === 'shop' ? (SHOP_BOOK_WORDS[id] ?? id) : id, values),
+    (id, values) =>
+      baseT(
+        book === 'shop'
+          ? (SHOP_BOOK_WORDS[id] ?? id)
+          : book === 'main'
+            ? (KHATA_BOOK_WORDS[id] ?? id)
+            : id,
+        values
+      ),
     [baseT, book]
   );
   const router = useRouter();

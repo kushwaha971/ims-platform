@@ -85,3 +85,13 @@ export const SHOP_BOOK_WORDS: Readonly<Record<string, string>> = {
   'parties.list.totals.receivable.action': 'parties.list.shop.toCollect.action',
   'parties.list.totals.payable.action': 'parties.list.shop.toPay.action',
 };
+
+/**
+ * DEC-019 — the Udhaar book's own list (`/khata`) is about people, not
+ * customers: it is everyone a merchant gave money to or got money from, and a
+ * shopkeeper's customers are the Shop's tab. Applied the same way as the Shop's.
+ */
+export const KHATA_BOOK_WORDS: Readonly<Record<string, string>> = {
+  'parties.list.title': 'parties.list.khata.title',
+  'parties.list.stats.customers': 'parties.list.khata.title',
+};

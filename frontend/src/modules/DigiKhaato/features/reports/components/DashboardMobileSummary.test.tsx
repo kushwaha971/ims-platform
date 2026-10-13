@@ -31,11 +31,11 @@ function Harness(props: { canBill: boolean }) {
 describe('DashboardMobileSummary', () => {
   it('leads with to collect and to pay, each opening its list', () => {
     renderWithProviders(<Harness canBill />);
-    expect(screen.getByRole('link', { name: /You will get/ })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: /To collect/ })).toHaveAttribute(
       'href',
       expect.stringContaining('balance=owes_me')
     );
-    expect(screen.getByRole('link', { name: /You will give/ })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: /To pay/ })).toHaveAttribute(
       'href',
       expect.stringContaining('balance=i_owe')
     );

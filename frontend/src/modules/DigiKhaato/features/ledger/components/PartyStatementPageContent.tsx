@@ -59,6 +59,7 @@ import type { StatementRow } from '../types/statement.types';
 const SHOP_STATEMENT_WORDS: Readonly<Record<string, string>> = {
   'ledger.statement.youGave': 'ledger.statement.shop.out',
   'ledger.statement.youGot': 'ledger.statement.shop.in',
+  'ledger.statement.backToKhata': 'common.action.back',
 };
 
 export function PartyStatementPageContent({ id }: Readonly<{ id: string }>): React.JSX.Element {

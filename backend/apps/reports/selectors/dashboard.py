@@ -36,6 +36,7 @@ from typing import Any
 from django.db.models import Count, DecimalField, Q, Sum
 from django.db.models.functions import Coalesce
 
+from apps.common.constants import LedgerBucket
 from apps.common.money import ZERO
 from apps.reports.constants import (
     CREDIT_NOTE_KIND,
@@ -255,6 +256,10 @@ def recent_activity(*, tenant: Any) -> list[dict[str, Any]]:
     write-offs and LED-03's reversals). A document's ledger line is the
     document's own event here, exactly as in the day book, so issuing an
     invoice is one row and not two.
+
+    DEC-019 — this is the Shop's home, so only the Shop's money is in it: a
+    ledger line or a payment in another app's bucket (an udhaar "You gave", a
+    library fee, a loan collection) is that app's event, never the Shop's.
     """
     from apps.expenses.models import Expense
     from apps.inventory.models import StockAdjustment
@@ -267,7 +272,9 @@ def recent_activity(*, tenant: Any) -> list[dict[str, Any]]:
     events: list[dict[str, Any]] = []
 
     for entry in (
-        LedgerEntry.objects.filter(tenant=tenant, source_type__in=("manual", "ledger_entry"))
+        LedgerEntry.objects.filter(
+            tenant=tenant, source_type__in=("manual", "ledger_entry"), bucket=LedgerBucket.SHOP
+        )
         .select_related("party")
         .order_by("-created_at", "-id")[:limit]
     ):
@@ -317,7 +324,9 @@ def recent_activity(*, tenant: Any) -> list[dict[str, Any]]:
             )
         )
 
-    payments = Payment.objects.filter(tenant=tenant).select_related("party")
+    payments = Payment.objects.filter(tenant=tenant, bucket=LedgerBucket.SHOP).select_related(
+        "party"
+    )
     for payment in payments.order_by("-created_at", "-id")[:limit]:
         events.append(
             _event(

@@ -221,7 +221,8 @@ def test_today_is_the_shops_date_not_the_servers(tenant: Any) -> None:
 
 def test_recent_activity_is_one_row_per_event_newest_first(tenant: Any) -> None:
     """FR-3 — an invoice and its ledger line are ONE event; a void is its own event;
-    a manual khata line is an event; ten at most."""
+    ten at most. DEC-019 — a manual udhaar line (You got) is the Udhaar book's event and
+    is never on the Shop's home."""
     ramesh = b.party(tenant)
     doc = b.sale(tenant, TODAY, 700, party=ramesh)
     b.khata(
@@ -238,7 +239,8 @@ def test_recent_activity_is_one_row_per_event_newest_first(tenant: Any) -> None:
     feed = build_dashboard(tenant=tenant, today=TODAY)["recent_activity"]
     kinds = [event["type"] for event in feed]
     assert kinds.count("invoice") == 0
-    assert "sale" in kinds and "sale_void" in kinds and "manual_got" in kinds
+    assert "sale" in kinds and "sale_void" in kinds
+    assert "manual_got" not in kinds
     assert any(event["source"]["id"] == str(doc.id) for event in feed)
     stamps = [event["at"] for event in feed]
     assert stamps == sorted(stamps, reverse=True)

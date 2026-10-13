@@ -218,8 +218,8 @@ async function run() {
     // Nobody owes anything yet (see BOOK), so these two find nobody — which is
     // the server and the screen agreeing, and is exactly what breaks when a
     // filter silently fails to leave the device.
-    ['balance', 'Owes me', 'balance=owes_me', 0],
-    ['balance', 'I owe them', 'balance=i_owe', 0],
+    ['balance', 'You will get', 'balance=owes_me', 0],
+    ['balance', 'You will give', 'balance=i_owe', 0],
     ['balance', 'Settled', 'balance=settled', BOOK.length],
     ['type', 'Suppliers', 'type=supplier', 2],
     ['type', 'Customers', 'type=customer', BOOK.length],
@@ -256,7 +256,7 @@ async function run() {
   // ── The money tiles are the same control as the chips ─────────────────────
   {
     const before = listRequests.length;
-    await page.getByRole('button', { name: 'Show only who owes me' }).click();
+    await page.getByRole('button', { name: 'Show only people you will get money from' }).click();
     await page.waitForTimeout(1500);
     const issued = listRequests.slice(before);
 
@@ -267,7 +267,7 @@ async function run() {
     );
     record(
       'and the Balance dropdown says the list is narrowed',
-      (await page.getByRole('button', { name: 'Balance: Owes me' }).count()) === 1,
+      (await page.getByRole('button', { name: 'Balance: You will get' }).count()) === 1,
       'a filter applied with nothing on screen saying so reads as missing parties'
     );
 
@@ -287,7 +287,7 @@ async function run() {
 
   // ── The empty state says which way the merchant got there ─────────────────
   {
-    await chooseFilter('balance', 'Owes me');
+    await chooseFilter('balance', 'You will get');
     await page.waitForTimeout(1600);
 
     const body = await page.locator('body').innerText();

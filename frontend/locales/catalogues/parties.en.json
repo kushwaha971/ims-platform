@@ -183,6 +183,7 @@
   "parties.list.filter.type.customer": "Customers",
   "parties.list.filter.type.label": "Type",
   "parties.list.filter.type.supplier": "Suppliers",
+  "parties.list.khata.title": "People",
   "parties.list.loading": "Loading customers",
   "parties.list.open": "Open {name}",
   "parties.list.search.label": "Search customers",

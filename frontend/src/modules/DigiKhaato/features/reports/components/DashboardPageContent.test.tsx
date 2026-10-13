@@ -138,17 +138,17 @@ it('draws exactly the tiles the server sent, each opening its list', async () =>
   service.getDashboard.mockResolvedValue(DATA());
   signIn(OWNER);
   renderWithProviders(<DashboardPageContent />);
-  expect(await screen.findAllByText('You will get')).not.toHaveLength(0);
+  expect(await screen.findAllByText('To collect')).not.toHaveLength(0);
   // Approved design (12 Oct 2026): the four figures a merchant opens Home for
   // are tiles from the start; the other four stay one line with Details (the
   // owner's 6 Oct choice).
-  expect(screen.getByRole('button', { name: /You will get: ₹7,000\.00/ })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /To collect: ₹7,000\.00/ })).toBeInTheDocument();
   const strip = screen.getByTestId('stat-summary');
   expect(within(strip).getByText('To collect today')).toBeInTheDocument();
-  expect(within(strip).queryByText('You will get')).toBeNull();
+  expect(within(strip).queryByText('To collect')).toBeNull();
   await userEvent.click(screen.getByRole('button', { name: 'Details' }));
   for (const label of [
-    'You will give',
+    'To pay',
     'To collect today',
     'Overdue',
     "Today's sales",
@@ -160,7 +160,7 @@ it('draws exactly the tiles the server sent, each opening its list', async () =>
   expect(screen.getAllByText('₹7,000.00').length).toBeGreaterThan(0);
   expect(screen.getByText(/₹900\.00 in 2 bills/)).toBeInTheDocument();
   expect(screen.getByText('1 out of stock')).toBeInTheDocument();
-  await userEvent.click(screen.getByRole('button', { name: /You will get: ₹7,000\.00/ }));
+  await userEvent.click(screen.getByRole('button', { name: /To collect: ₹7,000\.00/ }));
   // DEC-019 — the Shop's home opens the Shop's customers, not the Udhaar book.
   expect(mockPush).toHaveBeenCalledWith('/customers?balance=owes_me');
 });
@@ -170,7 +170,7 @@ it('leaves out a tile the reader may not see, rather than showing it as ₹0 (FR
   service.getDashboard.mockResolvedValue(DATA({ tiles }));
   signIn(OWNER.filter((code) => code !== 'reports.financial.read'));
   renderWithProviders(<DashboardPageContent />);
-  await screen.findAllByText('You will get');
+  await screen.findAllByText('To collect');
   expect(screen.queryByText('Cash in hand')).not.toBeInTheDocument();
   expect(screen.queryByText('Low stock')).not.toBeInTheDocument();
   expect(screen.queryByText('Running low')).not.toBeInTheDocument();
@@ -194,7 +194,7 @@ it('shows the first-use checklist instead of ₹0 tiles in an empty book (FR-9)'
     'href',
     '/customers'
   );
-  expect(screen.queryByText('You will get')).not.toBeInTheDocument();
+  expect(screen.queryByText('To collect')).not.toBeInTheDocument();
 });
 
 it('opens a new book on the three steps alone (approved design, 12 Oct 2026)', async () => {
@@ -249,7 +249,7 @@ it('asks the server to recompute when the refresh icon is pressed (FR-8)', async
   service.getDashboard.mockResolvedValue(DATA());
   signIn(OWNER);
   renderWithProviders(<DashboardPageContent />);
-  await screen.findAllByText('You will get');
+  await screen.findAllByText('To collect');
   expect(screen.getByText(/Updated/)).toBeInTheDocument();
   await userEvent.click(screen.getByRole('button', { name: 'Refresh' }));
   expect(service.getDashboard).toHaveBeenLastCalledWith({ refresh: true }, expect.anything());
@@ -259,7 +259,7 @@ it('re-reads after any write the invalidation map signals (TSK-RPT-01-06)', asyn
   service.getDashboard.mockResolvedValue(DATA());
   signIn(OWNER);
   renderWithProviders(<DashboardPageContent />);
-  await screen.findAllByText('You will get');
+  await screen.findAllByText('To collect');
   const before = service.getDashboard.mock.calls.length;
   act(() => {
     store.dispatch(cacheInvalidated({ slices: ['partyList'], urgency: 'next-mount' }));
@@ -309,7 +309,7 @@ it('never draws a registered section the server did not return', async () => {
   service.getDashboard.mockResolvedValue(DATA());
   signIn(OWNER);
   renderWithProviders(<DashboardPageContent />);
-  expect(await screen.findAllByText('You will get')).not.toHaveLength(0);
+  expect(await screen.findAllByText('To collect')).not.toHaveLength(0);
   expect(screen.queryByTestId('dashboard-module-sections')).not.toBeInTheDocument();
   expect(screen.queryByText(/Probe members/)).not.toBeInTheDocument();
 });

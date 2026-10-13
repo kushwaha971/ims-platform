@@ -230,10 +230,22 @@ def offerable_apps(*, partner: Any = None, plan: Any = None) -> tuple[Any, ...]:
     return tuple(a for a in apps_registry.registered_apps() if a.anchor in allowed)
 
 
+#: DEC-019 — the Udhaar book, which every Shop business had inside the Shop until it
+#: became an app of its own (`platform/0018_release_khata` gives it to them too).
+KHATA_APP = "khata"
+
+
 def chosen_apps(apps: Any, *, partner: Any, plan: Any) -> tuple[str, ...]:
-    """Validate the step-1 choice. `None` means the Shop, as it always has."""
+    """Validate the step-1 choice. `None` means the Shop, as it always has.
+
+    "As it always has" includes the udhaar book (You gave / You got), which was part
+    of the Shop until DEC-019 made it an app of its own: a client that names no apps
+    gets both, when the plan offers the Udhaar book, exactly as the release migration
+    gave both to every Shop business that already existed.
+    """
     if apps is None:
-        return (SHOP_APP,)
+        offered = {a.code for a in offerable_apps(partner=partner, plan=plan)}
+        return (SHOP_APP, KHATA_APP) if KHATA_APP in offered else (SHOP_APP,)
     offered = {a.code for a in offerable_apps(partner=partner, plan=plan)}
     wanted = [str(code) for code in apps] if isinstance(apps, (list, tuple)) else []
     if not wanted:

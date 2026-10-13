@@ -90,10 +90,12 @@ def test_the_offer_needs_a_signed_in_caller(anonymous_client: Any, onboarding_re
 
 def test_no_choice_still_means_the_shop(api_as: Any, tenant: Any, onboarding_ready: Any) -> None:
     """Every client and script from before this change sends no `apps`. They
-    get exactly what they always got."""
+    get exactly what they always got — and since DEC-019 that is two apps: the
+    Shop and the Udhaar book, which was part of the Shop until it became an app
+    of its own (the release migration gave both to every existing Shop)."""
     client, _member = api_as(tenant)
     created = _tenant_of(_create(client, business_type="retail"))
-    assert _running(created) == {"shop"}
+    assert _running(created) == {"shop", "khata"}
     assert {"sales", "purchases", "inventory", "expenses"} <= set(created.enabled_modules)
 
 

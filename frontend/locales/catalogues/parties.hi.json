@@ -183,6 +183,7 @@
   "parties.list.filter.type.customer": "ग्राहक",
   "parties.list.filter.type.label": "प्रकार",
   "parties.list.filter.type.supplier": "सप्लायर",
+  "parties.list.khata.title": "लोग",
   "parties.list.loading": "ग्राहक लोड हो रहे हैं",
   "parties.list.open": "{name} खोलें",
   "parties.list.search.label": "ग्राहक खोजें",

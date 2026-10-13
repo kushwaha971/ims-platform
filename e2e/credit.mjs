@@ -179,7 +179,9 @@ const signIn = async (page) => {
     // `load` is a state this app can legitimately never reach.
     await page.waitForURL((u) => !u.pathname.startsWith('/login'), { waitUntil: 'commit', timeout: 45000 }).catch(() => {});
     await page.waitForTimeout(600);
-    await page.goto(`${FRONTEND}/parties`, {
+    // DEC-019 — the khata page is the Udhaar book's: open its list first, as a merchant
+    // does, so the session is in that app (from the Shop the page shows bills instead).
+    await page.goto(`${FRONTEND}/khata`, {
       waitUntil: 'domcontentloaded',
       timeout: 45000,
     });

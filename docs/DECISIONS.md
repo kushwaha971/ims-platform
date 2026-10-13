@@ -561,7 +561,10 @@ ADR-021 ↔ §26.14 contradiction recorded as `CR-j`.
   on a new `khata` module (`MODULE_DEPENDENCIES` parties + ledger), registered beside the Shop
   with `order=95` so a business running both still lands in the Shop. `platform/0018`
   releases it to every plan and switches it on for every business that runs the Shop —
-  they had the udhaar book yesterday inside the Shop — and for nobody else (DEC-016). Its
+  they had the udhaar book yesterday inside the Shop — and for nobody else (DEC-016). For
+  the same reason a new business created with no `apps` (an old client, a script) gets the
+  Shop AND the Udhaar book: "no apps means the Shop, as it always did", and the Shop always
+  did include it. A business that chooses its apps gets exactly what it chose. Its
   menu is People (`/khata`), Old dues and Reminders; the last two left the Shop's menu
   because both read `balance`. The person's page (`/parties/<id>`) stays shared and reads
   the OPEN app's book (`AppManifest.book`): from the Shop it is the person's bills —
