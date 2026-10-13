@@ -86,7 +86,7 @@ const PARTY = {
   createdAt: '2026-01-05T08:00:00Z',
 };
 
-const signIn = (enabledModules: readonly ModuleCode[]): void => {
+const signIn = (enabledModules: readonly ModuleCode[], activeApp: string | null = null): void => {
   store.dispatch(
     sessionLoaded({
       user: {
@@ -100,8 +100,14 @@ const signIn = (enabledModules: readonly ModuleCode[]): void => {
       },
       activeTenant: { id: 't1', name: 'Kumar Stores', timezone: 'Asia/Kolkata' },
       tenants: [{ id: 't1', name: 'Kumar Stores', timezone: 'Asia/Kolkata' }],
-      permissions: ['parties.party.read', 'ledger.entry.read', 'payments.payment.read'],
+      permissions: [
+        'parties.party.read',
+        'ledger.entry.read',
+        'payments.payment.read',
+        'library.member.read',
+      ],
       enabledModules: [...enabledModules],
+      ...(activeApp ? { activeApp } : {}),
       version: 1,
     })
   );
@@ -130,7 +136,9 @@ beforeEach(() => {
 
 describe('the khata draws module panels for the modules that are on', () => {
   it('shows the deposit panel for a party holding a deposit, with no module roles on', async () => {
-    signIn(['parties', 'ledger', 'payments']);
+    // A held security deposit is the library's money (DEC-019): its panel is drawn
+    // while the Library is the open app.
+    signIn(['parties', 'ledger', 'payments', 'library'], 'library');
     partyService.getParty.mockResolvedValue({
       party: { ...PARTY, depositHeld: '380.00' },
       summary: { balance: '0.00' },
@@ -140,6 +148,21 @@ describe('the khata draws module panels for the modules that are on', () => {
     await screen.findByText('Asha Rao');
     // Rendered at every width (the rail and the phone's stack are one tree here).
     expect((await screen.findAllByText('deposit panel · 380.00')).length).toBeGreaterThan(0);
+  });
+
+  it('draws no library money on the Shop’s page for the same person (DEC-019)', async () => {
+    // Each app shows only its own money: the Shop's view of a person who holds a
+    // library deposit must not carry the library's figure.
+    signIn(['parties', 'ledger', 'payments', 'sales', 'library'], 'shop');
+    partyService.getParty.mockResolvedValue({
+      party: { ...PARTY, depositHeld: '380.00' },
+      summary: { balance: '0.00' },
+      credit: null,
+    });
+    renderWithProviders(<PartyDetailPageContent id={ID} />);
+    await screen.findByText('Asha Rao');
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(screen.queryByText(/deposit panel/)).not.toBeInTheDocument();
   });
 
   it('draws no deposit panel for a party the server sent no deposit figure for', async () => {

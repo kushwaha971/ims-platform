@@ -6,6 +6,8 @@ import { UbStack } from 'src/design-system';
 import { useAppSelector } from 'src/hooks/useAppStore';
 import { selectEnabledModules } from 'src/redux/slice/sessionSlice';
 
+import { useNavigation } from 'modules/DigiKhaato/features/navigation/useNavigation';
+
 import { partyPanelsFor } from '../modulePanels';
 
 // ── A4b ── core's own panel (held deposits, PLT-X02 §7) registers itself on import.
@@ -34,7 +36,9 @@ export function PartyModulePanels({
   className?: string;
 }>): React.JSX.Element | null {
   const enabled = useAppSelector(selectEnabledModules);
-  const panels = useMemo(() => partyPanelsFor(enabled, party), [enabled, party]);
+  // DEC-019 — only the open app's panels: the Shop's page shows no library dues.
+  const { app } = useNavigation();
+  const panels = useMemo(() => partyPanelsFor(enabled, party, app), [enabled, party, app]);
   if (panels.length === 0) return null;
   return (
     <UbStack gap={4} className={className}>

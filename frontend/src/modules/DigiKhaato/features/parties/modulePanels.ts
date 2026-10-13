@@ -42,6 +42,12 @@ export interface PartyPanelEntry {
    * panel's chunk on every visit to render nothing (Wave A gate).
    */
   readonly appliesTo?: (party: PartyDetail) => boolean;
+  /**
+   * DEC-019 — the apps whose view of a person shows this panel. Each app shows
+   * only its own money, so the library's dues and held deposit are not drawn on
+   * the Shop's or the Udhaar book's page. Omitted, every app.
+   */
+  readonly apps?: readonly string[];
 }
 
 export interface RegisteredPartyPanel {
@@ -54,6 +60,7 @@ const KEY = /^([a-z][a-z0-9_]*)\.[a-z0-9][a-z0-9_]*$/;
 type StoredPanel = RegisteredPartyPanel & {
   readonly load: PartyPanelEntry['load'];
   readonly appliesTo?: PartyPanelEntry['appliesTo'];
+  readonly apps?: PartyPanelEntry['apps'];
 };
 
 const registry = new Map<string, StoredPanel>();
@@ -68,7 +75,8 @@ export const registerPartyPanel = (module: string, entry: PartyPanelEntry): void
     if (
       existing.module === module &&
       existing.load === entry.load &&
-      existing.appliesTo === entry.appliesTo
+      existing.appliesTo === entry.appliesTo &&
+      existing.apps === entry.apps
     )
       return;
     throw new Error(`Party panel "${entry.key}" is registered twice`);
@@ -78,6 +86,7 @@ export const registerPartyPanel = (module: string, entry: PartyPanelEntry): void
     key: entry.key,
     load: entry.load,
     ...(entry.appliesTo ? { appliesTo: entry.appliesTo } : {}),
+    ...(entry.apps ? { apps: entry.apps } : {}),
     Component: dynamic(entry.load, { ssr: false }),
   });
 };
@@ -88,12 +97,15 @@ export const registerPartyPanel = (module: string, entry: PartyPanelEntry): void
  */
 export const partyPanelsFor = (
   enabledModules: readonly string[],
-  party?: PartyDetail
+  party?: PartyDetail,
+  /** DEC-019 — the open app; a panel that names its apps shows only in those. */
+  app?: string | null
 ): readonly RegisteredPartyPanel[] =>
   [...registry.values()].filter(
     (panel) =>
       enabledModules.includes(panel.module) &&
-      (party === undefined || panel.appliesTo === undefined || panel.appliesTo(party))
+      (party === undefined || panel.appliesTo === undefined || panel.appliesTo(party)) &&
+      (app === undefined || panel.apps === undefined || (app !== null && panel.apps.includes(app)))
   );
 
 let baseline: ReadonlyMap<string, StoredPanel> | null = null;

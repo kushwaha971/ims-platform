@@ -18,8 +18,13 @@ export const loadDepositPanel = (): Promise<PartyPanelComponent> =>
 export const depositPanelAppliesTo = (party: { readonly depositHeld?: string }): boolean =>
   party.depositHeld != null;
 
+/** Stable, so a repeated registration compares equal. */
+const DEPOSIT_PANEL_APPS = ['library'] as const;
+
 registerPartyPanel('payments', {
   key: 'payments.deposits',
   load: loadDepositPanel,
   appliesTo: depositPanelAppliesTo,
+  // DEC-019 — a held security deposit is the library's money.
+  apps: DEPOSIT_PANEL_APPS,
 });
