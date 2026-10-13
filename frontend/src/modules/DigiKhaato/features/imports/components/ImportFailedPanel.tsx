@@ -34,7 +34,7 @@ export function ImportFailedPanel({
       action={
         <UbStack direction="row" gap={2} wrap justify="center">
           {job.canCommit && (
-            <UbButton onClick={wizard.commit} busy={wizard.committing}>
+            <UbButton onClick={() => wizard.commit()} busy={wizard.committing}>
               {t('imports.failed.retry')}
             </UbButton>
           )}

@@ -50,6 +50,14 @@ class RowResult:
     errors: list[tuple[str, str, str]] = field(default_factory=list)
     warnings: list[tuple[str, str, str]] = field(default_factory=list)
     preview: dict[str, Any] = field(default_factory=dict)
+    #: QA B27 — the row's own figures (an opening balance, a stock value, one
+    #: customer). The ENGINE adds them up: into the totals only when the row will
+    #: import, into `totals_problems` when it will not — so the review never
+    #: promises money from a row it is about to refuse.
+    tally: dict[str, Any] = field(default_factory=dict)
+    #: QA B28 — the record this row would duplicate ("Ramesh Traders"), or "". A
+    #: check, not a problem: the owner chooses to skip duplicates or create them.
+    duplicate: str = ""
 
     def error(self, column: str, code: str, message: str) -> None:
         self.errors.append((column, code, message))

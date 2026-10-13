@@ -5,7 +5,7 @@ import { toApiError } from 'src/utils/apiError';
 
 import { importUploadProgressed } from './importJobActions';
 
-import type { ImportJob } from '../types/import.types';
+import type { ImportCommitOptions, ImportJob, ImportRowsPage } from '../types/import.types';
 
 /**
  * Part 19 §19.3.3 — one service call each, and a catch that normalises.
@@ -46,14 +46,33 @@ export const uploadImportFile = createAsyncThunk<
   }
 });
 
-/** MUTATION. Start the all-or-nothing commit (FR-6), with the press's own key. */
+/** QUERY. One page of every row before importing, with its problems (QA B34). */
+export const fetchImportRows = createAsyncThunk<
+  ImportRowsPage,
+  {
+    readonly id: string;
+    readonly page: number;
+    readonly pageSize: number;
+    readonly problems: boolean;
+  },
+  { rejectValue: ApiErrorShape }
+>('importJob/fetchImportRows', async ({ id, ...query }, { signal, rejectWithValue }) => {
+  try {
+    return await (await service()).listImportRows(id, query, signal);
+  } catch (error) {
+    return rejectWithValue(toApiError(error, 'imports.error.load'));
+  }
+});
+
+/** MUTATION. Start the commit (FR-6), with the press's own key — all-or-nothing, or
+ *  the good rows with the rest skipped (QA B33). */
 export const commitImportJob = createAsyncThunk<
   ImportJob,
-  { readonly id: string; readonly idempotencyKey: string },
+  { readonly id: string; readonly idempotencyKey: string; readonly options?: ImportCommitOptions },
   { rejectValue: ApiErrorShape }
->('importJob/commitImportJob', async ({ id, idempotencyKey }, { rejectWithValue }) => {
+>('importJob/commitImportJob', async ({ id, idempotencyKey, options }, { rejectWithValue }) => {
   try {
-    return await (await service()).commitImport(id, idempotencyKey);
+    return await (await service()).commitImport(id, idempotencyKey, options);
   } catch (error) {
     return rejectWithValue(toApiError(error, 'imports.error.commit'));
   }

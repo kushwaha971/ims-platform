@@ -35,7 +35,8 @@ export const commitBlockReason = (
   job: ImportJob
 ): { readonly id: string; readonly values?: Record<string, number> } | null => {
   if (job.canCommit) return null;
-  if (job.errorRows > 0)
+  // QA B33 — problem rows block only when nothing else could import.
+  if (job.validRows === 0 && job.errorRows > 0)
     return { id: 'imports.review.blocked.errors', values: { count: job.errorRows } };
   if (job.validRows === 0) return { id: 'imports.review.blocked.empty' };
   return { id: 'imports.review.blocked.permission' };

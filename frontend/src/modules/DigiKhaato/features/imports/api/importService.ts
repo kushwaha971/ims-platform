@@ -3,10 +3,13 @@ import { absoluteApiUrl } from 'src/api/apiUrl';
 import { api, ubConfig } from 'src/api/AxiosInstances';
 
 import type {
+  ImportCommitOptions,
   ImportFailure,
   ImportJob,
   ImportPreviewRow,
+  ImportReviewRow,
   ImportRowProblem,
+  ImportRowsPage,
   ImportStatus,
 } from '../types/import.types';
 
@@ -42,6 +45,8 @@ export interface ImportJobWire {
   readonly warnings?: readonly ImportRowProblem[];
   readonly preview_rows?: readonly ImportPreviewRow[];
   readonly totals?: Readonly<Record<string, string | number | readonly string[]>>;
+  readonly totals_problems?: Readonly<Record<string, string | number>>;
+  readonly duplicates?: number;
   readonly progress?: { readonly done: number; readonly total: number | null } | null;
   readonly has_error_file?: boolean;
   readonly can_commit?: boolean;
@@ -85,6 +90,8 @@ export const toImportJob = (wire: ImportJobWire): ImportJob => ({
   warnings: wire.warnings ?? [],
   previewRows: wire.preview_rows ?? [],
   totals: wire.totals ?? {},
+  totalsProblems: wire.totals_problems ?? {},
+  duplicates: wire.duplicates ?? 0,
   progress: wire.progress ?? null,
   hasErrorFile: wire.has_error_file ?? false,
   canCommit: wire.can_commit ?? false,
@@ -135,14 +142,40 @@ export const getImportJob = async (id: string, signal?: AbortSignal): Promise<Im
   return toImportJob(response.data.data);
 };
 
-/** POST /imports/{id}/commit — 202 (FR-6), with the key the press minted. */
-export const commitImport = async (id: string, idempotencyKey: string): Promise<ImportJob> => {
+/** POST /imports/{id}/commit — 202 (FR-6), with the key the press minted. QA B33:
+ *  `skip_errors` imports the good rows and skips the rest; QA B28: `duplicates`. */
+export const commitImport = async (
+  id: string,
+  idempotencyKey: string,
+  options?: ImportCommitOptions
+): Promise<ImportJob> => {
   const response = await api.post<{ data: ImportJobWire }>(
     API_PATHS.IMPORT_COMMIT(id),
-    {},
+    options ? { skip_errors: options.skipErrors, duplicates: options.duplicates } : {},
     ubConfig({ headers: { 'Idempotency-Key': idempotencyKey } })
   );
   return toImportJob(response.data.data);
+};
+
+/** GET /imports/{id}/rows — one page of every row, with its problems (QA B34). */
+export const listImportRows = async (
+  id: string,
+  query: { readonly page: number; readonly pageSize: number; readonly problems: boolean },
+  signal?: AbortSignal
+): Promise<ImportRowsPage> => {
+  const response = await api.get<{
+    data: readonly ImportReviewRow[];
+    meta: { total: number; page: number; page_size: number };
+  }>(API_PATHS.IMPORT_ROWS(id), {
+    params: { page: query.page, page_size: query.pageSize, problems: query.problems ? 1 : 0 },
+    signal,
+  });
+  return {
+    rows: response.data.data,
+    total: response.data.meta.total,
+    page: response.data.meta.page,
+    pageSize: response.data.meta.page_size,
+  };
 };
 
 /** POST /imports/{id}/cancel — FR-7. */

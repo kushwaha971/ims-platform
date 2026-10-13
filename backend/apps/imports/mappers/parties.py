@@ -203,6 +203,15 @@ def preflight(tenant: Any) -> dict:
     tag_names = {
         name.lower() for name in Tag.objects.filter(tenant=tenant).values_list("name", flat=True)
     }
+    # QA B28 — a row with no mobile can only be told apart from a party already in
+    # the book by its name: `name → the name as stored`.
+    existing_names = {
+        name.strip().lower(): name
+        for name in Party.objects.filter(tenant=tenant, deleted_at__isnull=True)
+        .values_list("name", flat=True)
+        .iterator(chunk_size=2000)
+        if name
+    }
     return {
         "tenant": tenant,
         "today": today,
@@ -212,8 +221,7 @@ def preflight(tenant: Any) -> dict:
         "codes": existing_codes,
         "tags": tag_names,
         "new_tags": set(),
-        "opening_receivable": Decimal("0.00"),
-        "opening_payable": Decimal("0.00"),
+        "names": existing_names,
     }
 
 
@@ -296,6 +304,10 @@ def validate_row(ctx: dict, row: dict[str, str], number: int) -> RowResult:
     )
     clean["is_customer"] = party_type in ("customer", "both")
     clean["is_supplier"] = party_type in ("supplier", "both")
+    # QA B44 — how many of each the import button may name.
+    result.tally[{"customer": "customers", "supplier": "suppliers"}.get(party_type, "both")] = 1
+    if not mobile and name and name.lower() in ctx["names"]:
+        result.duplicate = ctx["names"][name.lower()]
 
     # ── opening balance (LED-02's own rules, imported rather than restated) ──
     amount = attempt("opening_balance", coerce.money, maximum=MAX_CREDIT_LIMIT)
@@ -310,7 +322,23 @@ def validate_row(ctx: dict, row: dict[str, str], number: int) -> RowResult:
             "Use a date within the last ten years, not in the future.",
         )
         as_of = None
-    if amount:
+    if amount and opening_type is None and "opening_type" not in {e[0] for e in result.errors}:
+        if "opening_type" in row:
+            # QA B29 — the file HAS a direction column and this cell is blank: it
+            # used to become "they owe me" silently. Which way is the owner's call.
+            result.error(
+                "opening_type", "required", "Choose to_receive or to_pay for this balance."
+            )
+        else:
+            # No direction column at all ("Outstanding" from a paper-book export):
+            # an amount there has always meant money to receive — said, not silent.
+            opening_type = "to_receive"
+            result.warn(
+                "opening_balance",
+                "direction_assumed",
+                "No to_receive / to_pay column: read as money to receive.",
+            )
+    if amount and opening_type is not None:
         direction = "credit" if opening_type == "to_pay" else "debit"
         as_of = as_of or ctx["fy_start"]
         try:
@@ -332,10 +360,10 @@ def validate_row(ctx: dict, row: dict[str, str], number: int) -> RowResult:
             clean["opening_balance_amount"] = amount
             clean["opening_balance_direction"] = direction
             clean["opening_balance_as_of"] = as_of
-            if direction == "debit":
-                ctx["opening_receivable"] += amount
-            else:
-                ctx["opening_payable"] += amount
+            # QA B27 — the row's own figure; the engine counts it only if it imports.
+            result.tally["opening_receivable" if direction == "debit" else "opening_payable"] = (
+                amount
+            )
 
     # ── GSTIN and state (PTY-01 FR-7: a mismatch warns, a bad checksum refuses)
     state = attempt("state", _state)
@@ -425,7 +453,7 @@ def validate_row(ctx: dict, row: dict[str, str], number: int) -> RowResult:
         "opening_balance": (
             str(clean["opening_balance_amount"]) if "opening_balance_amount" in clean else None
         ),
-        "opening_type": opening_type or ("to_receive" if amount else None),
+        "opening_type": opening_type,
         "opening_date": (
             clean["opening_balance_as_of"].isoformat() if "opening_balance_as_of" in clean else None
         ),
@@ -445,8 +473,12 @@ def commit_rows(ctx: dict, service_ctx: Any, rows: list[tuple[int, dict]], progr
     receivable = Decimal("0.00")
     payable = Decimal("0.00")
     for index, (_number, clean) in enumerate(rows, start=1):
-        create_party(ctx=service_ctx, payload=dict(clean))
+        party, _warnings = create_party(ctx=service_ctx, payload=dict(clean))
         created += 1
+        if clean.get("opening_balance_as_of"):
+            # QA B35 — the paper book's date is this khata's last entry, not the
+            # moment of the import (300 parties all read "Last entry: Today").
+            _last_entry_on(party, clean["opening_balance_as_of"])
         if clean.get("opening_balance_amount"):
             openings += 1
             if clean["opening_balance_direction"] == "debit":
@@ -462,11 +494,27 @@ def commit_rows(ctx: dict, service_ctx: Any, rows: list[tuple[int, dict]], progr
     }
 
 
+def _last_entry_on(party: Any, day: Any) -> None:
+    import datetime as dt
+
+    from apps.common.dates import tenant_timezone
+    from apps.parties.models import Party
+
+    moment = dt.datetime.combine(day, dt.time(12, 0), tzinfo=tenant_timezone(party.tenant))
+    Party.objects.filter(pk=party.pk).update(last_activity_at=moment)
+
+
 def preview_totals(ctx: dict) -> dict:
-    """PTY-10 FR-7 — the opening totals the owner checks against their own book."""
+    """PTY-10 FR-7 — the opening totals the owner checks against their own book, from
+    the rows that will import (the engine's tally, QA B27)."""
+    tally = ctx.get("tally") or {}
     return {
-        "opening_receivable": str(ctx["opening_receivable"]),
-        "opening_payable": str(ctx["opening_payable"]),
+        "opening_receivable": str(
+            Decimal(tally.get("opening_receivable") or 0).quantize(Decimal("0.01"))
+        ),
+        "opening_payable": str(
+            Decimal(tally.get("opening_payable") or 0).quantize(Decimal("0.01"))
+        ),
         "tags_created": len(ctx["new_tags"]),
     }
 

@@ -33,11 +33,36 @@ export interface ImportFailure {
 
 /** A preview row exactly as the importer understood it (AC-3). */
 export type ImportPreviewRow = Readonly<
-  Record<string, string | number | boolean | null | readonly string[]>
+  Record<string, string | number | boolean | null | readonly string[] | readonly ImportRowIssue[]>
 > & {
   readonly row: number;
   readonly valid: boolean;
 };
+
+/** One problem on one row, as the paged review shows it (QA B34). */
+export interface ImportRowIssue {
+  readonly column: string;
+  readonly message: string;
+}
+
+/** A row of the paged review: as understood, with its problems (QA B34). */
+export type ImportReviewRow = ImportPreviewRow & {
+  readonly duplicate?: boolean;
+  readonly errors?: readonly ImportRowIssue[];
+};
+
+export interface ImportRowsPage {
+  readonly rows: readonly ImportReviewRow[];
+  readonly total: number;
+  readonly page: number;
+  readonly pageSize: number;
+}
+
+/** What the commit is asked to do with problem rows and duplicates (QA B33, B28). */
+export interface ImportCommitOptions {
+  readonly skipErrors: boolean;
+  readonly duplicates: 'skip' | 'create';
+}
 
 export interface ImportProgress {
   readonly done: number;
@@ -61,6 +86,10 @@ export interface ImportJob {
   readonly warnings: readonly ImportRowProblem[];
   readonly previewRows: readonly ImportPreviewRow[];
   readonly totals: Readonly<Record<string, string | number | readonly string[]>>;
+  /** QA B27 — the money in rows that will not import, shown apart. */
+  readonly totalsProblems: Readonly<Record<string, string | number>>;
+  /** QA B28 — rows repeating a record the book already has. */
+  readonly duplicates: number;
   readonly progress: ImportProgress | null;
   readonly hasErrorFile: boolean;
   /** Decided by the server: an accountant sees it false whatever the counts. */

@@ -30,7 +30,7 @@ import {
 } from '../redux/importThunk';
 import { isLive, pollDelay, wizardStep } from '../view-model/importDisplay';
 
-import type { ImportKind, ImportJob } from '../types/import.types';
+import type { ImportCommitOptions, ImportKind, ImportJob } from '../types/import.types';
 
 export interface UseImportWizardResult {
   readonly kind: ImportKind | null;
@@ -44,7 +44,8 @@ export interface UseImportWizardResult {
   /** Whether the member may import this kind at all (§19.7.5 — drawn or not). */
   readonly canImport: (kind: ImportKind) => boolean;
   readonly start: (file: File) => void;
-  readonly commit: () => void;
+  /** QA B33/B28 — all-or-nothing by default; or skip the problem rows / duplicates. */
+  readonly commit: (options?: ImportCommitOptions) => void;
   readonly cancel: () => void;
   /** Alternate A — the old job is cancelled and the upload step reopens. */
   readonly uploadAnother: () => void;
@@ -98,35 +99,40 @@ export const useImportWizard = ({
   }, [dispatch, jobId]);
 
   /* FR-8 — poll while the job is moving: 2 s, then 5 s after 30 s, then 15 s
-     after two minutes; nothing while the tab is hidden, and one read the
-     moment it is shown again. Keyed on the job OBJECT and the request status,
-     so each answer (or failure) schedules exactly one next read. */
-  const watchingSince = useRef<{ id: string; at: number } | null>(null);
+     after two minutes; no request while the tab is hidden, and one read the
+     moment it is shown again.
+
+     QA B31 — the page stayed on "Importing 7 rows…" after the job had finished,
+     until a reload. The poll used to schedule its next read from the PREVIOUS
+     answer's render, so any read that changed nothing it watched (a hidden tab,
+     an identical answer) left no timer behind and the page went quiet. Now one
+     chain of timers lives for as long as the job is live, whatever each answer
+     brings; it ends when the job reaches a final status or the page leaves. */
   const live = job !== null && job.id === jobId && isLive(job.status);
+  const liveId = live ? job.id : null;
   useEffect(() => {
-    if (!live || !job) {
-      watchingSince.current = null;
-      return undefined;
-    }
-    if (watchingSince.current?.id !== job.id)
-      watchingSince.current = { id: job.id, at: Date.now() };
-    const elapsed = Date.now() - watchingSince.current.at;
-    const timer = window.setTimeout(
-      () => {
-        if (typeof document !== 'undefined' && document.hidden) return;
-        void dispatch(fetchImportJob({ id: job.id, quiet: true }));
-      },
-      pollDelay(elapsed, POLL_STEPS)
-    );
+    if (!liveId) return undefined;
+    const startedAt = Date.now();
+    let timer: number | undefined;
+    let stopped = false;
+    const tick = () => {
+      if (stopped) return;
+      if (typeof document === 'undefined' || !document.hidden) {
+        void dispatch(fetchImportJob({ id: liveId, quiet: true }));
+      }
+      timer = window.setTimeout(tick, pollDelay(Date.now() - startedAt, POLL_STEPS));
+    };
+    timer = window.setTimeout(tick, pollDelay(0, POLL_STEPS));
     const onVisible = () => {
-      if (!document.hidden) void dispatch(fetchImportJob({ id: job.id, quiet: true }));
+      if (!document.hidden) void dispatch(fetchImportJob({ id: liveId, quiet: true }));
     };
     document.addEventListener('visibilitychange', onVisible);
     return () => {
+      stopped = true;
       window.clearTimeout(timer);
       document.removeEventListener('visibilitychange', onVisible);
     };
-  }, [dispatch, live, job, status]);
+  }, [dispatch, liveId]);
 
   /* §17 — the merchant still on the wizard hears it here; the notification is
      for the one who left. Announced once per transition, not on every poll. */
@@ -156,10 +162,13 @@ export const useImportWizard = ({
 
   /* One key per PRESS, minted here: a retried request after a dropped
      response replays the first answer instead of queueing a second commit. */
-  const commit = useCallback(() => {
-    if (!job) return;
-    void dispatch(commitImportJob({ id: job.id, idempotencyKey: newRequestId() }));
-  }, [dispatch, job]);
+  const commit = useCallback(
+    (options?: ImportCommitOptions) => {
+      if (!job) return;
+      void dispatch(commitImportJob({ id: job.id, idempotencyKey: newRequestId(), options }));
+    },
+    [dispatch, job]
+  );
 
   const cancel = useCallback(() => {
     if (!job) return;

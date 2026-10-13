@@ -155,7 +155,8 @@ def test_re_uploading_the_same_file_reports_every_mobile_as_already_there(
     again = _ready(owner, GOOD, django_capture_on_commit_callbacks)
     codes = {(e["row"], e["code"]) for e in again["errors"]}
     assert (2, "duplicate_existing") in codes and (3, "duplicate_existing") in codes
-    assert again["can_commit"] is False
+    # QA B33 — the button stays offered for the rows that can still import (with
+    # the bad ones skipped), but a plain commit is still refused whole:
     refused = commit(owner, again["id"], django_capture_on_commit_callbacks)
     assert refused.status_code == 409
     assert refused.json()["error"]["code"] == "import_has_errors"
@@ -199,7 +200,8 @@ def test_errors_carry_row_column_value_code_and_message(
     repeat = next(e for e in job["errors"] if e["code"] == "duplicate_in_file")
     assert repeat["message"] == "Repeats row 3."
     assert repeat["value"] == "9876543203"
-    assert job["can_commit"] is False
+    # QA B33 — good rows remain, so importing them (skipping these two) is offered.
+    assert job["can_commit"] is True
 
 
 def test_a_row_with_three_bad_columns_reports_three_errors(

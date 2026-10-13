@@ -264,6 +264,8 @@ export const API_PATHS = {
   IMPORT: (id: string) => `/imports/${seg(id)}`,
   IMPORT_COMMIT: (id: string) => `/imports/${seg(id)}/commit`,
   IMPORT_CANCEL: (id: string) => `/imports/${seg(id)}/cancel`,
+  // QA B34 — every row, paged, with "only problems".
+  IMPORT_ROWS: (id: string) => `/imports/${seg(id)}/rows`,
   /** IMP-01 FR-9 — the file with problems; a download link, not a fetch. */
   IMPORT_ERRORS_CSV: (id: string) => `/imports/${seg(id)}/errors.csv`,
   /** IMP-01 FR-2 — the template for a kind; a download link, not a fetch. */

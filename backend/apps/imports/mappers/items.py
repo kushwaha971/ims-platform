@@ -258,6 +258,9 @@ def validate_row(ctx: dict, row: dict[str, str], number: int) -> RowResult:
     clean["name"] = name
     if name and name.lower() in ctx["existing_names"]:
         ctx["names"] += 1
+        # QA B28 — a second "QA Pen" used to be created with no word: a check now,
+        # and the owner chooses to skip duplicates or add them.
+        result.duplicate = name
 
     item_type = (
         attempt("item_type", coerce.choice, ITEM_TYPES, message="Use goods or service.") or "goods"
@@ -424,7 +427,8 @@ def validate_row(ctx: dict, row: dict[str, str], number: int) -> RowResult:
                     "unit_cost": str(unit_cost),
                     "as_of": (as_of or ctx["today"]).isoformat(),
                 }
-                ctx["stock_value"] += (qty * unit_cost).quantize(Decimal("0.01"))
+                # QA B27 — the row's own figure; the engine counts it only if it imports.
+                result.tally["stock_value"] = (qty * unit_cost).quantize(Decimal("0.01"))
 
     description = attempt("description", coerce.optional_text, max_length=DESCRIPTION_MAX_LENGTH)
     if description:
@@ -514,7 +518,9 @@ def preview_totals(ctx: dict) -> dict:
             for parent, child in ctx["new_categories"].values()
         )[:50],
         "categories_created": len(ctx["new_categories"]),
-        "stock_value": str(ctx["stock_value"]),
+        "stock_value": str(
+            Decimal((ctx.get("tally") or {}).get("stock_value") or 0).quantize(Decimal("0.01"))
+        ),
         "existing_names": ctx["names"],
     }
 

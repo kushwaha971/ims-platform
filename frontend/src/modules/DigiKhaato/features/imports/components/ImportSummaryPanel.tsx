@@ -36,6 +36,20 @@ export function ImportSummaryPanel({
   const { t } = useTranslation();
   const summary = job.summary ?? {};
   const route = RECORDS_ROUTE[job.kind];
+  // QA B33/B28 — "Everything in the file was saved" was said over skipped rows.
+  const skippedRows = Number(summary.skipped_rows ?? 0);
+  const skippedDuplicates = Number(summary.skipped_duplicates ?? 0);
+  const body =
+    skippedRows || skippedDuplicates
+      ? [
+          skippedRows ? t('imports.done.skippedRows', { count: skippedRows }) : '',
+          skippedDuplicates
+            ? t('imports.done.skippedDuplicates', { count: skippedDuplicates })
+            : '',
+        ]
+          .filter(Boolean)
+          .join(' ')
+      : t('imports.done.body');
   return (
     <UbStack gap={4}>
       <UbStatusBanner
@@ -43,7 +57,7 @@ export function ImportSummaryPanel({
         title={t(`imports.done.title.${job.kind === 'items' ? 'items' : 'parties'}`, {
           count: Number(summary.created_parties ?? summary.created_items ?? 0),
         })}
-        description={t('imports.done.body')}
+        description={body}
       />
       <UbStatGrid>
         {job.summaryFields.map((field) => (

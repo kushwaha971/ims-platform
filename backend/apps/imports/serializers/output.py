@@ -61,6 +61,10 @@ def job_detail(job: ImportJob, *, can_commit: bool) -> dict:
             "preview_rows": result.get("preview_rows", []),
             "columns": result.get("columns") or (list(spec.column_names) if spec else []),
             "totals": result.get("totals", {}),
+            # QA B27 — the money in rows that will not import, shown apart.
+            "totals_problems": result.get("totals_problems", {}),
+            # QA B28 — rows that repeat a record the book has; the commit's choice.
+            "duplicates": result.get("duplicates", 0),
             "progress": result.get("progress"),
             "has_error_file": bool(result.get("error_file"))
             and job.status != ImportStatus.CANCELLED,

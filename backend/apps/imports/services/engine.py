@@ -52,6 +52,8 @@ from apps.imports.constants import (
     CANCELLABLE_STATUSES,
     COMMIT_LOCK_NAMESPACE,
     ERRORS_CAP,
+    INLINE_MAX_BYTES,
+    INLINE_MAX_ROWS,
     JOB_COMMIT,
     JOB_VALIDATE,
     MAX_COLUMNS,
@@ -221,6 +223,8 @@ def upload(*, ctx: Ctx, kind: str, upload: Any) -> ImportJob:
                 created_by=ctx.actor,
                 idempotency_token=f"{JOB_VALIDATE}:{job.id}",
                 request_id=ctx.request_id,
+                # QA B32 — a small file is checked as soon as the upload commits.
+                run_now=(upload.size or 0) <= INLINE_MAX_BYTES,
             )
     except Exception:
         default_storage.delete(stored_key)
@@ -248,7 +252,14 @@ class _Collector:
         self.warnings: list[dict] = []
         self.warning_codes: dict[str, int] = {}
         self.preview: list[dict] = []
+        #: QA B34 — every row as understood, with its problems, for the paged review.
+        self.rows: list[dict] = []
         self.codes: dict[str, int] = {}
+        #: QA B27 — the good rows' figures, and the problem rows' apart.
+        self.tally: dict[str, Any] = {}
+        self.tally_problems: dict[str, Any] = {}
+        #: QA B28 — rows that repeat a record the book already has.
+        self.duplicates = 0
         self._file: IO[str] | None = None
         self._writer: Any = None
 
@@ -386,6 +397,9 @@ def validate_file(
                 }
             )
         ctx = spec.preflight(job.tenant)
+        # QA B27 — what `spec.totals(ctx)` reads: the good rows' tallies only.
+        ctx["tally"] = collector.tally
+        ctx["tally_problems"] = collector.tally_problems
         seen: dict[str, dict[str, int]] = {column: {} for column in spec.unique_columns}
         rows: list[tuple[int, dict]] = []
         extra_warned = False
@@ -462,21 +476,63 @@ def validate_file(
                         "message": message,
                     }
                 )
+            _add(collector.tally_problems if errors else collector.tally, outcome.tally)
+            duplicate = bool(outcome.duplicate) and not errors
+            if duplicate:
+                collector.duplicates += 1
+                collector.add_warning(
+                    {
+                        "row": record.row,
+                        "column": spec.example_key,
+                        "value": _echo(outcome.duplicate),
+                        "code": "duplicate_name",
+                        "message": f"{outcome.duplicate} is already in your book. "
+                        "Choose to skip it or add it again.",
+                    }
+                )
             if errors:
                 collector.add_errors(record.row, cells, errors)
             else:
                 collector.valid += 1
                 if collect_rows:
-                    rows.append((record.row, outcome.clean))
+                    clean = dict(outcome.clean)
+                    if duplicate:
+                        clean[DUPLICATE_KEY] = True
+                    rows.append((record.row, clean))
+            entry = {"row": record.row, "valid": not errors, **outcome.preview}
             if len(collector.preview) < PREVIEW_ROWS:
-                collector.preview.append(
-                    {"row": record.row, "valid": not errors, **outcome.preview}
+                collector.preview.append(entry)
+            if not collect_rows:
+                collector.rows.append(
+                    {
+                        **entry,
+                        "duplicate": duplicate,
+                        "errors": [
+                            {"column": e["column"], "message": e["message"]} for e in errors
+                        ],
+                    }
                 )
             if collector.total % PROGRESS_EVERY == 0 and not collect_rows:
                 _set_progress(job.pk, collector.total, None)
         if collector.total == 0:
             raise FileRefused("empty_file", "The file has no rows.")
         return collector, ctx, rows
+
+
+#: Marks a clean row that repeats a record the book has (QA B28); the engine strips
+#: it before the spec sees the row.
+DUPLICATE_KEY = "_duplicate"
+
+
+def _add(into: dict[str, Any], tally: dict[str, Any]) -> None:
+    for key, value in tally.items():
+        into[key] = into.get(key, 0) + value
+
+
+def _tally_json(tally: dict[str, Any]) -> dict[str, Any]:
+    return {
+        key: (str(value) if not isinstance(value, int) else value) for key, value in tally.items()
+    }
 
 
 def _unique_key(column: str, clean: dict, raw: str) -> str:
@@ -536,7 +592,10 @@ def run_validation(job_id: Any) -> dict:
         "preview_rows": collector.preview,
         "columns": [column.name for column in spec.columns],
         "header": collector.header,
-        "totals": spec.totals(ctx) if spec.totals else {},
+        "totals": {**_tally_json(collector.tally), **(spec.totals(ctx) if spec.totals else {})},
+        "totals_problems": _tally_json(collector.tally_problems),
+        "duplicates": collector.duplicates,
+        "rows": collector.rows,
         "error_file": bool(error_attachment),
         "duration_ms": int((time.monotonic() - started) * 1000),
     }
@@ -630,8 +689,22 @@ def _audit_system(job: ImportJob, action: str, metadata: dict) -> None:
 # ── commit (FR-6) ────────────────────────────────────────────────────────────
 
 
-def request_commit(*, ctx: Ctx, job: ImportJob) -> ImportJob:
-    """`ready → importing`, then queue the commit. 409s per §10's commit level."""
+def request_commit(*, ctx: Ctx, job: ImportJob, data: Any = None) -> ImportJob:
+    """`ready → importing`, then queue the commit. 409s per §10's commit level.
+
+    QA B33 — `skip_errors: true` imports the good rows and skips the rest (they are
+    in the error file); without it a file with problems is still refused whole,
+    the all-or-nothing the owner may prefer. QA B28 — `duplicates: create | skip`
+    for rows that repeat a record the book already has.
+    """
+    data = data if isinstance(data, dict) else {}
+    if not data:
+        # A retry after a failed commit sends nothing: it means what was asked before.
+        data = dict((job.result or {}).get("commit_options") or {})
+    skip_errors = data.get("skip_errors") is True
+    duplicates = data.get("duplicates") or "create"
+    if duplicates not in ("create", "skip"):
+        raise ValidationFailed({"duplicates": ["Choose create or skip."]})
     spec = registry.get(job.kind)
     if spec is None:
         raise ValidationFailed({"kind": ["This kind of import is no longer available."]})
@@ -648,11 +721,17 @@ def request_commit(*, ctx: Ctx, job: ImportJob) -> ImportJob:
                 "This import is not ready to be imported.",
                 details={"status": locked.status},
             )
-        if locked.error_rows > 0:
+        if locked.error_rows > 0 and not skip_errors:
             raise BusinessRuleViolation(
                 "import_has_errors",
-                f"Fix {locked.error_rows} rows first.",
-                details={"error_rows": locked.error_rows},
+                f"Fix {locked.error_rows} rows first, or import the good rows and skip them.",
+                details={"error_rows": locked.error_rows, "valid_rows": locked.valid_rows},
+            )
+        if locked.valid_rows == 0:
+            raise BusinessRuleViolation(
+                "import_has_errors",
+                "No row can be imported. Fix the file and upload it again.",
+                details={"error_rows": locked.error_rows, "valid_rows": 0},
             )
         locked.status = ImportStatus.IMPORTING
         locked.finished_at = None
@@ -664,6 +743,7 @@ def request_commit(*, ctx: Ctx, job: ImportJob) -> ImportJob:
         # committed again, and `uq_job_idem` counts a succeeded job as live.
         attempt = int(result.get("commit_attempt") or 0) + 1
         result["commit_attempt"] = attempt
+        result["commit_options"] = {"skip_errors": skip_errors, "duplicates": duplicates}
         locked.result = result
         locked.save(update_fields=["status", "finished_at", "result", "updated_at"])
         enqueue(
@@ -676,6 +756,9 @@ def request_commit(*, ctx: Ctx, job: ImportJob) -> ImportJob:
             created_by=ctx.actor,
             idempotency_token=f"{JOB_COMMIT}:{locked.id}:{attempt}",
             request_id=ctx.request_id,
+            # QA B32 — a small commit runs when this request commits, not after
+            # the scheduler's next tick; the queued job then finds it done.
+            run_now=locked.valid_rows <= INLINE_MAX_ROWS,
         )
     return locked
 
@@ -683,7 +766,7 @@ def request_commit(*, ctx: Ctx, job: ImportJob) -> ImportJob:
 def _is_retryable_failure(job: ImportJob) -> bool:
     """A job that failed AT COMMIT (not at validation) may be committed again."""
     error = (job.result or {}).get("error") or {}
-    return bool(error.get("at") == "commit") and job.error_rows == 0 and job.valid_rows > 0
+    return bool(error.get("at") == "commit") and job.valid_rows > 0
 
 
 def run_commit(job_id: Any, actor_id: Any) -> dict:
@@ -728,11 +811,24 @@ def run_commit(job_id: Any, actor_id: Any) -> dict:
                     [COMMIT_LOCK_NAMESPACE, str(job.tenant_id)],
                 )
             collector, ctx, rows = validate_file(job=job, spec=spec, collect_rows=True)
-            if collector is None or collector.error_rows:
+            options = (job.result or {}).get("commit_options") or {}
+            skip_errors = options.get("skip_errors") is True
+            if collector is None or (collector.error_rows and not skip_errors):
                 # The book changed since the preview (someone added a party with
                 # one of these mobiles). Nothing is written; the merchant re-checks.
                 raise _Stale(collector.error_rows if collector else 0)
-            summary = _commit_rows(spec, ctx, service_ctx, rows)
+            skipped_duplicates = 0
+            if options.get("duplicates") == "skip":
+                kept = [(n, c) for n, c in rows if not c.get(DUPLICATE_KEY)]
+                skipped_duplicates = len(rows) - len(kept)
+                rows = kept
+            rows = [(n, {k: v for k, v in c.items() if k != DUPLICATE_KEY}) for n, c in rows]
+            summary = _commit_rows(spec, ctx, service_ctx, rows) if rows else {}
+            summary = {
+                **summary,
+                "skipped_rows": collector.error_rows if skip_errors else 0,
+                "skipped_duplicates": skipped_duplicates,
+            }
             write_audit(
                 ctx=service_ctx,
                 action=AUDIT_IMPORT_COMMITTED,
@@ -995,3 +1091,16 @@ def template_csv(spec: registry.ImporterSpec) -> str:
     for example in spec.template_rows:
         writer.writerow([neutralise(example.get(name, "")) for name in spec.column_names])
     return buffer.getvalue()
+
+
+def rows_page(job: ImportJob, *, page: int, page_size: int, problems: bool) -> tuple[list, int]:
+    """QA B34 — one page of every row as the check understood it, with its problems.
+
+    Read from what validation stored (`result.rows`), so paging never re-reads the
+    file. `problems` keeps the rows that will not import or are duplicates.
+    """
+    rows = (job.result or {}).get("rows") or []
+    if problems:
+        rows = [r for r in rows if not r.get("valid") or r.get("duplicate")]
+    start = (page - 1) * page_size
+    return rows[start : start + page_size], len(rows)

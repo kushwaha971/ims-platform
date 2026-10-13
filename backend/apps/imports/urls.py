@@ -16,6 +16,7 @@ from apps.imports.views.job import (
     ImportErrorFileView,
     ImportJobDetailView,
     ImportJobListView,
+    ImportRowsView,
     ImportTemplateView,
 )
 
@@ -24,6 +25,8 @@ urlpatterns = [
     path("imports/templates/<slug:kind>.csv", ImportTemplateView.as_view(), name="import-template"),
     path("imports/<uuid:job_id>", ImportJobDetailView.as_view(), name="import-detail"),
     path("imports/<uuid:job_id>/commit", ImportCommitView.as_view(), name="import-commit"),
+    # QA B34 — every row, paged, with "only problems".
+    path("imports/<uuid:job_id>/rows", ImportRowsView.as_view(), name="import-rows"),
     path("imports/<uuid:job_id>/cancel", ImportCancelView.as_view(), name="import-cancel"),
     path("imports/<uuid:job_id>/errors.csv", ImportErrorFileView.as_view(), name="import-errors"),
 ]

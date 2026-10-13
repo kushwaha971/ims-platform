@@ -42,6 +42,14 @@ MAX_COLUMNS = 200
 ERRORS_CAP = 500
 WARNINGS_CAP = 200
 PREVIEW_ROWS = 20
+#: QA B34 — the paged review's default and largest page.
+ROWS_PAGE_SIZE = 50
+ROWS_PAGE_MAX = 200
+#: QA B32 — a file this small is checked, and a commit this small written, the
+#: moment the request commits rather than after the scheduler's next tick (a
+#: 30-second loop made 27 rows take 35 s). Larger ones stay on the queue.
+INLINE_MAX_BYTES = 512 * 1024
+INLINE_MAX_ROWS = 2_000
 #: FR-4 — `result.progress` is written every 200 rows.
 PROGRESS_EVERY = 200
 #: The error model truncates the echoed value to 80 characters.

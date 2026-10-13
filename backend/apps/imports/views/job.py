@@ -76,7 +76,9 @@ def _can_commit(request: Any, job: ImportJob, spec: registry.ImporterSpec | None
     """The button's state, decided by the server (an accountant sees it disabled)."""
     if spec is None or not _may_write(request, spec):
         return False
-    if job.error_rows or job.valid_rows == 0:
+    # QA B33 — problem rows no longer block: the good rows can be imported and the
+    # rest skipped. Only a file with nothing importable cannot be committed.
+    if job.valid_rows == 0:
         return False
     if job.status == ImportStatus.READY:
         return True
@@ -138,6 +140,30 @@ class ImportJobDetailView(_ImportView):
         return StandardResponse.ok(job_detail(job, can_commit=_can_commit(request, job, spec)))
 
 
+class ImportRowsView(_ImportView):
+    """`GET /imports/{id}/rows?page=&page_size=&problems=1` — every row before
+    importing, a page at a time (QA B34: the review showed only the first 20)."""
+
+    def get(self, request: Any, job_id: Any) -> Any:
+        from apps.imports.constants import ROWS_PAGE_MAX, ROWS_PAGE_SIZE
+
+        job, _spec = _job_or_404(request, job_id)
+
+        def number(key: str, default: int, top: int) -> int:
+            try:
+                return max(1, min(int(request.query_params.get(key) or default), top))
+            except (TypeError, ValueError):
+                return default
+
+        page = number("page", 1, 10_000)
+        size = number("page_size", ROWS_PAGE_SIZE, ROWS_PAGE_MAX)
+        problems = request.query_params.get("problems") in ("1", "true")
+        rows, total = engine.rows_page(job, page=page, page_size=size, problems=problems)
+        return StandardResponse.ok(
+            rows, meta={"page": page, "page_size": size, "total": total, "problems": problems}
+        )
+
+
 class ImportCommitView(_ImportView):
     """`POST /imports/{id}/commit` → 202 (FR-6)."""
 
@@ -154,7 +180,11 @@ class ImportCommitView(_ImportView):
         job, spec = _job_or_404(request, job_id)
         if not _may_write(request, spec):
             raise PermissionDenied("Only someone who can add these records can import them.")
-        job = engine.request_commit(ctx=Ctx.from_request(request), job=job)
+        job = engine.request_commit(
+            ctx=Ctx.from_request(request),
+            job=job,
+            data=request.data if isinstance(request.data, dict) else {},
+        )
         job = ImportJob.objects.select_related("file_attachment", "created_by").get(pk=job.pk)
         return StandardResponse.accepted(
             job_detail(job, can_commit=False), message="Import started"

@@ -30,6 +30,8 @@ const JOB: ImportJob = {
   warnings: [],
   previewRows: [],
   totals: {},
+  totalsProblems: {},
+  duplicates: 0,
   progress: null,
   hasErrorFile: true,
   canCommit: false,
@@ -58,10 +60,11 @@ describe('pollDelay (IMP-01 FR-8)', () => {
 });
 
 describe('commitBlockReason (FR-6, §8)', () => {
-  it('names the rows to fix when there are problems', () => {
+  it('names the rows to fix when nothing else could import', () => {
     /* The disabled Import button carries its reason BENEATH it — a phone has
-       no hover, so a tooltip would be a reason nobody can read. */
-    expect(commitBlockReason(JOB)).toEqual({
+       no hover, so a tooltip would be a reason nobody can read. QA B33: problem
+       rows block only when there is no good row to import instead. */
+    expect(commitBlockReason({ ...JOB, validRows: 0 })).toEqual({
       id: 'imports.review.blocked.errors',
       values: { count: 2 },
     });

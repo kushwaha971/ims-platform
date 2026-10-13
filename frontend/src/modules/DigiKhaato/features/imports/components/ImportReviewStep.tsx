@@ -7,6 +7,7 @@ import { CircleAlert, Download, FileCheck2, ListChecks, Rows3, Upload } from 'lu
 import {
   UbActionLink,
   UbButton,
+  UbChoiceChips,
   UbConfirmDialog,
   UbDisclosure,
   UbSectionHeading,
@@ -23,17 +24,24 @@ import { importErrorsUrl } from '../api/importService';
 import { IMPORT_KINDS, isImportKind } from '../constants/importKinds';
 import { commitBlockReason } from '../view-model/importDisplay';
 
-import { ImportErrorTable, ImportPreviewTable } from './ImportTables';
+import { ImportRowsReview } from './ImportRowsReview';
+import { ImportErrorTable } from './ImportTables';
 
 import type { UseImportWizardResult } from '../hooks/useImportWizard';
-import type { ImportJob } from '../types/import.types';
+import type { ImportCommitOptions, ImportJob } from '../types/import.types';
 
 /**
  * Step 3 (IMP-01 §7, PTY-10 FR-7, INV-09 FR-5) — what will happen, before it
  * happens: four tiles, the file-wide figures a merchant checks against their
- * own book, the first rows as understood, every problem by row and column,
- * and a Commit that carries its count and — when disabled — its reason,
+ * own book, every row as understood (paged, QA B34), every problem by row and
+ * column, and a Commit that carries its count and — when disabled — its reason,
  * beneath it rather than in a tooltip (touch devices have no hover).
+ *
+ * The 12 Oct QA: the totals count only rows that will import, with the money in
+ * problem rows said apart (B27); problem rows no longer block the good ones —
+ * the button imports the good rows and skips the rest, which stay in the error
+ * file (B33); rows the book already has are a choice (B28); and the party button
+ * names customers, suppliers and both (B44).
  */
 export function ImportReviewStep({
   wizard,
@@ -46,6 +54,37 @@ export function ImportReviewStep({
   const config = kind ? IMPORT_KINDS[kind] : null;
   const blocked = commitBlockReason(job);
   const warnings = job.warnings;
+  // QA B28 — what to do with rows the book already has; skipping is the safe default.
+  const [duplicates, setDuplicates] = useState<ImportCommitOptions['duplicates']>('skip');
+  // QA B33 — with problem rows, the button imports the good ones and skips the rest.
+  const skipErrors = job.errorRows > 0;
+
+  const problemsLine = (() => {
+    const owed = Number(job.totalsProblems.opening_receivable ?? 0);
+    const owing = Number(job.totalsProblems.opening_payable ?? 0);
+    const stock = Number(job.totalsProblems.stock_value ?? 0);
+    const amount = owed + owing + stock;
+    return amount > 0
+      ? t('imports.review.problemMoney', { amount: formatInr(amount.toFixed(2)) })
+      : null;
+  })();
+
+  const commitLabel = (() => {
+    if (skipErrors) {
+      return t('imports.commit.skipBad', { good: job.validRows, bad: job.errorRows });
+    }
+    if (kind === 'parties') {
+      // QA B44 — "Import 11 customers" when some were suppliers.
+      const parts = (['customers', 'suppliers', 'both'] as const)
+        .map((key) => ({ key, count: Number(job.totals[key] ?? 0) }))
+        .filter((part) => part.count > 0)
+        .map((part) => t(`imports.commit.kinds.${part.key}`, { count: part.count }));
+      return parts.length
+        ? t('imports.commit.partiesByKind', { count: job.validRows, kinds: parts.join(', ') })
+        : t('imports.commit.parties', { count: job.validRows });
+    }
+    return t(`imports.commit.${kind ?? 'rows'}`, { count: job.validRows });
+  })();
 
   const totalsLine = (() => {
     if (kind === 'parties') {
@@ -96,13 +135,35 @@ export function ImportReviewStep({
           {totalsLine}
         </UbText>
       )}
+      {problemsLine && (
+        <UbText as="p" variant="body-sm" tone="secondary" data-testid="import-problem-money">
+          {problemsLine}
+        </UbText>
+      )}
 
       {job.errorRows > 0 && (
         <UbStatusBanner
           tone="warning"
           title={t('imports.errorsFound', { count: job.errorRows })}
-          description={t('imports.review.fixHint')}
+          description={t('imports.review.skipHint', { good: job.validRows })}
         />
+      )}
+
+      {job.duplicates > 0 && (
+        <UbStack gap={1} data-testid="import-duplicates">
+          <UbText variant="body-sm-medium">
+            {t('imports.review.duplicates', { count: job.duplicates })}
+          </UbText>
+          <UbChoiceChips<ImportCommitOptions['duplicates']>
+            ariaLabel={t('imports.review.duplicates', { count: job.duplicates })}
+            value={duplicates}
+            onChange={setDuplicates}
+            options={[
+              { value: 'skip', label: t('imports.review.duplicates.skip') },
+              { value: 'create', label: t('imports.review.duplicates.create') },
+            ]}
+          />
+        </UbStack>
       )}
 
       {warnings.length > 0 && (
@@ -142,14 +203,13 @@ export function ImportReviewStep({
         </UbStack>
       )}
 
-      {config && job.previewRows.length > 0 && (
-        <UbStack gap={2}>
-          <UbSectionHeading
-            title={t('imports.preview.title')}
-            meta={t('imports.preview.meta', { count: job.previewRows.length })}
-          />
-          <ImportPreviewTable t={t} rows={job.previewRows} columns={config.previewColumns} />
-        </UbStack>
+      {config && job.totalRows > 0 && (
+        <ImportRowsReview
+          t={t}
+          jobId={job.id}
+          total={job.totalRows}
+          columns={config.previewColumns}
+        />
       )}
 
       <UbText as="p" variant="body-sm" tone="tertiary">
@@ -187,13 +247,14 @@ export function ImportReviewStep({
         )}
         <UbStack gap={1}>
           <UbButton
-            onClick={wizard.commit}
+            onClick={() => wizard.commit({ skipErrors, duplicates })}
             disabled={blocked !== null}
             busy={wizard.committing}
             busyLabel={t('imports.commit.starting')}
             aria-describedby={blocked ? 'import-commit-reason' : undefined}
+            data-testid="import-commit"
           >
-            {t(`imports.commit.${kind ?? 'rows'}`, { count: job.validRows })}
+            {commitLabel}
           </UbButton>
           {blocked && (
             <UbText id="import-commit-reason" as="span" variant="caption" tone="warning">

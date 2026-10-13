@@ -85,8 +85,14 @@ def enqueue(
     scheduled_key: str | None = None,
     created_by: Any = None,
     request_id: str | None = None,
+    run_now: bool = False,
 ) -> Any:
     """Queue background work. The only way anything becomes asynchronous.
+
+    `run_now` (QA B32) runs the job through the normal runner the moment the
+    caller's transaction commits, for work small enough that waiting for the
+    scheduler's next tick is the whole of the delay. The row is still queued
+    first, so a crash between the commit and the run leaves it for the scheduler.
 
     Called inside the caller's transaction, so the INSERT commits with the
     caller's work: a job never exists for a transaction that rolled back and
@@ -122,7 +128,7 @@ def enqueue(
 
     from django.conf import settings
 
-    if getattr(settings, "UB_JOBS_EAGER", False):
+    if run_now or getattr(settings, "UB_JOBS_EAGER", False):
         # Local and test only (Part 20 §20.8.10): run inline after the current
         # transaction commits, so a test can assert job side effects without a loop.
         transaction.on_commit(lambda: run_job(model.objects.get(pk=job.pk), worker="eager"))

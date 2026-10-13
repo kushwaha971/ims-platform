@@ -110,6 +110,8 @@ export const QUERIES = {
   fetchOpenDocuments: 'paymentForm/fetchOpenDocuments',
   fetchCollectQr: 'paymentForm/fetchCollectQr',
   fetchImportJob: 'importJob/fetchImportJob',
+  // QA B34 — the review's paged rows; reads only.
+  fetchImportRows: 'importJob/fetchImportRows',
   exportListCsv: 'listExport/exportListCsv',
   fetchExportJob: 'listExport/fetchExportJob',
   // PLT-10 — "Your data": the page, one export's poll, the gate's re-read

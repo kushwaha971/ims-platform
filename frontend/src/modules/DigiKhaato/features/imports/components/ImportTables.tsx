@@ -16,7 +16,7 @@ import type { ImportPreviewRow, ImportRowProblem } from '../types/import.types';
 
 const ERROR_PAGE_SIZE = 25;
 
-const gridLabels = (t: TranslateFn): UbDataGridLabels => ({
+export const gridLabels = (t: TranslateFn): UbDataGridLabels => ({
   loading: t('imports.loading'),
   pageOf: t('common.grid.pageOf', { page: '{page}', pages: '{pages}' }),
   previousPage: t('common.grid.previousPage'),
@@ -36,7 +36,7 @@ const gridLabels = (t: TranslateFn): UbDataGridLabels => ({
   openRow: t('imports.grid.openRow', { name: '{name}' }),
 });
 
-const noEmptyStates = (t: TranslateFn): UbDataGridEmptyStates => ({
+export const noEmptyStates = (t: TranslateFn): UbDataGridEmptyStates => ({
   firstUse: { title: t('imports.preview.empty') },
   filtered: { title: t('imports.preview.empty') },
   error: { title: t('imports.error.load') },

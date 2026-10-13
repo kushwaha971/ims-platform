@@ -22,6 +22,7 @@ jest.mock('../api/importService', () => ({
   uploadImport: jest.fn(),
   commitImport: jest.fn(),
   cancelImport: jest.fn(),
+  listImportRows: jest.fn(),
 }));
 
 const mockReplace = jest.fn();
@@ -37,6 +38,7 @@ const service = jest.requireMock('../api/importService') as {
   uploadImport: jest.Mock;
   commitImport: jest.Mock;
   cancelImport: jest.Mock;
+  listImportRows: jest.Mock;
 };
 
 const OWNER: readonly PermissionCode[] = [
@@ -112,7 +114,14 @@ const READY: ImportJob = {
       tags: ['Camp Area'],
     },
   ],
-  totals: { opening_receivable: '124500.00', opening_payable: '22150.00' },
+  totals: {
+    opening_receivable: '124500.00',
+    opening_payable: '22150.00',
+    customers: 9,
+    suppliers: 1,
+  },
+  totalsProblems: {},
+  duplicates: 0,
   progress: { done: 12, total: 12 },
   hasErrorFile: true,
   canCommit: false,
@@ -125,6 +134,7 @@ beforeEach(() => {
   jest.clearAllMocks();
   store.dispatch(resetAllFeatureState());
   signIn(OWNER);
+  service.listImportRows.mockResolvedValue({ rows: [], total: 0, page: 1, pageSize: 25 });
 });
 
 const renderJob = (job: ImportJob) => {
@@ -133,14 +143,41 @@ const renderJob = (job: ImportJob) => {
 };
 
 describe('the review step', () => {
-  it('disables Import with the reason beneath it while rows have problems (AC-2)', async () => {
-    /* A phone has no hover: the reason must be visible text, tied to the
-       button, not a tooltip nobody can open. */
-    renderJob(READY);
-    const commit = await screen.findByRole('button', { name: 'Import 10 customers' });
-    expect(commit).toBeDisabled();
-    expect(screen.getByText('Fix 2 rows first.')).toBeInTheDocument();
-    expect(commit).toHaveAttribute('aria-describedby', 'import-commit-reason');
+  it('imports the good rows and skips the ones with problems, saying so (QA B33)', async () => {
+    /* "Fix 16 rows first" used to block 11 good rows. The button now says what it
+       will do — and sends exactly that, so the server never guesses. */
+    const user = userEvent.setup();
+    renderJob({ ...READY, canCommit: true });
+    service.commitImport.mockResolvedValue({ ...READY, status: 'importing' });
+    const commit = await screen.findByRole('button', { name: 'Import 10 good rows, skip 2' });
+    expect(commit).toBeEnabled();
+    await user.click(commit);
+    await waitFor(() => expect(service.commitImport).toHaveBeenCalledTimes(1));
+    expect(service.commitImport.mock.calls[0]?.[2]).toEqual({
+      skipErrors: true,
+      duplicates: 'skip',
+    });
+  });
+
+  it('says the money in problem rows apart from the totals (QA B27)', async () => {
+    renderJob({ ...READY, canCommit: true, totalsProblems: { opening_receivable: '1300.00' } });
+    expect(await screen.findByTestId('import-problem-money')).toHaveTextContent(
+      '₹1,300.00 is in rows with problems'
+    );
+  });
+
+  it('asks what to do with rows the book already has, skipping by default (QA B28)', async () => {
+    const user = userEvent.setup();
+    renderJob({ ...READY, errorRows: 0, errors: [], canCommit: true, duplicates: 3 });
+    service.commitImport.mockResolvedValue({ ...READY, status: 'importing' });
+    expect(await screen.findByText('3 rows are already in your book')).toBeInTheDocument();
+    await user.click(screen.getByRole('radio', { name: 'Add them again' }));
+    await user.click(screen.getByTestId('import-commit'));
+    await waitFor(() => expect(service.commitImport).toHaveBeenCalledTimes(1));
+    expect(service.commitImport.mock.calls[0]?.[2]).toEqual({
+      skipErrors: false,
+      duplicates: 'create',
+    });
   });
 
   it('lists every problem by the spreadsheet row and column (US-IMP-01-2)', async () => {
@@ -170,6 +207,13 @@ describe('the review step', () => {
   });
 
   it('previews rows as they will be saved — money en-IN, dates dd/mm/yyyy (AC-3)', async () => {
+    // QA B34 — every row now comes a page at a time from the server.
+    service.listImportRows.mockResolvedValue({
+      rows: READY.previewRows,
+      total: 1,
+      page: 1,
+      pageSize: 25,
+    });
     renderJob({ ...READY, errorRows: 0, errors: [], canCommit: true });
     expect(await screen.findByText('Ramesh Traders')).toBeInTheDocument();
     expect(screen.getByText('₹2,300.00')).toBeInTheDocument();
@@ -179,7 +223,10 @@ describe('the review step', () => {
     const user = userEvent.setup();
     renderJob({ ...READY, errorRows: 0, errors: [], canCommit: true });
     service.commitImport.mockResolvedValue({ ...READY, status: 'importing', errorRows: 0 });
-    await user.click(await screen.findByRole('button', { name: 'Import 10 customers' }));
+    // QA B44 — the button names the kinds: 9 customers and 1 supplier.
+    await user.click(
+      await screen.findByRole('button', { name: 'Import 10 parties (9 customers, 1 supplier)' })
+    );
     await waitFor(() => expect(service.commitImport).toHaveBeenCalledTimes(1));
     const [id, key] = service.commitImport.mock.calls[0] as [string, string];
     expect(id).toBe('job-1');
@@ -245,9 +292,10 @@ describe('the outcomes', () => {
         opening_payable: '0.00',
       },
     });
-    expect(await screen.findByText('412 customers imported')).toBeInTheDocument();
+    // QA B44 — parties, not customers: a file mixes customers and suppliers.
+    expect(await screen.findByText('412 parties imported')).toBeInTheDocument();
     expect(screen.getByText('₹1,24,500.00')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Go to customers' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: 'Go to customers and suppliers' })).toHaveAttribute(
       'href',
       '/parties'
     );
@@ -286,5 +334,47 @@ describe('choosing and uploading', () => {
     await waitFor(() => expect(service.uploadImport).toHaveBeenCalledTimes(1));
     expect(service.uploadImport.mock.calls[0]?.[0]).toBe('parties');
     await waitFor(() => expect(mockReplace).toHaveBeenCalledWith('/imports/job-1'));
+  });
+});
+
+describe('watching a running job (QA B31)', () => {
+  it('keeps asking until the job finishes, even when an answer changes nothing', async () => {
+    /* The page stayed on "Importing 7 rows…" after the job had completed: each
+       read used to schedule the next from its own answer, so an unchanged answer
+       could leave no timer behind. The answers here are identical three times. */
+    jest.useFakeTimers();
+    try {
+      const importing = { ...READY, status: 'importing' as const, errorRows: 0, errors: [] };
+      service.getImportJob
+        .mockResolvedValueOnce(importing)
+        .mockResolvedValueOnce(importing)
+        .mockResolvedValueOnce(importing)
+        .mockResolvedValueOnce(importing)
+        .mockResolvedValue({ ...importing, status: 'completed', summary: { created_parties: 10 } });
+      renderWithProviders(<ImportWizard kind={null} jobId={READY.id} exportId={null} />);
+      for (let i = 0; i < 6; i += 1) {
+        await jest.advanceTimersByTimeAsync(2_100);
+      }
+      expect(service.getImportJob.mock.calls.length).toBeGreaterThanOrEqual(5);
+      const calls = service.getImportJob.mock.calls.length;
+      await jest.advanceTimersByTimeAsync(20_000);
+      // Finished: the polling stopped.
+      expect(service.getImportJob.mock.calls.length).toBe(calls);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+});
+
+describe('the outcome after skipping rows (QA B33)', () => {
+  it('never says everything was saved when rows were skipped', async () => {
+    renderJob({
+      ...READY,
+      status: 'completed',
+      summary: { created_parties: 2, skipped_rows: 2, skipped_duplicates: 1 },
+    });
+    expect(await screen.findByText(/2 rows with problems were skipped/)).toBeInTheDocument();
+    expect(screen.getByText(/1 row already in your book was skipped/)).toBeInTheDocument();
+    expect(screen.queryByText('Everything in the file was saved.')).not.toBeInTheDocument();
   });
 });
