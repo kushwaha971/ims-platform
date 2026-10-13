@@ -194,8 +194,11 @@ export function PartyDetailPageContent({
   /* The header's money words follow the book: "To collect / To pay" on the Shop's
      page, "You will get / You will give" in the Udhaar book. */
   const headerT = useCallback<TranslateFn>(
-    (key, values) => w(shopBook ? (SHOP_BOOK_WORDS[key] ?? key) : key, values),
-    [w, shopBook]
+    (key, values) =>
+      key === 'parties.detail.badge.customer' || key === 'parties.detail.badge.supplier'
+        ? t(key, values)
+        : w(shopBook ? (SHOP_BOOK_WORDS[key] ?? key) : key, values),
+    [t, w, shopBook]
   );
   const router = useRouter();
   const partyForm = usePartyForm();

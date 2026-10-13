@@ -593,6 +593,26 @@ describe('opened from the Shop (DEC-019)', () => {
   });
 });
 
+it('does not invent a Student role for a customer when Library is active (QA B11)', async () => {
+  // The current navigation labels the app; the person's stored roles label the person.
+  signIn(['parties.party.read', 'ledger.entry.read'], 'owner', 'library');
+  const session = store.getState().session;
+  if (!session.user) throw new Error('The fixture must be signed in');
+  store.dispatch(
+    sessionLoaded({
+      ...session,
+      user: session.user,
+      apps: [
+        { code: 'library', labelId: 'nav.workspace.library', homePath: '/library', order: 10 },
+      ],
+    })
+  );
+  renderWithProviders(<PartyDetailPageContent id={ID} />);
+  await screen.findByText('Ramesh Traders');
+  expect(screen.getByText('Customer', { exact: true })).toBeInTheDocument();
+  expect(screen.queryByText('Student', { exact: true })).not.toBeInTheDocument();
+});
+
 describe('the promise date', () => {
   it('saves what the merchant picked, without a Save button to forget', async () => {
     const user = userEvent.setup();

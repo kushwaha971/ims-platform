@@ -1,5 +1,9 @@
 {
  "//": [
+  "13 Oct 2026, QA B11: browser-history app context keeps Back and reload in",
+  "the original app. It adds about 0.2 KB to routes using navigation. The",
+  "affected limits below are the measured gzip size plus 0.5 KB; three",
+  "Library first-load limits already exceeded on the unchanged dev build.",
   "Part 19 §19.9.2 — the bundle budgets, as a committed file so that raising one",
   "is a reviewable line in a diff rather than an argument in a PR thread.",
   "",
@@ -1329,7 +1333,7 @@
  "routes": {
   "/library/money": {
    "route": 68.7,
-   "firstLoad": 307
+   "firstLoad": 307.7
   },
   "/purchases/debit-notes/[id]": {
    "route": 65,
@@ -1368,7 +1372,7 @@
    "firstLoad": 388
   },
   "/purchases/orders/[id]/edit": {
-   "route": 149,
+   "route": 149.5,
    "firstLoad": 388
   },
   "/sales/orders/[id]": {
@@ -1448,7 +1452,7 @@
    "firstLoad": 348
   },
   "/settings/team": {
-   "route": 83,
+   "route": 83.7,
    "firstLoad": 322
   },
   "/parties/[id]": {
@@ -1481,7 +1485,7 @@
   },
   "/settings/profile": {
    "route": 138,
-   "firstLoad": 376
+   "firstLoad": 376.5
   },
   "/settings/branding": {
    "route": 90,
@@ -1529,18 +1533,18 @@
   },
   "/payments/[id]": {
    "route": 62,
-   "firstLoad": 300
+   "firstLoad": 300.6
   },
   "/ledger/reminders": {
    "route": 71,
-   "firstLoad": 309
+   "firstLoad": 309.6
   },
   "/imports": {
-   "route": 50,
+   "route": 50.6,
    "firstLoad": 289
   },
   "/imports/[id]": {
-   "route": 50,
+   "route": 50.6,
    "firstLoad": 289
   },
   "/admin": {
@@ -1628,12 +1632,12 @@
    "firstLoad": 314.2
   },
   "/library/copies/[copyId]": {
-   "route": 69.6,
-   "firstLoad": 308
+   "route": 70.1,
+   "firstLoad": 308.8
   },
   "/library/settings": {
    "route": 113.6,
-   "firstLoad": 352
+   "firstLoad": 352.6
   },
   "/library/members": {
    "route": 83.4,
@@ -1644,24 +1648,24 @@
    "firstLoad": 315.3
   },
   "/library/catalogue/[titleId]": {
-   "route": 66.5,
-   "firstLoad": 305
+   "route": 67.1,
+   "firstLoad": 305.7
   },
   "/library/catalogue/categories": {
-   "route": 65,
-   "firstLoad": 303.6
+   "route": 65.7,
+   "firstLoad": 304.4
   },
   "/library/catalogue/locations": {
-   "route": 65,
-   "firstLoad": 303.6
+   "route": 65.7,
+   "firstLoad": 304.4
   },
   "/library/counter": {
    "route": 76.1,
    "firstLoad": 314.7
   },
   "/library/seats": {
-   "route": 71.2,
-   "firstLoad": 309.8
+   "route": 71.8,
+   "firstLoad": 310.4
   },
   "/library/fees": {
    "route": 72.1,
@@ -1708,16 +1712,16 @@
    "firstLoad": 239
   },
   "/library": {
-   "route": 72.6,
+   "route": 73.2,
    "firstLoad": 311.5
   },
   "/library/attendance": {
-   "route": 68.7,
+   "route": 69.2,
    "firstLoad": 307.6
   },
   "/library/messages": {
    "route": 66.7,
-   "firstLoad": 304.9
+   "firstLoad": 305.6
   },
   "/lending/loans/new": {
    "route": 131.8,
@@ -1728,7 +1732,7 @@
    "firstLoad": 304
   },
   "/lending/loans/[loanId]": {
-   "route": 64,
+   "route": 64.7,
    "firstLoad": 303
   },
   "/lending/loans": {

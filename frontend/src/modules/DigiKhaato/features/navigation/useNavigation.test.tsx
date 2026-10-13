@@ -84,6 +84,7 @@ const keysOf = (nav: ReturnType<typeof useNavigation>) =>
   nav.sections.flatMap((section) => section.items.map((item) => item.key));
 
 beforeEach(() => {
+  window.history.replaceState(null, '', '/');
   store.dispatch(resetAllFeatureState());
   jest.mocked(authService.switchApp).mockReset();
   jest.mocked(authService.switchApp).mockImplementation(() => new Promise(() => undefined));
@@ -156,6 +157,46 @@ describe('one menu per app', () => {
 });
 
 describe('the switcher', () => {
+  it('restores the app recorded on a shared history entry after switching apps (QA B11)', () => {
+    // Back to a Shop customer must not turn them into a Library student.
+    window.history.replaceState(
+      { yourkhataApp: { path: '/parties/p1', app: 'shop', tenant: 't1' } },
+      '',
+      '/parties/p1'
+    );
+    mockPath = '/parties/p1';
+    load({ activeApp: 'library' });
+    expect(listed().app).toBe('shop');
+    window.history.replaceState(null, '', '/');
+  });
+
+  it('ignores history context from another business (QA B11)', () => {
+    // Switching business must not carry the previous business's open app.
+    window.history.replaceState(
+      { yourkhataApp: { path: '/parties/p1', app: 'shop', tenant: 'another-business' } },
+      '',
+      '/parties/p1'
+    );
+    mockPath = '/parties/p1';
+    load({ activeApp: 'library' });
+    expect(listed().app).toBe('library');
+  });
+
+  it('keeps Next router metadata when recording a shared page (QA B11)', () => {
+    // Replacing Next's history fields would restore the app but break Back itself.
+    window.history.replaceState({ __NA: true, routerTree: ['existing'] }, '', '/parties/p1');
+    mockPath = '/parties/p1';
+    load({ activeApp: 'shop' });
+    listed();
+    expect(window.history.state).toEqual(
+      expect.objectContaining({
+        __NA: true,
+        routerTree: ['existing'],
+        yourkhataApp: { path: '/parties/p1', app: 'shop', tenant: 't1' },
+      })
+    );
+  });
+
   it('lists the apps the server says, in its order, with their homes', () => {
     expect(listed().apps).toEqual([
       { code: 'library', labelId: 'nav.workspace.library', href: '/library' },

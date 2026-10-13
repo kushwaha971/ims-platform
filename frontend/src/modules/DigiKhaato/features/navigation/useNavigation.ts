@@ -7,6 +7,7 @@ import { usePathname } from 'next/navigation';
 import { useAppDispatch, useAppSelector } from 'src/hooks/useAppStore';
 import {
   selectActiveApp,
+  selectActiveTenant,
   selectEnabledModules,
   selectPermissions,
   selectSessionApps,
@@ -22,6 +23,7 @@ import {
   type AppManifest,
   type AppNavItem,
 } from './appManifest';
+import { rememberHistoryApp, useHistoryApp } from './historyApp';
 
 export interface NavSectionView {
   readonly key: string;
@@ -90,8 +92,10 @@ export function useNavigation(): UseNavigationResult {
   const permissions = useAppSelector(selectPermissions);
   const sessionApps = useAppSelector(selectSessionApps);
   const activeApp = useAppSelector(selectActiveApp);
+  const tenantId = useAppSelector(selectActiveTenant)?.id ?? null;
   const pathname = usePathname();
-  const fromPath = appForPath(pathname);
+  const historyApp = useHistoryApp(pathname, tenantId);
+  const fromPath = appForPath(pathname) ?? historyApp;
 
   const result = useMemo(() => {
     const visible = (item: AppNavItem): boolean =>
@@ -138,6 +142,10 @@ export function useNavigation(): UseNavigationResult {
     }));
     return { sections, bottomNav, apps, app: code, shell: current?.shell ?? NO_SHELL };
   }, [enabledModules, permissions, sessionApps, activeApp, fromPath]);
+
+  useEffect(() => {
+    rememberHistoryApp(pathname, tenantId, result.app);
+  }, [pathname, tenantId, result.app]);
 
   // A page of another app was opened directly: say so, once, so the server's
   // `active_app` follows the person rather than the last switcher tap.
