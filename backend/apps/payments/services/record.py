@@ -561,6 +561,21 @@ def _record(
             )
             mode = AllocationMode.MANUAL
 
+    # QA B37 / PAY-01 EC-2: advances are valid, but recording a receipt must
+    # not silently allocate it to a later bill. Recheck the locked documents,
+    # including FIFO choices, rather than trusting the client's preview.
+    if payload.get("confirm_early_allocation") is not True and any(
+        c.target.bucket == LedgerBucket.SHOP and cleaned["payment_date"] < c.document.document_date
+        for c in chosen
+    ):
+        raise ValidationFailed(
+            {
+                "payment_date": [
+                    "Payment dated before the bill. Confirm the allocation or keep it as advance."
+                ]
+            }
+        )
+
     allocated = sum((c.amount for c in chosen), ZERO)
     bucket = single_bucket((c.target for c in chosen), default=cleaned["bucket"])
     number = allocate_number(

@@ -200,6 +200,8 @@ export interface AllocationRowForm {
 }
 
 export interface PaymentFormValues {
+  /** B37: explicit consent for this submit's allocation to later-dated bills. */
+  confirmEarlyAllocation?: boolean;
   direction: PaymentDirection;
   partyId: string;
   partyName: string;

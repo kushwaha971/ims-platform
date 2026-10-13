@@ -1,5 +1,7 @@
 'use client';
 
+import { useState } from 'react';
+
 import dynamic from 'next/dynamic';
 import { useSearchParams } from 'next/navigation';
 
@@ -36,12 +38,18 @@ import { DocumentLinksPanel } from './DocumentLinksPanel';
 import { InvoiceProfitCard } from './InvoiceProfitCard';
 import { OriginBadge } from './OriginBadge';
 
+import type { PaymentContext } from '../../payments/types/payment.types';
 import type { FlowKind } from '../types/salesFlows.types';
 
 /* The print layouts load with the bill, not with the list or the editor. */
 const PrintSheetLazy = dynamic(
   () => import('./print/InvoicePrintSheet').then((m) => m.InvoicePrintSheet),
   { ssr: false, loading: () => <UbPageSkeleton variant="card" /> }
+);
+
+const PaymentFormDrawerLazy = dynamic(
+  () => import('../../payments/components/PaymentFormDrawer').then((m) => m.PaymentFormDrawer),
+  { ssr: false }
 );
 
 type DetailKind = 'invoice' | FlowKind;
@@ -75,6 +83,7 @@ export function InvoiceDetailPageContent({
   const locale = useAppSelector(selectLocale);
   const { can, hasModule } = usePermissions();
   const detail = useInvoiceDetail(id, search?.get('print') === '1', kind);
+  const [paymentContext, setPaymentContext] = useState<PaymentContext | null>(null);
   const doc = detail.document?.id === id ? detail.document : null;
 
   if (!(hasModule('sales') && can(READ_PERMISSION[kind]))) {
@@ -105,6 +114,13 @@ export function InvoiceDetailPageContent({
   const invoice = kind === 'invoice';
   return (
     <UbPageShell>
+      {paymentContext && (
+        <PaymentFormDrawerLazy
+          context={paymentContext}
+          onClose={() => setPaymentContext(null)}
+          onSaved={detail.reload}
+        />
+      )}
       <UbPageHeader
         className="ub-print-hide"
         title={doc.number ?? t('sales.status.draft')}
@@ -144,6 +160,7 @@ export function InvoiceDetailPageContent({
               doc.party &&
               ['issued', 'partially_paid', 'overdue'].includes(doc.status) && (
                 <RecordPaymentButton
+                  onRecord={setPaymentContext}
                   context={{
                     direction: 'in',
                     partyId: doc.party.id,

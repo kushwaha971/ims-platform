@@ -29,9 +29,12 @@ const PaymentFormDrawerLazy = dynamic(
 export function RecordPaymentButton({
   context,
   onSaved,
+  onRecord,
 }: Readonly<{
   context: PaymentContext;
   onSaved?: (result: PaymentSaveResult) => void;
+  /** A page owns the drawer when this launcher lives in a dismissing action sheet. */
+  onRecord?: (context: PaymentContext) => void;
 }>): React.JSX.Element | null {
   const { t } = useTranslation();
   const { can, hasModule } = usePermissions();
@@ -42,7 +45,7 @@ export function RecordPaymentButton({
       <UbButton
         iconOnly="mobile"
         icon={<Wallet className="h-4 w-4" aria-hidden />}
-        onClick={() => setOpen(true)}
+        onClick={() => (onRecord ? onRecord(context) : setOpen(true))}
         data-testid="record-payment-action"
       >
         {/* PUR-02 FR-4 — on a purchase bill the same drawer is "Pay supplier". */}

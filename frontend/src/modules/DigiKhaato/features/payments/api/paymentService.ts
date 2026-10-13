@@ -199,6 +199,7 @@ export const toWireBody = (values: PaymentFormValues): Record<string, unknown> =
   direction: values.direction,
   party_id: values.partyId || null,
   payment_date: values.paymentDate,
+  ...(values.confirmEarlyAllocation ? { confirm_early_allocation: true } : {}),
   note: values.note.trim(),
   mode_breakup: toModeBreakup(values.lines),
   allocations: values.autoAllocate

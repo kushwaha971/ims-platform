@@ -23,6 +23,8 @@ class PaymentWriteSerializer(serializers.Serializer):
     direction = serializers.CharField(required=False, allow_blank=True, default="in")
     party_id = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     payment_date = serializers.CharField(required=False, allow_null=True, allow_blank=True)
+    # B37: preserve the JSON boolean; only literal true is consent in the service.
+    confirm_early_allocation = serializers.JSONField(required=False)
     amount = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     mode_breakup = serializers.JSONField(required=False)
     reference = serializers.CharField(required=False, allow_blank=True, default="")

@@ -276,3 +276,50 @@ it('P-D6: "Fill remaining" on a split works to the amount set, not the receivabl
   await user.click(screen.getByRole('button', { name: 'Fill remaining ₹200.00' }));
   expect(first).toHaveValue('200.00');
 });
+
+it('B37 asks before allocating an earlier payment and saves only after confirmation', async () => {
+  // A date mismatch must never silently mark a later bill paid.
+  const user = userEvent.setup();
+  const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date());
+  jest
+    .mocked(service.listOpenDocuments)
+    .mockResolvedValue([bill('d1', 'INV/early', '100.00', today)]);
+  jest
+    .mocked(service.recordPayment)
+    .mockClear()
+    .mockResolvedValue({
+      payment: {
+        id: 'early',
+        number: 'RCT/early',
+        direction: 'in',
+        amount: '10.00',
+        unallocatedAmount: '0.00',
+      } as never,
+      partyBalance: '90.00',
+      documents: [],
+    });
+  renderWithProviders(
+    <PaymentFormDrawer
+      context={{ ...context, documentId: 'd1', documentDue: '100.00' }}
+      onClose={jest.fn()}
+    />
+  );
+  await screen.findByTestId('alloc-picker');
+  await user.click(screen.getByRole('button', { name: 'Yesterday' }));
+  await user.click(screen.getByTestId('payment-save'));
+  const confirmation = await screen.findByRole('dialog', { name: 'Payment dated before the bill' });
+  expect(service.recordPayment).not.toHaveBeenCalled();
+  await user.click(within(confirmation).getByRole('button', { name: 'Keep editing' }));
+  expect(service.recordPayment).not.toHaveBeenCalled();
+  await user.click(screen.getByTestId('payment-save'));
+  await user.click(
+    within(await screen.findByRole('dialog', { name: 'Payment dated before the bill' })).getByRole(
+      'button',
+      { name: 'Allocate this payment' }
+    )
+  );
+  await waitFor(() => expect(service.recordPayment).toHaveBeenCalledTimes(1));
+  expect(jest.mocked(service.recordPayment).mock.calls[0]?.[0]).toMatchObject({
+    confirmEarlyAllocation: true,
+  });
+});

@@ -1556,7 +1556,7 @@ Initial (prefilled) · Loading open documents (skeleton rows) · No open documen
 
 #### 13. Edge Cases
 1. EC-1 Two staff record against the same invoice concurrently → document row locked `FOR UPDATE`; second sees reduced `amount_due`; if allocation exceeds → 400 with current `amount_due` in details; UI refreshes rows.
-2. EC-2 Payment dated before the invoice date → allowed (advance later allocated); warning caption "Payment dated before the bill".
+2. EC-2 Payment dated before the invoice date → allowed after explicit confirmation (advance later allocated). The drawer asks "Payment dated before the bill" before submitting an allocation. `POST /payments` requires the JSON boolean `confirm_early_allocation: true` for manual or automatic allocations to later-dated Shop bills; without it, validation fails before any receipt or ledger posting. An unallocated advance and the separate Apply to bills workflow remain valid.
 3. EC-3 Invoice voided after payment (Part 22 §22.14) → allocation deleted by void flow, `unallocated_amount` grows; payment untouched.
 4. EC-4 Party has both open invoices and an existing advance → auto-allocation uses only the new payment; advance stays (BR-10).
 5. EC-5 Mode `cheque` with future date → payment date still ≤ today (cheque date is the reference at MVP; PDC tracking is PAY-09).

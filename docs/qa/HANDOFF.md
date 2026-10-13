@@ -11,11 +11,11 @@ owner asks.
 
 **Done and pushed** (each has a commit naming it — `git log --grep "B26"` etc.):
 B1, B2, B3, B4, B5, B6, B7, B8, B9, B10, B11, B12, B13, B14, B15, B16, B17, B18, B19, B20, B21, B22, B23, B24, B25, B26, B27–B35,
-B36, B44, B45, B46, B47, B48, B49, B50, B51, F1, F2, F4, F6, F8, F10 (parts A and B),
+B36, B37, B44, B45, B46, B47, B48, B49, B50, B51, F1, F2, F4, F6, F8, F10 (parts A and B),
 F12, FB4, and DEC-019 (each app keeps its own money).
 
 **Next, in this order:**
-1. P2 bugs: B37, B38, B39,
+1. P2 bugs: B38, B39,
    B40, B41, B42, B43.
    Apply the owner's additional [One Person, One Workspace requirements](one-person-workspace.md)
    throughout these fixes, then complete a dedicated UX16 pass across Library,
@@ -199,6 +199,26 @@ Update the "Done" list in this file in the same commit as each item.
   changed-file ESLint, locales, build and unchanged bundle budgets pass.
   Full frontend: 3,990 passed and the same three landing-page failures.
   Backend source remains unchanged since its recorded full run.
+
+- B37: an earlier-dated receipt allocated to a later bill returned 201 with
+  no warning. Four API cases, the drawer confirmation case and the phone
+  launcher regression failed first. PAY-01 EC-2 permits advances, so the
+  drawer now asks for explicit confirmation; the API rechecks locked manual
+  and FIFO Shop bills and requires the literal JSON boolean
+  `confirm_early_allocation: true` before writing. Unallocated advances and
+  the separate Apply to bills workflow remain valid. The invoice page owns
+  its payment drawer: closing the phone's More actions sheet no longer
+  destroys the form. All 47 backend and 14 frontend targeted tests pass.
+  `e2e/payment-date-look.mjs` verifies confirmation, cancellation with no
+  receipt, one confirmed receipt, refreshed paid status/history and staying
+  on the same invoice at 1280/360 px. Six final screenshots were inspected;
+  no overflow or browser errors. Backend formatting/import/lint, frontend
+  types/changed-file ESLint, locales, build and bundle gates pass. Only three
+  exceeded first-load limits use measured + 0.5 KB, with a dated explanation.
+  Full backend: 4,500 passed, 16 skipped, two timing cases deselected and the
+  same existing vocabulary failure. Full frontend: 3,992 passed and the same
+  three landing-page failures. The owner's additional workspace requirement
+  is recorded in `one-person-workspace.md` and remains pending as UX16.
 
 ## How each item is done
 

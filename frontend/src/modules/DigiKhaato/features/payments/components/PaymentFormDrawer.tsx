@@ -9,6 +9,7 @@ import {
   UbActionLink,
   UbButton,
   UbChoiceChips,
+  UbConfirmDialog,
   UbDateInput,
   UbDrawer,
   UbField,
@@ -25,7 +26,7 @@ import { selectTenantTimezone } from 'src/redux/slice/sessionSlice';
 import { ROUTES } from 'src/routes';
 import { PAYMENT_MODES, type PaymentMode } from 'src/types/domain.types';
 import { todayInTenantTz } from 'src/utils/dates';
-import { formatAmount } from 'src/utils/money';
+import { compareMoney, formatAmount } from 'src/utils/money';
 
 import { ExpensePartyField } from '../../expenses/components/ExpensePartyField';
 import { LAST_MODE_KEY } from '../constants/paymentConstants';
@@ -34,6 +35,7 @@ import { usePaymentSchemas } from '../validation/paymentSchemas';
 import {
   allocationRowsFor,
   defaultAmount,
+  fifoPreview,
   linesTotal,
   presetAllocation,
 } from '../view-model/paymentDisplay';
@@ -93,6 +95,7 @@ export function PaymentFormDrawer({
   const { canWrite, isSaving, formErrors, openDocuments, openStatus, loadOpenDocuments, submit } =
     payment;
   const [saved, setSaved] = useState<PaymentSaveResult | null>(null);
+  const [earlyPayment, setEarlyPayment] = useState<PaymentFormValues | null>(null);
 
   const today = useMemo(() => todayInTenantTz(timezone ?? undefined), [timezone]);
   const yesterday = useMemo(
@@ -169,6 +172,21 @@ export function PaymentFormDrawer({
 
   const handleSubmit = useCallback(
     async (values: PaymentFormValues) => {
+      const amounts = values.autoAllocate
+        ? fifoPreview(linesTotal(values.lines), openDocuments).allocations
+        : Object.fromEntries(values.allocations.map((row) => [row.documentId, row.amount]));
+      if (
+        !values.confirmEarlyAllocation &&
+        openDocuments.some(
+          (doc) =>
+            (doc.documentType === 'sales_document' || doc.documentType === 'purchase_document') &&
+            doc.documentDate > values.paymentDate &&
+            compareMoney(amounts[doc.documentId] || '0', '0') > 0
+        )
+      ) {
+        setEarlyPayment(values);
+        return;
+      }
       if (values.lines[0]?.mode) rememberMode(values.lines[0].mode);
       const result = await submit(values, setError);
       if (result) {
@@ -176,7 +194,7 @@ export function PaymentFormDrawer({
         onSaved?.(result);
       }
     },
-    [submit, setError, onSaved]
+    [submit, setError, onSaved, openDocuments]
   );
 
   const directions = useMemo(
@@ -251,6 +269,23 @@ export function PaymentFormDrawer({
       }
     >
       <UbForm id={formId} form={form} onSubmit={handleSubmit} formErrors={formErrors}>
+        <UbConfirmDialog
+          open={earlyPayment !== null}
+          onOpenChange={(open) => !open && setEarlyPayment(null)}
+          title={t('payments.early.title')}
+          description={t('payments.early.body')}
+          confirmLabel={t('payments.early.confirm')}
+          cancelLabel={t('payments.early.cancel')}
+          closeLabel={t('common.action.close')}
+          destructive={false}
+          busy={isSaving}
+          onConfirm={() => {
+            if (!earlyPayment || isSaving) return;
+            const confirmed = { ...earlyPayment, confirmEarlyAllocation: true };
+            setEarlyPayment(null);
+            void handleSubmit(confirmed);
+          }}
+        />
         {!canWrite && <UbStatusBanner tone="info" title={t('payments.readOnly')} />}
 
         {context.entry === 'list' && (
