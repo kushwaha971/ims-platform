@@ -18,7 +18,7 @@ import {
 import { useTranslation } from 'src/hooks/useTranslation';
 import { formatInr } from 'src/utils/money';
 
-import { sgstLabelId } from '../view-model/invoiceDisplay';
+import { salesWarningMessage, sgstLabelId } from '../view-model/invoiceDisplay';
 
 import type { DiscountType, Rule46Check, SalesWarning } from '../types/sales.types';
 import type { InvoiceFormValues } from '../view-model/invoiceForm';
@@ -182,9 +182,9 @@ export function InvoiceTotalsPanel({
             )}
           </UbPopover>
         )}
-        {warnings.map((warning) => (
-          <UbText key={warning.code} variant="caption" tone="warning" role="status">
-            {warning.message}
+        {warnings.map((warning, index) => (
+          <UbText key={`${warning.code}-${index}`} variant="caption" tone="warning" role="status">
+            {salesWarningMessage(warning, t)}
           </UbText>
         ))}
         {taxFree && (

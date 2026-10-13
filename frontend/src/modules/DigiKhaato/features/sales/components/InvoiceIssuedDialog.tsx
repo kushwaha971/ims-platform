@@ -6,6 +6,8 @@ import { UbButton, UbDialog, UbStack, UbText } from 'src/design-system';
 import { useTranslation } from 'src/hooks/useTranslation';
 import { formatInr } from 'src/utils/money';
 
+import { salesWarningMessage } from '../view-model/invoiceDisplay';
+
 import type { SalesDocumentEnvelope } from '../types/sales.types';
 
 // Loaded with dynamic(), so its own words come with its own chunk rather than
@@ -65,9 +67,9 @@ export function InvoiceIssuedDialog({
             {t('sales.issued.paid', { amount: formatInr(doc.amountPaid), modes: modes ?? '' })}
           </UbText>
         )}
-        {issued.warnings.map((warning) => (
-          <UbText key={warning.code} variant="caption" tone="warning">
-            {warning.message}
+        {issued.warnings.map((warning, index) => (
+          <UbText key={`${warning.code}-${index}`} variant="caption" tone="warning">
+            {salesWarningMessage(warning, t)}
           </UbText>
         ))}
       </UbStack>

@@ -1,5 +1,6 @@
 {
  "//": [
+    "2026-10-14 B38: dated stock explanations in the editor and issue warning. Five exceeded limits use measured + 0.5 KB; about 0.2 KB of shared display logic/copy.",
     "2026-10-13 B37: explicit confirmation for payments dated before their bills. Three exceeded first-load limits use measured 315.6 KB + 0.5 KB.",
   "13 Oct 2026, QA B24: controlled/cancellable menus and app-add feedback",
   "add about 0.2 KB to affected route chunks. Only the 41 exceeded limits",
@@ -1370,8 +1371,8 @@
    "firstLoad": 316.1
   },
   "/sales/challans": {
-   "route": 78.7,
-   "firstLoad": 317.6
+   "route": 79.3,
+   "firstLoad": 318.3
   },
   "/sales/challans/new": {
    "route": 150.1,
@@ -1402,8 +1403,8 @@
    "firstLoad": 316.1
   },
   "/sales/orders": {
-   "route": 78.7,
-   "firstLoad": 317.6
+   "route": 79.3,
+   "firstLoad": 318.3
   },
   "/sales/orders/new": {
    "route": 150.1,
@@ -1458,7 +1459,7 @@
    "firstLoad": 356
   },
   "/sales/credit-notes/new": {
-   "route": 142.5,
+   "route": 143.0,
    "firstLoad": 390
   },
   "/sales/credit-notes/[id]": {

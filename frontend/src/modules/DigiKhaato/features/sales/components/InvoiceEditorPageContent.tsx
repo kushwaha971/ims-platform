@@ -8,7 +8,6 @@ import { useRouter } from 'next/navigation';
 import { Save, Send, Trash2 } from 'lucide-react';
 import { useStore } from 'react-redux';
 
-
 import {
   UbButton,
   UbEmptyState,
@@ -36,7 +35,7 @@ import { useEditorWindowEffects } from '../hooks/useEditorWindowEffects';
 import { useInvoiceEditor, type EditorKind } from '../hooks/useInvoiceEditor';
 import { deleteEstimateDraft } from '../redux/salesFlowThunk';
 import { deleteInvoiceDraft } from '../redux/salesThunk';
-import { documentTitleId, stockShortLines } from '../view-model/invoiceDisplay';
+import { documentTitleId, stockShortLines, stockShortMessage } from '../view-model/invoiceDisplay';
 
 import { InvoiceEditorDialogs } from './InvoiceEditorDialogs';
 import { InvoiceLinesSection } from './InvoiceLinesSection';
@@ -301,9 +300,7 @@ export function InvoiceEditorPageContent({
               <UbStatusBanner
                 tone="error"
                 title={t('sales.stock.blocked')}
-                description={stockShort
-                  .map((line) => t('sales.stock.shortLine', line))
-                  .join(' · ')}
+                description={stockShort.map((line) => stockShortMessage(line, t)).join(' · ')}
               />
             )}
             {otherRefusal && (

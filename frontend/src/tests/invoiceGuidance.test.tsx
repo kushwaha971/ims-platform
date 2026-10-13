@@ -6,6 +6,7 @@ import { UbForm } from 'src/design-system';
 import { PurchaseBillTotalsPanel } from 'src/modules/DigiKhaato/features/purchases/components/PurchaseBillTotalsPanel';
 import type { PurchaseBillFormValues } from 'src/modules/DigiKhaato/features/purchases/view-model/purchaseBillForm';
 import { InvoiceTotalsPanel } from 'src/modules/DigiKhaato/features/sales/components/InvoiceTotalsPanel';
+import type { SalesWarning } from 'src/modules/DigiKhaato/features/sales/types/sales.types';
 import type { InvoiceFormValues } from 'src/modules/DigiKhaato/features/sales/view-model/invoiceForm';
 import { computeDocumentTotals } from 'src/modules/DigiKhaato/features/sales/view-model/taxEngine';
 import { renderWithProviders } from 'src/tests/renderWithProviders';
@@ -20,7 +21,7 @@ const preview = computeDocumentTotals({
   discountValue: null,
 });
 
-function InvoiceHarness() {
+function InvoiceHarness({ warnings = [] }: Readonly<{ warnings?: readonly SalesWarning[] }> = {}) {
   const form = useForm<InvoiceFormValues>({
     defaultValues: { discountType: '', roundOffEnabled: false, placeOfSupplyState: '27' },
   });
@@ -31,7 +32,7 @@ function InvoiceHarness() {
         preview={preview}
         taxFree={false}
         disabled={false}
-        warnings={[]}
+        warnings={warnings}
         rule46={{
           passed: true,
           satisfied: 7,
@@ -104,4 +105,36 @@ it('uses Hindi for the supplier warning and corrective action', () => {
     'href',
     '/parties/supplier-1'
   );
+});
+
+/** B38: every warning surface must explain the dates in the chosen language. */
+it.each(['en', 'hi'] as const)('explains dated stock in the totals panel in %s', (locale) => {
+  const message = 'Not enough Date Rice stock on 2026-03-15.';
+  renderWithProviders(
+    <InvoiceHarness
+      warnings={[
+        {
+          code: 'stock_before_available_date',
+          message,
+          details: {
+            item_name: 'Date Rice',
+            requested: '2.500',
+            available: '0.000',
+            unit_code: 'KGS',
+            as_of: '2026-03-15',
+            opening_date: '2026-04-01',
+          },
+        },
+      ]}
+    />,
+    { locale }
+  );
+  expect(screen.queryByText(message)).toBeNull();
+  expect(
+    screen.getByText(
+      locale === 'en'
+        ? 'Date Rice: no stock on 15/03/2026. Opening stock starts 01/04/2026.'
+        : 'Date Rice: 15/03/2026 को स्टॉक नहीं था। शुरुआती स्टॉक 01/04/2026 से है।'
+    )
+  ).toBeVisible();
 });

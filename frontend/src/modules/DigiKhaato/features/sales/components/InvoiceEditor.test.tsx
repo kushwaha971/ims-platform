@@ -270,3 +270,36 @@ describe('a bill the stock cannot cover (QA B1)', () => {
     expect(screen.getByText('QA Pen: 7 NOS on the bill, 5 NOS in stock')).toBeInTheDocument();
   });
 });
+
+it('B38 explains the sale date and later opening stock date on the refusal', async () => {
+  // Today's on-hand stock must not hide why a historical sale is refused.
+  signIn(['sales.invoice.write', 'sales.invoice.read']);
+  renderWithProviders(<InvoiceEditorPageContent documentId={null} />);
+  await screen.findByTestId('invoice-issue');
+  act(() => {
+    store.dispatch({
+      type: 'invoiceEditor/issueInvoice/rejected',
+      payload: {
+        code: 'insufficient_stock',
+        status: 409,
+        message: 'Not enough stock.',
+        details: {
+          lines: [
+            {
+              index: 0,
+              item_name: 'QA Rice',
+              requested: '2.500',
+              available: '0.000',
+              unit_code: 'KGS',
+              as_of: '2026-03-15',
+              opening_date: '2026-04-01',
+            },
+          ],
+        },
+      },
+    });
+  });
+  expect(
+    await screen.findByText('QA Rice: no stock on 15/03/2026. Opening stock starts 01/04/2026.')
+  ).toBeInTheDocument();
+});

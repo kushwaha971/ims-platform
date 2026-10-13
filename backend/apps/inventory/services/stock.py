@@ -34,6 +34,7 @@ from decimal import Decimal
 from typing import Any, Iterable
 
 from django.db import transaction
+from django.db.models import Min, Q, Sum
 from django.utils import timezone
 
 from apps.common.context import Ctx
@@ -48,13 +49,7 @@ from apps.inventory.constants import (
     MovementType,
 )
 from apps.inventory.models import Item, ItemStock, Location, StockMovement
-from apps.inventory.services.costing import (
-    ZERO3,
-    ZERO4,
-    ZERO7,
-    apply_weighted_average,
-    exact_value,
-)
+from apps.inventory.services.costing import ZERO3, ZERO4, ZERO7, apply_weighted_average, exact_value
 
 
 @dataclass
@@ -81,6 +76,7 @@ class PostedLine:
     on_hand_before: Decimal
     avg_cost_before: Decimal
     stock: ItemStock = field(repr=False)
+    date_shortage: dict | None = None
 
 
 def allow_negative_stock(tenant: Any) -> bool:
@@ -188,22 +184,72 @@ def post_movements(
     if allow_negative is None:
         allow_negative = allow_negative_stock(ctx.tenant)
     running = {pair: row.on_hand for pair, row in stock_rows.items()}
+    # B38: arrival-order costing stays intact, but a sale cannot borrow stock
+    # dated after that sale. Only backdated sales need this historical read.
+    dates = {
+        line.movement_date
+        for line in lines
+        if line.movement_type == MovementType.SALE_OUT
+        and stock_rows[(line.item.id, line.location.id)].max_movement_date is not None
+        and line.movement_date < stock_rows[(line.item.id, line.location.id)].max_movement_date
+    }
+    dated: dict[tuple, Decimal] = {}
+    first_stock: dict[tuple, dt.date | None] = {}
+    for as_of in dates:
+        snapshots = (
+            StockMovement.objects.filter(
+                tenant=ctx.tenant,
+                item_id__in=[pair[0] for pair in pairs],
+                location_id__in=[pair[1] for pair in pairs],
+            )
+            .values("item_id", "location_id")
+            .annotate(
+                available=Sum("qty", filter=Q(movement_date__lte=as_of)),
+                opening_date=Min(
+                    "movement_date", filter=Q(qty__gt=0, movement_type=MovementType.OPENING)
+                ),
+            )
+        )
+        for snapshot in snapshots:
+            pair = (snapshot["item_id"], snapshot["location_id"])
+            dated[(*pair, as_of)] = snapshot["available"] or ZERO3
+            first_stock[pair] = snapshot["opening_date"]
+    date_shortages: dict[int, dict] = {}
     short: list[dict] = []
     for line in lines:
         pair = (line.item.id, line.location.id)
         before = running[pair]
         running[pair] = before + line.qty
-        if line.qty < 0 and not allow_negative and before + line.qty < 0:
-            short.append(
-                {
-                    "index": line.index,
-                    "item_id": str(line.item.id),
-                    "item_name": line.item.name,
-                    "requested": str(q3(-line.qty)),
-                    "available": str(q3(max(before, ZERO3))),
-                    "unit_code": line.item.unit.code,
-                }
-            )
+        date_key = (*pair, line.movement_date)
+        available_on_date = dated.get(date_key, before)
+        # Earlier lines in this request count only when dated on/before
+        # this snapshot, including repeated item lines in a bill.
+        for key in dated:
+            if key[:2] == pair and line.movement_date <= key[2]:
+                dated[key] += line.qty
+        date_short = (
+            line.movement_type == MovementType.SALE_OUT
+            and line.movement_date in dates
+            and available_on_date + line.qty < 0
+        )
+        if line.qty < 0 and (date_short or before + line.qty < 0):
+            detail = {
+                "index": line.index,
+                "item_id": str(line.item.id),
+                "item_name": line.item.name,
+                "requested": str(q3(-line.qty)),
+                "available": str(q3(max(available_on_date if date_short else before, ZERO3))),
+                "unit_code": line.item.unit.code,
+            }
+            if date_short:
+                opening = first_stock.get(pair)
+                detail.update(
+                    as_of=line.movement_date.isoformat(),
+                    opening_date=opening.isoformat() if opening else None,
+                )
+                date_shortages[id(line)] = detail
+            if not allow_negative:
+                short.append(detail)
     if short:
         raise BusinessRuleViolation(
             "insufficient_stock",
@@ -254,7 +300,11 @@ def post_movements(
         if stock.max_movement_date is None or line.movement_date > stock.max_movement_date:
             stock.max_movement_date = line.movement_date
         touched[pair] = stock
-        posted.append(PostedLine(line, movement, on_hand_before, avg_before, stock))
+        posted.append(
+            PostedLine(
+                line, movement, on_hand_before, avg_before, stock, date_shortages.get(id(line))
+            )
+        )
 
     for stock in touched.values():
         ItemStock.objects.filter(pk=stock.pk).update(

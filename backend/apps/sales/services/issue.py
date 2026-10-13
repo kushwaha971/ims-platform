@@ -135,7 +135,8 @@ def issue_invoice(
     from apps.sales.services.challans import delivered_quantities, split_delivered
 
     to_move, covered_costs = split_delivered(rows, delivered_quantities(document))
-    unit_costs = {**post_stock(ctx, document, to_move), **covered_costs}
+    warnings = list(outcome["warnings"])
+    unit_costs = {**post_stock(ctx, document, to_move, warnings=warnings), **covered_costs}
 
     # What the invoice will have received once the payment below is recorded.
     # The credit check reads the part going on CREDIT (BR-13), so it is decided
@@ -143,7 +144,6 @@ def issue_invoice(
     # invoice exists, through PAY-01 (see `payment_seam`).
     amount_paid = paid_at_issue(cleaned_payment, document.grand_total)
     amount_due = document.grand_total - amount_paid
-    warnings = list(outcome["warnings"])
     overridden = False
     if party is not None and amount_due > 0:
         warning, overridden = check_party_credit(

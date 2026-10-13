@@ -7,15 +7,15 @@ this file, then the item in `docs/qa/2026-10-12-prompt-pack.md`.
 Branch: `dev`. Push with `git push -u origin dev`. No pull request unless the
 owner asks.
 
-## Status (13 Oct 2026)
+## Status (14 Oct 2026)
 
 **Done and pushed** (each has a commit naming it — `git log --grep "B26"` etc.):
 B1, B2, B3, B4, B5, B6, B7, B8, B9, B10, B11, B12, B13, B14, B15, B16, B17, B18, B19, B20, B21, B22, B23, B24, B25, B26, B27–B35,
-B36, B37, B44, B45, B46, B47, B48, B49, B50, B51, F1, F2, F4, F6, F8, F10 (parts A and B),
+B36, B37, B38, B44, B45, B46, B47, B48, B49, B50, B51, F1, F2, F4, F6, F8, F10 (parts A and B),
 F12, FB4, and DEC-019 (each app keeps its own money).
 
 **Next, in this order:**
-1. P2 bugs: B38, B39,
+1. P2 bugs: B39,
    B40, B41, B42, B43.
    Apply the owner's additional [One Person, One Workspace requirements](one-person-workspace.md)
    throughout these fixes, then complete a dedicated UX16 pass across Library,
@@ -50,7 +50,7 @@ F12, FB4, and DEC-019 (each app keeps its own money).
 
 Update the "Done" list in this file in the same commit as each item.
 
-## Verification on 13 Oct 2026
+## Verification since 13 Oct 2026
 
 - B9 was already closed by DEC-019. `e2e/library-book-look.mjs` creates a person
   with a ₹900 Library fee and a ₹250 opening balance in the Udhaar book, then
@@ -232,6 +232,28 @@ Update the "Done" list in this file in the same commit as each item.
   same existing vocabulary failure. Full frontend: 3,992 passed and the same
   three landing-page failures. The owner's additional workspace requirement
   is recorded in `one-person-workspace.md` and remains pending as UX16.
+
+- B38 (14 Oct): a March sale against April opening stock issued without any
+  warning. After correcting the fractional fixture to KGS, both API cases
+  failed against the original behavior. The editor's date explanation and
+  English/Hindi totals-warning tests also failed first. Stock availability
+  now checks the sale date under the existing stock locks, including repeated
+  lines and later inbound goods. Negative stock disabled refuses before any
+  write; enabled issues with a dated warning. Arrival-order costing is intact,
+  and ordinary current-date sales need no historical query. Test goods for
+  unrelated historical invoices now open before their bill dates. All 32 final
+  backend and 15 frontend targeted cases pass; a final failing quantity-label
+  case was corrected so the dated explanation uses historical availability.
+  `e2e/stock-date-look.mjs` passes both policies at 1280/360 px, checks the
+  unchanged/refreshed stock and document, and observes zero full-document
+  reloads during issue/refusal. All four final screenshots were read, including
+  the actual issued dialog. Formatting/import/lint, types, locales, build and
+  bundle gates pass; five exceeded limits use measured + 0.5 KB with a dated
+  note. Full frontend: 3,995 passed and the same three landing-page failures.
+  Full backend: 4,504 passed, 16 skipped, two timing cases deselected and the
+  same vocabulary failure. The final quantity-explanation adjustment and its
+  extra regression were checked with the 32 targeted backend cases after that
+  full run; the stock decision and writes were unchanged by that adjustment.
 
 ## How each item is done
 

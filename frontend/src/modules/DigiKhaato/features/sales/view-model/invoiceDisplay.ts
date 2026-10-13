@@ -1,5 +1,6 @@
 import type { UbStatusBadgeTone } from 'src/design-system/UbStatusBadge/UbStatusBadge';
-import { isValidWireDate } from 'src/utils/dates';
+import type { TranslateFn } from 'src/hooks/useTranslation';
+import { formatBusinessDate, isValidWireDate } from 'src/utils/dates';
 import { formatQuantity } from 'src/utils/quantity';
 
 import { resolveExpensePreset } from '../../expenses/view-model/expenseDisplay';
@@ -18,6 +19,7 @@ import type {
   SalesDocument,
   SalesKind,
   SalesStatus,
+  SalesWarning,
 } from '../types/sales.types';
 
 /** SAL-08 §7 — the badge tones: draft grey, issued blue, part-paid amber, paid green, overdue red. */
@@ -172,7 +174,13 @@ export const whatsappUrl = (mobile: string | null, text: string): string => {
  */
 export const stockShortLines = (
   details: Readonly<Record<string, unknown>> | undefined
-): { item: string; requested: string; available: string }[] => {
+): {
+  item: string;
+  requested: string;
+  available: string;
+  asOf?: string;
+  openingDate?: string;
+}[] => {
   const lines = (details?.lines ?? []) as readonly Record<string, unknown>[];
   return lines.map((line) => {
     const unit = String(line.unit_code ?? '');
@@ -180,6 +188,35 @@ export const stockShortLines = (
       item: String(line.item_name ?? ''),
       requested: formatQuantity(String(line.requested ?? '0'), unit),
       available: formatQuantity(String(line.available ?? '0'), unit),
+      ...(isValidWireDate(String(line.as_of ?? ''))
+        ? { asOf: formatBusinessDate(String(line.as_of)) }
+        : {}),
+      ...(isValidWireDate(String(line.opening_date ?? '')) &&
+      String(line.opening_date) > String(line.as_of)
+        ? { openingDate: formatBusinessDate(String(line.opening_date)) }
+        : {}),
     };
   });
 };
+
+/** B38: explain dated shortages in the same words before and after issue. */
+export const stockShortMessage = (
+  line: ReturnType<typeof stockShortLines>[number],
+  t: TranslateFn
+): string =>
+  t(
+    line.asOf && line.openingDate
+      ? 'sales.stock.beforeOpening'
+      : line.asOf
+        ? 'sales.stock.shortLineAsOf'
+        : 'sales.stock.shortLine',
+    line
+  );
+
+/** The same localized warning belongs in the totals and the issued dialog. */
+export const salesWarningMessage = (warning: SalesWarning, t: TranslateFn): string =>
+  warning.code === 'stock_before_available_date'
+    ? stockShortLines({ lines: [warning.details] })
+        .map((line) => stockShortMessage(line, t))
+        .join(' · ')
+    : warning.message;

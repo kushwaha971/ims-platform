@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import datetime as dt
 import uuid
 from decimal import Decimal
 from typing import Any
@@ -82,7 +83,17 @@ def make_item(shop: Any) -> Any:
             **extra,
         }
         if stock is not None:
-            payload["opening_stock"] = {"qty": stock, "unit_cost": "380.00"}
+            from apps.common.dates import fy_bounds, tenant_today
+
+            # Fixtures issue current/previous-FY invoices: their goods must
+            # already exist before those bills, rather than opening today (B38).
+            current_start = fy_bounds(shop, tenant_today(shop))[0]
+            opening = fy_bounds(shop, current_start - dt.timedelta(days=1))[0]
+            payload["opening_stock"] = {
+                "qty": stock,
+                "unit_cost": "380.00",
+                "as_of": opening.isoformat(),
+            }
         return create_item(ctx=Ctx.system(shop), payload=payload)["item"]
 
     return _make

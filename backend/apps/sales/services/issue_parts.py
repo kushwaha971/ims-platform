@@ -34,7 +34,9 @@ def rule46_for(tenant: Any, document: Any, rows: list[dict]) -> dict:
     )
 
 
-def post_stock(ctx: Ctx, document: Any, rows: list[dict]) -> dict[int, Decimal | None]:
+def post_stock(
+    ctx: Ctx, document: Any, rows: list[dict], *, warnings: list[dict] | None = None
+) -> dict[int, Decimal | None]:
     """FR-7/FR-8 — `sale_out` for tracked goods; returns `{line_no: unit_cost}` (COGS at avg).
 
     Services and untracked goods never move stock (BR-19, EC-14) and keep a
@@ -61,6 +63,17 @@ def post_stock(ctx: Ctx, document: Any, rows: list[dict]) -> dict[int, Decimal |
             )
         )
     posted = post_movements(ctx=ctx, lines=movement_lines)
+    if warnings is not None:
+        for row in posted:
+            if row.date_shortage:
+                details = row.date_shortage
+                warnings.append(
+                    {
+                        "code": "stock_before_available_date",
+                        "message": f"Not enough {details['item_name']} stock on {details['as_of']}.",
+                        "details": details,
+                    }
+                )
     return {p.line.index + 1: p.movement.unit_cost for p in posted}
 
 
