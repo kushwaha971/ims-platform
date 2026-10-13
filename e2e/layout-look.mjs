@@ -2,6 +2,7 @@
 /** QA B17: real money, document identifiers, phones and decimal quantities must fit. */
 import { mkdirSync } from 'node:fs';
 import { chromium } from 'playwright';
+import { inputFit } from './lib/input-fit.mjs';
 import { addParty, fixtureGstin, must, newUser, uniq, uniqMobile } from './lib/fixtures.mjs';
 
 const frontend = process.env.E2E_FRONTEND ?? 'http://localhost:3000';
@@ -83,13 +84,8 @@ try {
       const quantity = page.getByRole('textbox', { name: /Qty.*line 1|Quantity.*line 1/i });
       await quantity.waitFor();
       record(`${width} ${name} retains the complete decimal quantity`, /^2\.50*$/.test(await quantity.inputValue()), await quantity.inputValue());
-      const fit = await quantity.evaluate((el) => {
-        const style = getComputedStyle(el);
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d'); ctx.font = style.font;
-        return ctx.measureText(el.value).width <= el.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
-      });
-      record(`${width} ${name} decimal quantity fits`, fit);
+      const fit = await inputFit(quantity);
+      record(`${width} ${name} decimal quantity fits`, fit.widths[0] <= fit.available);
       if (width >= 1024) {
         const scrolls = await page.evaluate(() => [...document.querySelectorAll('main [role=table]')].filter((el) => el.scrollWidth > el.clientWidth + 1).length);
         record(`${width} ${name} form has no sideways scroll`, scrolls === 0, `${scrolls} tables`);
@@ -104,11 +100,8 @@ try {
     await page.goto(`${frontend}/lending/loans/new`, { waitUntil: 'networkidle' });
     const mobile = page.getByRole('textbox', { name: /^Mobile\b/ });
     await mobile.waitFor();
-    record(`${width} mobile placeholder fits`, await mobile.evaluate((el) => {
-      const style = getComputedStyle(el), ctx = document.createElement('canvas').getContext('2d');
-      ctx.font = style.font;
-      return ctx.measureText(el.placeholder).width <= el.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
-    }));
+    const placeholderFit = await inputFit(mobile);
+    record(`${width} mobile placeholder fits`, placeholderFit.widths[0] <= placeholderFit.available);
     await photograph('loan');
     await context.close();
   }

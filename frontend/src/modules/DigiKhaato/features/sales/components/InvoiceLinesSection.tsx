@@ -197,7 +197,7 @@ export function InvoiceLinesSection({
         id: 'qty',
         header: t('sales.line.qty'),
         field: 'qty',
-        track: 'minmax(7rem,1fr)',
+        track: 'minmax(9rem,1fr)',
         align: 'end',
         render: ({ field, id, label, invalid, index }) => (
           <UbQuantityInput

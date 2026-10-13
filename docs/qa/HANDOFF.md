@@ -11,13 +11,13 @@ owner asks.
 
 **Done and pushed** (each has a commit naming it — `git log --grep "B26"` etc.):
 B1, B2, B3, B4, B5, B6, B7, B8, B9, B10, B11, B12, B13, B14, B15, B16, B17, B18, B19, B20, B21, B22, B23, B24, B25, B26, B27–B35,
-B36, B37, B38, B39, B40, B41, B42, B44, B45, B46, B47, B48, B49, B50, B51, F1, F2, F4, F6, F8, F10 (parts A and B),
+B36, B37, B38, B39, B40, B41, B42, B43, B44, B45, B46, B47, B48, B49, B50, B51, F1, F2, F4, F6, F8, F10 (parts A and B),
 F12, FB4, and DEC-019 (each app keeps its own money).
 
 **Next, in this order:**
-1. P2 bugs: B43.
+1. UX16/UX17/UX18: coordinated person-workspace, seat-management and rendering passes.
    Apply the owner's additional [One Person, One Workspace requirements](one-person-workspace.md)
-   throughout these fixes, then complete a dedicated UX16 pass across Library,
+   throughout these passes, and complete a dedicated UX16 pass across Library,
    Lending, Shop customer/supplier and Udhaar book person pages before the
    remaining P2 features. Routine collections, backdated entries, reminders,
    edits and history stay on the person's page via dialogs/inline sections.
@@ -50,6 +50,21 @@ F12, FB4, and DEC-019 (each app keeps its own money).
 Update the "Done" list in this file in the same commit as each item.
 
 ## Verification since 13 Oct 2026
+
+- B43 (14 Oct): B17's card layout already fits large quantities at 1280/360,
+  but the 1536 table had only 42 px for a value needing about 65 px. The new
+  `e2e/quantity-look.mjs` failed on the actual clipping before the fix. The
+  invoice quantity track now reserves 9rem beside its unit; decimal parsing
+  and financial calculations are unchanged. All 14 focused editor/quantity
+  tests pass, including the complete table's minimum-width budget. The shared
+  `e2e/lib/input-fit.mjs` reconstructs computed font longhands when the font
+  shorthand is empty: the old canvas default could hide clipping. The corrected
+  broader `layout-look.mjs` still passes all 99 checks across six widths.
+  Final large-quantity checks pass at 1280/360/1536; all three screenshots and
+  the wide taxed invoice/purchase layouts were read. Types, changed-file lint,
+  locales, build and unchanged bundle limits pass. Full frontend: 4,005 passed
+  and the same three landing failures. Backend source remains unchanged since
+  B38. All B1–B51 items are now fixed or verified; UX16/17/18 remain pending.
 
 - B42 (14 Oct): B11's history fix preserved an existing Shop entry, but a new
   import deep link still inherited Library and kept it on reload. Both widths
