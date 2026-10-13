@@ -1,6 +1,9 @@
 import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 
 import { resetPosthogForTests } from 'src/analytics/posthogClient';
+import { AccountMenu } from 'src/components/layout/AccountMenu';
+import { resetSession, sessionLoaded } from 'src/redux/slice/sessionSlice';
+import { store } from 'src/redux/store';
 import { renderWithProviders } from 'src/tests/renderWithProviders';
 
 import { AnalyticsHost } from './AnalyticsHost';
@@ -24,7 +27,10 @@ let mockSurveys: { id: string; type: string; end_date?: string | null }[] = [];
 jest.mock('posthog-js', () => ({ __esModule: true, default: posthog }));
 
 let mockPath = '/dashboard';
-jest.mock('next/navigation', () => ({ usePathname: () => mockPath }));
+jest.mock('next/navigation', () => ({
+  usePathname: () => mockPath,
+  useRouter: () => ({ push: jest.fn(), replace: jest.fn() }),
+}));
 
 let mockEnabled = true;
 let mockKey = 'phc_test';
@@ -52,10 +58,42 @@ const mount = async (): Promise<void> => {
   });
 };
 
+const mountAccount = async (): Promise<ReturnType<typeof renderWithProviders>> => {
+  store.dispatch(
+    sessionLoaded({
+      user: {
+        id: 'u1',
+        name: 'Owner',
+        email: 'owner@qa.test',
+        mobile: null,
+        locale: 'en',
+        mustChangePassword: false,
+        passwordExpiresAt: null,
+      },
+      activeTenant: { id: 't1', name: 'Shop', timezone: 'Asia/Kolkata' },
+      tenants: [],
+      permissions: [],
+      enabledModules: [],
+      version: 1,
+    })
+  );
+  const view = renderWithProviders(
+    <>
+      <AnalyticsHost />
+      <AccountMenu />
+    </>
+  );
+  await act(async () => {
+    jest.advanceTimersByTime(1600);
+  });
+  return view;
+};
+
 beforeEach(() => {
   jest.useFakeTimers();
   jest.clearAllMocks();
   resetPosthogForTests();
+  store.dispatch(resetSession());
   mockPath = '/dashboard';
   mockEnabled = true;
   mockKey = 'phc_test';
@@ -65,6 +103,33 @@ beforeEach(() => {
 afterEach(() => jest.useRealTimers());
 
 describe('AnalyticsHost', () => {
+  it('never floats Feedback over form inputs and offers it in the account menu (QA B16)', async () => {
+    // Feedback must occupy normal navigation space, not the right edge of a form.
+    mockSurveys = [{ id: 'sv_1', type: 'popover', end_date: null }];
+    await mountAccount();
+    await waitFor(() => expect(posthog.getSurveys).toHaveBeenCalled());
+    expect(screen.queryByTestId('feedback-tab')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Account menu for Owner' }));
+    expect(await screen.findByRole('menuitem', { name: 'Give feedback' })).toBeInTheDocument();
+  });
+
+  it('removes account feedback when navigating to a customer document (QA B16)', async () => {
+    // A retained callback must not keep a survey available on a protected customer URL.
+    mockSurveys = [{ id: 'sv_1', type: 'popover', end_date: null }];
+    const view = await mountAccount();
+    fireEvent.click(screen.getByRole('button', { name: 'Account menu for Owner' }));
+    expect(await screen.findByRole('menuitem', { name: 'Give feedback' })).toBeInTheDocument();
+    mockPath = '/d/customer-token';
+    view.rerender(
+      <>
+        <AnalyticsHost />
+        <AccountMenu />
+      </>
+    );
+    await waitFor(() =>
+      expect(screen.queryByRole('menuitem', { name: 'Give feedback' })).toBeNull()
+    );
+  });
   it('sends nothing at all unless the build enables it', async () => {
     mockEnabled = false;
     await mount();
@@ -130,12 +195,13 @@ describe('AnalyticsHost', () => {
    * once and is gone for good from that browser when closed; the owner closed
    * his and could not get it back. The tab asks for the same survey again.
    */
-  it('draws a Feedback tab that opens the running survey again, ignoring "already seen"', async () => {
+  it('opens the running survey repeatedly from the account menu, ignoring already seen', async () => {
     mockSurveys = [{ id: 'sv_1', type: 'popover', end_date: null }];
-    await mount();
-    const tab = await screen.findByRole('button', { name: 'Give feedback' });
-    fireEvent.click(tab);
-    fireEvent.click(tab);
+    await mountAccount();
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      fireEvent.click(screen.getByRole('button', { name: 'Account menu for Owner' }));
+      fireEvent.click(await screen.findByRole('menuitem', { name: 'Give feedback' }));
+    }
     expect(posthog.displaySurvey).toHaveBeenCalledTimes(2);
     expect(posthog.displaySurvey).toHaveBeenCalledWith('sv_1', {
       displayType: 'popover',
@@ -149,18 +215,20 @@ describe('AnalyticsHost', () => {
     ['the only survey has ended', [{ id: 'sv_1', type: 'popover', end_date: '2026-10-01' }]],
     // PostHog's own "Feedback button" kind brings its own tab: ours would make two.
     ['PostHog draws its own feedback button', [{ id: 'sv_2', type: 'widget', end_date: null }]],
-  ])('draws no tab when %s', async (_why, surveys) => {
+  ])('offers no account feedback when %s', async (_why, surveys) => {
     mockSurveys = surveys;
-    await mount();
+    await mountAccount();
     await waitFor(() => expect(posthog.getSurveys).toHaveBeenCalled());
-    expect(screen.queryByTestId('feedback-tab')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Account menu for Owner' }));
+    expect(screen.queryByRole('menuitem', { name: 'Give feedback' })).toBeNull();
   });
 
   it("draws no tab on a page a merchant's customer opens", async () => {
     mockSurveys = [{ id: 'sv_1', type: 'popover', end_date: null }];
     mockPath = '/d/2f9c1a7e';
-    await mount();
-    expect(screen.queryByTestId('feedback-tab')).toBeNull();
+    await mountAccount();
+    fireEvent.click(screen.getByRole('button', { name: 'Account menu for Owner' }));
+    expect(screen.queryByRole('menuitem', { name: 'Give feedback' })).toBeNull();
   });
 });
 

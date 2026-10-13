@@ -2,8 +2,16 @@
 
 import { useRouter } from 'next/navigation';
 
-import { Check, ChevronDown, LogOut, MonitorSmartphone, ShieldCheck } from 'lucide-react';
+import {
+  Check,
+  ChevronDown,
+  LogOut,
+  MessageSquare,
+  MonitorSmartphone,
+  ShieldCheck,
+} from 'lucide-react';
 
+import { useFeedback } from 'src/analytics/feedback';
 import { THEME_MODES, useAccountActions } from 'src/components/layout/useAccountActions';
 import { UbAvatar, UbBox, UbDivider, UbText } from 'src/design-system';
 import { MLMenu, MLMenuItem, MLMenuLabel } from 'src/design-system/primitives';
@@ -34,6 +42,7 @@ export function AccountMenu({
 }: Readonly<{ compact?: boolean }>): React.JSX.Element | null {
   const { t } = useTranslation();
   const router = useRouter();
+  const feedback = useFeedback();
   const { user, impersonating, locale, options, setLocale, theme, setTheme, signOut } =
     useAccountActions();
 
@@ -106,6 +115,12 @@ export function AccountMenu({
         <MonitorSmartphone aria-hidden className="h-4 w-4" />
         {t('sessions.nav')}
       </MLMenuItem>
+      {feedback && (
+        <MLMenuItem onSelect={feedback}>
+          <MessageSquare aria-hidden className="h-4 w-4" />
+          {t('feedback.tab.label')}
+        </MLMenuItem>
+      )}
       {/* PLT-14 FR-1 — the console link, for operators only and never from
           inside a support session (the console refuses a support token). */}
       {user?.isSuperAdmin && !impersonating ? (

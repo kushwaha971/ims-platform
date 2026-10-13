@@ -1,6 +1,7 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
+import { FeedbackTab } from 'src/components/providers/FeedbackTab';
 import { localeChanged } from 'src/redux/slice/localeSlice';
 import { sessionLoaded } from 'src/redux/slice/sessionSlice';
 import { store } from 'src/redux/store';
@@ -9,6 +10,8 @@ import { renderWithProviders } from 'src/tests/renderWithProviders';
 import { clearCookie, LOCALE_COOKIE, readCookie } from 'src/utils/cookieUtils';
 
 import { MorePageContent } from './MorePageContent';
+
+import type { PostHog } from 'posthog-js';
 
 /**
  * The phone's More tab. It replaced the ☰ drawer AND the phone header's account
@@ -68,6 +71,28 @@ beforeEach(() => {
 });
 
 describe('MorePageContent', () => {
+  it('opens feedback from a normal account row on the phone (QA B16)', async () => {
+    // The phone must keep the survey reachable without a floating tab over fields.
+    const displaySurvey = jest.fn();
+    const client = {
+      getSurveys: (callback: (surveys: unknown[]) => void) =>
+        callback([{ id: 'sv_mobile', type: 'popover' }]),
+      displaySurvey,
+    };
+    renderWithProviders(
+      <>
+        <MorePageContent />
+        <FeedbackTab posthog={client as unknown as PostHog} />
+      </>
+    );
+    await userEvent.click(await screen.findByRole('button', { name: 'Give feedback' }));
+    expect(screen.queryByTestId('feedback-tab')).toBeNull();
+    expect(displaySurvey).toHaveBeenCalledWith('sv_mobile', {
+      displayType: 'popover',
+      ignoreConditions: true,
+      ignoreDelay: true,
+    });
+  });
   it('lists every destination except the tabs, grouped as the sidebar groups them', () => {
     /* Prevents: a feature reachable on desktop and nowhere on a phone, and a
        tab listed twice (once in the bar, once here). */

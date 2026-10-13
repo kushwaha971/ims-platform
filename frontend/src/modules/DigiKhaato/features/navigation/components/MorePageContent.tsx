@@ -2,8 +2,15 @@
 
 import { useMemo, useState } from 'react';
 
-import { ArrowLeftRight, LogOut, MonitorSmartphone, ShieldCheck } from 'lucide-react';
+import {
+  ArrowLeftRight,
+  LogOut,
+  MessageSquare,
+  MonitorSmartphone,
+  ShieldCheck,
+} from 'lucide-react';
 
+import { useFeedback } from 'src/analytics/feedback';
 import { THEME_MODES, useAccountActions } from 'src/components/layout/useAccountActions';
 import {
   UbAvatar,
@@ -39,6 +46,7 @@ export function MorePageContent(): React.JSX.Element {
   const { t } = useTranslation();
   const { sections, bottomNav } = useNavigation();
   const tenant = useAppSelector(selectActiveTenant);
+  const feedback = useFeedback();
   const { user, impersonating, locale, options, setLocale, theme, setTheme, signOut } =
     useAccountActions();
   const [query, setQuery] = useState('');
@@ -87,6 +95,16 @@ export function MorePageContent(): React.JSX.Element {
       href: ROUTES.SETTINGS_DEVICES,
       icon: <MonitorSmartphone aria-hidden className="h-5 w-5" />,
     },
+    ...(feedback
+      ? [
+          {
+            key: 'feedback',
+            label: t('feedback.tab.label'),
+            onSelect: feedback,
+            icon: <MessageSquare aria-hidden className="h-5 w-5" />,
+          },
+        ]
+      : []),
     ...(user?.isSuperAdmin && !impersonating
       ? [
           {

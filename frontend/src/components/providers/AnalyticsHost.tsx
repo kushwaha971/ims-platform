@@ -27,7 +27,7 @@ import type { PostHog } from 'posthog-js';
  * DEC-017 — product analytics and feedback (PostHog), mounted once.
  *
  * Its job is to decide WHEN the SDK may be loaded and what it is told, and to
- * draw the one thing a person sees of it, the Feedback tab: see `analyticsRules.ts` for the three rules. On a page
+ * offer its Feedback survey in account navigation: see `analyticsRules.ts` for the three rules. On a page
  * a merchant's customer opens, or one whose address carries a token, the SDK
  * is not even downloaded; if it was loaded earlier in the same visit it is
  * told to stop until the address is an ordinary one again.
@@ -42,7 +42,7 @@ export function AnalyticsHost(): React.JSX.Element | null {
   const apps = useAppSelector(selectSessionApps);
   const locale = useAppSelector(selectLocale);
   const identified = useRef<string | null>(null);
-  /** The SDK, once it is here: what the Feedback tab opens the survey with. */
+  /** The SDK, once it is here: what the account's Feedback action opens the survey with. */
   const [client, setClient] = useState<PostHog | null>(null);
 
   const enabled = ANALYTICS_ENABLED && Boolean(POSTHOG_KEY);
@@ -104,6 +104,6 @@ export function AnalyticsHost(): React.JSX.Element | null {
       });
   }, [allowed, userId, tenantId, role, appCodes, locale]);
 
-  // The Feedback tab: only where analytics may run, and only once the SDK is here.
+  // Account feedback: only where analytics may run, and only once the SDK is here.
   return allowed && client ? <FeedbackTab posthog={client} /> : null;
 }
