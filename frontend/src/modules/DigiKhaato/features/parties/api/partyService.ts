@@ -9,6 +9,7 @@ import type {
   PartyDetail,
   PartyDetailResult,
   PartyFormValues,
+  PartyIdentityValues,
   PartyListParams,
   PartyListResult,
   PartyRoleBadge,
@@ -389,6 +390,19 @@ export const updateParty = async (
     API_PATHS.PARTY(id),
     toWireBody(values, { create: false }),
     ubConfig({})
+  );
+  return toSaveResult(response.data);
+};
+
+/** A person's shared identity; do not resend another app's profile or money. */
+export const updatePartyIdentity = async (
+  id: string,
+  values: PartyIdentityValues
+): Promise<PartySaveResult> => {
+  const response = await api.patch<PartySaveApiResponse>(
+    API_PATHS.PARTY(id),
+    { name: values.name.trim(), mobile: values.mobile?.trim() || null },
+    ubConfig({ suppressErrorSnackbar: true })
   );
   return toSaveResult(response.data);
 };

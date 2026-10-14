@@ -208,6 +208,10 @@ registerInvalidation({
   // F06 — a payment collected against a library charge (the core drawer) moves
   // the member's dues: the member page refetches and the lists go stale.
   core: {
+    saveParty: {
+      refetch: ['libraryMemberDetail'],
+      stale: ['libraryMemberList', 'librarySeats', 'libraryAttendance'],
+    },
     recordPayment: {
       refetch: ['libraryMemberDetail'],
       stale: ['libraryMemberList', 'libraryHome', 'librarySeats'],

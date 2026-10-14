@@ -147,6 +147,8 @@
   "parties.form.title.edit": "Edit party",
   "parties.form.type.required": "Choose whether this is a customer, a supplier, or both.",
   "parties.form.warning.gstinState": "Saved. The GSTIN is registered in state {gstinState}, and you chose {state}.",
+  "parties.identity.shared": "This name and mobile are shared wherever this person appears.",
+  "parties.identity.title": "Change name or mobile",
   "parties.list.add": "Add party",
   "parties.list.bulk.clearSelection": "Clear selection",
   "parties.list.caption": "Customers, what each one owes, and how long since their last entry",

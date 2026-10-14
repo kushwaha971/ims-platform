@@ -16,8 +16,8 @@ F12, FB4, and DEC-019 (each app keeps its own money).
 
 **Next, in this order:**
 1. UX16/UX17/UX18: coordinated person-workspace, seat-management and rendering passes.
-   The Library partial-fee/payment-history workflow is done. Continue with
-   student information editing and the visible fee overview/quick actions,
+   The Library partial-fee/payment-history and shared name/mobile editing
+   workflows are done. Continue with the visible fee overview/quick actions,
    then the remaining Lending, Shop, supplier and Udhaar workflows. UX16 as a
    whole, UX17 and the cross-module UX18 audit remain pending.
    Apply the owner's additional [One Person, One Workspace requirements](one-person-workspace.md)
@@ -54,6 +54,27 @@ F12, FB4, and DEC-019 (each app keeps its own money).
 Update the "Done" list in this file in the same commit as each item.
 
 ## Verification since 13 Oct 2026
+
+- UX16 shared student identity editing (14 Oct) is done and pushed. The old
+  membership drawer linked to the person's separate account page to change
+  name/mobile; both live widths reproduced that detour, and the page-action
+  and identity-service assertions failed first. A lazy shared identity drawer
+  now opens on the student and reuses the existing party-save mutation and
+  central validators. Its PATCH whitelists name/mobile; manager and party-write
+  permissions still apply. Saving refreshes the Library identity views without
+  moving money or replacing customer/supplier roles. Existing membership/date
+  edits remain separate on the same page. The removed account-page link no
+  longer sends the owner away. Targeted tests cover saving, unchanged values,
+  refused mobiles and permissions; both live widths verify the new student
+  name/mobile, ₹700 fee due, Udhaar ₹777 and Shop −₹333 unchanged, zero document
+  reloads and no overflow. Screenshot review caught a missing Save label and
+  added an explicit visible-text regression before the final rerun. The whole
+  UX16/17/18 passes remain pending. All 57 focused tests pass, plus all five
+  drawer cases after the Save-label correction. Types, changed-file lint,
+  locale split/check, final build and bundle checks pass; only 13 exceeded
+  budget scalars use measured + 0.5 KB. Full frontend: 4,021 passed and the
+  same three landing failures. Both final drawer and updated-student screenshots
+  were read at 1280/360. Backend source and financial rules are unchanged.
 
 - UX16 Library payment/history workflow (14 Oct) is done and pushed. A ₹200
   partial fee already saved correctly, but its history required another page.

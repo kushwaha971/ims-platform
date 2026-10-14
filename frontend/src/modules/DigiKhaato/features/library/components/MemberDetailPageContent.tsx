@@ -34,6 +34,8 @@ import {
   UbText,
 } from 'src/design-system';
 import { useAppDispatch, useAppSelector } from 'src/hooks/useAppStore';
+import { useIsOwnerOrAdmin } from 'src/hooks/useIsOwnerOrAdmin';
+import { usePermissions } from 'src/hooks/usePermissions';
 import { useTranslation } from 'src/hooks/useTranslation';
 import { selectTenantTimezone } from 'src/redux/slice/sessionSlice';
 import { ROUTES } from 'src/routes';
@@ -91,6 +93,10 @@ const MemberEditDrawerLazy = dynamic(
   () => import('./MemberEditDrawer').then((m) => m.MemberEditDrawer),
   { ssr: false }
 );
+const PartyIdentityDrawerLazy = dynamic(
+  () => import('../../parties/components/PartyIdentityDrawer').then((m) => m.PartyIdentityDrawer),
+  { ssr: false }
+);
 
 /**
  * F04 (LIB-04 §7, §8) — `/library/members/[membershipId]`: who the member is,
@@ -102,6 +108,8 @@ const MemberEditDrawerLazy = dynamic(
 export function MemberDetailPageContent({ id }: Readonly<{ id: string }>): React.JSX.Element {
   const { t } = useTranslation();
   const dispatch = useAppDispatch();
+  const { can } = usePermissions();
+  const isManager = useIsOwnerOrAdmin();
   const detail = useMemberDetail(id);
   const { types } = useAppSelector(selectLibraryMemberList);
   const timezone = useAppSelector(selectTenantTimezone);
@@ -109,6 +117,7 @@ export function MemberDetailPageContent({ id }: Readonly<{ id: string }>): React
   const [dialog, setDialog] = useState<MemberDialogKind | null>(null);
   const [seating, setSeating] = useState(false);
   const [editing, setEditing] = useState(false);
+  const [editingIdentity, setEditingIdentity] = useState(false);
   const [messaging, setMessaging] = useState<MessageKind | null>(null);
   // Bumped when a message dialog closes, so the log shows a send at once.
   const [messageLogKey, setMessageLogKey] = useState(0);
@@ -306,6 +315,15 @@ export function MemberDetailPageContent({ id }: Readonly<{ id: string }>): React
                   label: t('library.member.edit'),
                   icon: Pencil,
                   action: detail.canEdit ? () => setEditing(true) : undefined,
+                },
+                {
+                  key: 'identity',
+                  label: t('library.member.edit.nameLink'),
+                  icon: Pencil,
+                  action:
+                    isManager && can('parties.party.write')
+                      ? () => setEditingIdentity(true)
+                      : undefined,
                 },
                 {
                   key: 'changePlan',
@@ -600,6 +618,13 @@ export function MemberDetailPageContent({ id }: Readonly<{ id: string }>): React
           busy={busy}
           onClose={() => setSeating(false)}
           onSubmit={detail.place}
+        />
+      )}
+      {editingIdentity && (
+        <PartyIdentityDrawerLazy
+          key={member.party.id}
+          party={member.party}
+          onClose={() => setEditingIdentity(false)}
         />
       )}
       {editing && (

@@ -7,7 +7,19 @@ import * as Yup from 'yup';
 import { useTranslation } from 'src/hooks/useTranslation';
 import { useValidationSchemas } from 'src/hooks/useValidationSchemas';
 
-import type { PartyFormValues } from '../types/party.types';
+import type { PartyFormValues, PartyIdentityValues } from '../types/party.types';
+
+export const usePartyIdentitySchema = (): Yup.ObjectSchema<PartyIdentityValues> => {
+  const v = useValidationSchemas();
+  return useMemo(
+    () =>
+      Yup.object({
+        name: v.requiredText(160, 'parties.form.name.required').defined(),
+        mobile: v.mobileValidation(false).defined().default(''),
+      }),
+    [v]
+  );
+};
 
 /**
  * Part 19 §19.5.3 — the party form's schema, COMPOSED from the central
@@ -30,13 +42,12 @@ export const usePartySchemas = (): {
   readonly partySchema: Yup.ObjectSchema<PartyFormValues>;
 } => {
   const v = useValidationSchemas();
+  const identitySchema = usePartyIdentitySchema();
   const { t } = useTranslation();
 
   return useMemo(
     () => ({
       partySchema: Yup.object({
-        name: v.requiredText(160, 'parties.form.name.required').defined(),
-        mobile: v.mobileValidation(false).defined().default(''),
         altPhone: v.mobileValidation(false).defined().default(''),
         email: v.emailValidation(false).defined().default(''),
         displayCode: Yup.string().max(24).defined().default(''),
@@ -81,15 +92,20 @@ export const usePartySchemas = (): {
         // round trip, and this one is instant and points at the control.
         isCustomer: Yup.boolean().defined().default(true),
         isSupplier: Yup.boolean().defined().default(false),
-      }).test(
-        'one-of-customer-or-supplier',
-        t('parties.form.type.required'),
-        function check(values) {
-          if (values.isCustomer || values.isSupplier) return true;
-          return this.createError({ path: 'isCustomer', message: t('parties.form.type.required') });
-        }
-      ),
+      })
+        .concat(identitySchema)
+        .test(
+          'one-of-customer-or-supplier',
+          t('parties.form.type.required'),
+          function check(values) {
+            if (values.isCustomer || values.isSupplier) return true;
+            return this.createError({
+              path: 'isCustomer',
+              message: t('parties.form.type.required'),
+            });
+          }
+        ),
     }),
-    [v, t]
+    [v, t, identitySchema]
   );
 };

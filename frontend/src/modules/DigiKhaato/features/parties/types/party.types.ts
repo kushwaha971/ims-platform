@@ -68,6 +68,11 @@ export interface PartyTagWithCount extends PartyTag {
   readonly partyCount: number;
 }
 
+export interface PartyIdentityValues {
+  name: string;
+  mobile: string | null;
+}
+
 export interface Party {
   readonly id: string;
   readonly name: string;

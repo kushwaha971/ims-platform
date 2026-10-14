@@ -3,16 +3,16 @@ import { createAsyncThunk } from '@reduxjs/toolkit';
 import type { ApiErrorShape } from 'src/types/api.types';
 import { toApiError } from 'src/utils/apiError';
 
-import { createParty, updateParty } from '../api/partyService';
+import { createParty, updateParty, updatePartyIdentity } from '../api/partyService';
 
-import type { PartyFormValues, PartySaveResult } from '../types/party.types';
+import type { PartyFormValues, PartyIdentityValues, PartySaveResult } from '../types/party.types';
 
 /**
  * Part 19 §19.3.3 — one service call per thunk, three type arguments, and a
  * catch that normalises. Nothing here decides what the screen shows.
  */
 
-export interface SavePartyArg {
+interface SavePartyFormArg {
   readonly values: PartyFormValues;
   /** Present on an edit; absent on a create. */
   readonly partyId?: string;
@@ -24,6 +24,13 @@ export interface SavePartyArg {
    */
   readonly idempotencyKey: string;
 }
+
+export type SavePartyArg =
+  | SavePartyFormArg
+  | {
+      readonly partyId: string;
+      readonly identity: PartyIdentityValues;
+    };
 
 /**
  * MUTATION — create or edit.
@@ -41,8 +48,10 @@ export const saveParty = createAsyncThunk<
   PartySaveResult,
   SavePartyArg,
   { rejectValue: ApiErrorShape }
->('partyForm/save', async ({ values, partyId, idempotencyKey }, { rejectWithValue }) => {
+>('partyForm/save', async (arg, { rejectWithValue }) => {
   try {
+    if ('identity' in arg) return await updatePartyIdentity(arg.partyId, arg.identity);
+    const { values, partyId, idempotencyKey } = arg;
     return partyId ? await updateParty(partyId, values) : await createParty(values, idempotencyKey);
   } catch (error) {
     return rejectWithValue(toApiError(error, 'parties.form.error.title'));

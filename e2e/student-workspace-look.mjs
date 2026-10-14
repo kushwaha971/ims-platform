@@ -6,6 +6,7 @@ import { chromium } from "playwright";
 import { addParty, must, newUser, uniq, uniqMobile } from "./lib/fixtures.mjs";
 
 const before = process.argv.includes("--before");
+const identityBefore = process.argv.includes("--identity-before");
 const out = process.env.SHOTS ?? "/tmp/student-workspace-look";
 const frontend = process.env.E2E_FRONTEND ?? "http://localhost:3000";
 const today = new Intl.DateTimeFormat("en-CA", {
@@ -87,6 +88,28 @@ try {
       waitUntil: "networkidle",
     });
     const studentUrl = page.url();
+    if (identityBefore) {
+      await page
+        .getByRole("button", { name: "More actions", exact: true })
+        .click();
+      await page
+        .getByRole("button", { name: "Edit details", exact: true })
+        .click();
+      const link = page.getByRole("link", { name: "Change name or mobile" });
+      await link.waitFor();
+      assert.ok(
+        (await link.getAttribute("href")).endsWith(`/parties/${party.id}`),
+      );
+      await page.screenshot({
+        path: `${out}/${width}-identity-before.png`,
+        fullPage: true,
+      });
+      console.log(
+        `REPRODUCED ${width}: identity editing requires leaving the student`,
+      );
+      await context.close();
+      continue;
+    }
     let documentLoads = 0;
     const historyReads = [];
     page.on("request", (request) => {
@@ -179,6 +202,74 @@ try {
       );
       assert.equal(historyReads[0].get("party_id"), party.id);
       assert.equal(historyReads[0].get("bucket"), "library");
+      const dismiss = page.getByRole("button", {
+        name: "Dismiss",
+        exact: true,
+      });
+      if (await dismiss.count()) await dismiss.click();
+      await page
+        .getByRole("button", { name: "More actions", exact: true })
+        .click();
+      await page
+        .getByRole("button", { name: "Change name or mobile", exact: true })
+        .click();
+      const identity = page.getByRole("dialog", {
+        name: "Change name or mobile",
+      });
+      await identity.getByRole("button", { name: "Save changes", exact: true }).waitFor();
+      await identity
+        .getByRole("textbox", { name: "Name", exact: true })
+        .fill("Workspace Student Updated");
+      const newMobile = uniqMobile();
+      await identity
+        .getByRole("textbox", { name: "Mobile number" })
+        .fill(newMobile);
+      await page.screenshot({
+        path: `${out}/${width}-identity.png`,
+        fullPage: true,
+      });
+      const identitySaved = page.waitForResponse(
+        (reply) =>
+          reply.request().method() === "PATCH" &&
+          new URL(reply.url()).pathname === `/api/v1/parties/${party.id}`,
+      );
+      await page.getByTestId("party-identity-save").click();
+      const identityReply = await identitySaved;
+      assert.equal(identityReply.status(), 200);
+      assert.deepEqual(
+        Object.keys(identityReply.request().postDataJSON()).sort(),
+        ["mobile", "name"],
+      );
+      await page
+        .getByRole("heading", {
+          name: "Workspace Student Updated",
+          exact: true,
+        })
+        .waitFor();
+      await identity.waitFor({ state: "hidden" });
+      assert.equal(page.url(), studentUrl);
+      const updated = await must(
+        "GET",
+        `/parties/${party.id}`,
+        null,
+        owner.token,
+      );
+      assert.equal(updated.name, "Workspace Student Updated");
+      assert.ok(updated.mobile.endsWith(newMobile));
+      assert.equal(updated.is_customer, books.is_customer);
+      assert.equal(updated.is_supplier, books.is_supplier);
+      assert.equal(updated.balance, "777.00");
+      assert.equal(updated.shop_balance, "-333.00");
+      const updatedMember = await must(
+        "GET",
+        `/library/members/${member.membership_id}`,
+        null,
+        owner.token,
+      );
+      assert.equal(updatedMember.dues_amount, "700.00");
+      console.log(
+        `PASS ${width}: name/mobile saved on student, roles and all three books unchanged`,
+      );
     }
     assert.equal(documentLoads, 0);
     assert.deepEqual(errors, []);

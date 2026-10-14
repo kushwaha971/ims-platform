@@ -1,5 +1,6 @@
 {
  "//": [
+    "2026-10-14 UX16 student identity: a lazy shared name/mobile drawer reuses the party-save flow and refreshes Library identity views. Only 13 exceeded scalars use measured + 0.5 KB; the shared app remains within 112 KB.",
     "2026-10-14 UX16 student payment history: a lazy, scoped receipt read and its Library query metadata. Only four exceeded Library route limits use measured + 0.5 KB; the shared first-load baseline is unchanged.",
     "2026-10-14 B42: import kinds remember their owning app on shared deep links. Only two exceeded limits use measured + 0.5 KB: /parties/tags first load 301.0 and /imports/[id] route 50.6; existing history synchronization is reused.",
     "2026-10-14 B41: new shared Month/Year labels slightly raise first load. Only the exceeded /_not-found limit is raised from 239 to measured 239.0 + 0.5 KB; the calendar remains lazy.",
@@ -1379,11 +1380,11 @@
   },
   "/sales/challans/new": {
    "route": 150.1,
-   "firstLoad": 389.1
+   "firstLoad": 389.7
   },
   "/sales/challans/[id]/edit": {
    "route": 150.1,
-   "firstLoad": 389.1
+   "firstLoad": 389.7
   },
   "/purchases/orders/[id]": {
    "route": 65.5,
@@ -1411,11 +1412,11 @@
   },
   "/sales/orders/new": {
    "route": 150.1,
-   "firstLoad": 389.1
+   "firstLoad": 389.6
   },
   "/sales/orders/[id]/edit": {
    "route": 150.1,
-   "firstLoad": 389.1
+   "firstLoad": 389.7
   },
   "/parties": {
    "route": 109,
@@ -1427,11 +1428,11 @@
   },
   "/sales/invoices/new": {
    "route": 150.1,
-   "firstLoad": 389.1
+   "firstLoad": 389.6
   },
   "/sales/invoices/[id]/edit": {
    "route": 150.1,
-   "firstLoad": 389.1
+   "firstLoad": 389.6
   },
   "/sales/invoices": {
    "route": 98,
@@ -1486,7 +1487,7 @@
    "firstLoad": 343.3
   },
   "/parties/tags": {
-   "route": 62,
+   "route": 62.5,
    "firstLoad": 301.5
   },
   "/parties/[id]/statement": {
@@ -1587,7 +1588,7 @@
   },
   "/admin/tenants/[id]": {
    "route": 24,
-   "firstLoad": 263
+   "firstLoad": 263.5
   },
   "/admin/tenants": {
    "route": 31,
@@ -1611,7 +1612,7 @@
   },
   "/purchases/bills/new": {
    "route": 149.7,
-   "firstLoad": 388.5
+   "firstLoad": 389.0
   },
   "/reports": {
    "route": 72,
@@ -1623,7 +1624,7 @@
   },
   "/reports/gst-summary": {
    "route": 107,
-   "firstLoad": 346
+   "firstLoad": 346.6
   },
   "/reports/profit": {
    "route": 102,
@@ -1670,7 +1671,7 @@
    "firstLoad": 323.0
   },
   "/library/members/[membershipId]": {
-   "route": 77.2,
+   "route": 77.8,
    "firstLoad": 316.4
   },
   "/library/catalogue/[titleId]": {
@@ -1703,7 +1704,7 @@
   },
   "/reset-password": {
    "route": 52,
-   "firstLoad": 291
+   "firstLoad": 291.6
   },
   "/forgot-password": {
    "route": 52,
@@ -1715,7 +1716,7 @@
   },
   "/d/[token]": {
    "route": 39.5,
-   "firstLoad": 278.5
+   "firstLoad": 279.1
   },
   "/accept-invite/[token]": {
    "route": 11,

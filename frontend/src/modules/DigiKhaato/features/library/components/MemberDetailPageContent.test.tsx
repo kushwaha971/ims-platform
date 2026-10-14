@@ -109,6 +109,14 @@ beforeEach(() => {
 });
 
 describe('MemberDetailPageContent', () => {
+  it('offers shared identity editing here to a manager with party write permission', async () => {
+    signIn(['library.member.read', 'library.member.write', 'parties.party.write']);
+    renderWithProviders(<MemberDetailPageContent id="m1" />);
+    await screen.findByTestId('library-member-number');
+    await userEvent.click(screen.getByRole('button', { name: 'More actions' }));
+    expect(screen.getByRole('button', { name: 'Change name or mobile' })).toBeInTheDocument();
+  });
+
   /** UX16: a paid fee belongs on the student, never behind another person's page. */
   it('shows the student’s scoped payment history on the same page', async () => {
     jest.mocked(payments.listPayments).mockResolvedValue({

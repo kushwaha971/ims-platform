@@ -11,15 +11,12 @@ import {
   UbDrawer,
   UbField,
   UbForm,
-  UbLink,
-  UbText,
   UbTextArea,
   UbTextInput,
 } from 'src/design-system';
 import { useAppDispatch } from 'src/hooks/useAppStore';
 import { useTranslation } from 'src/hooks/useTranslation';
 import { showSnackbar } from 'src/redux/slice/snackbarSlice';
-import { ROUTES } from 'src/routes';
 import type { ApiErrorShape } from 'src/types/api.types';
 import { applyServerErrors } from 'src/utils/applyServerErrors';
 
@@ -82,7 +79,7 @@ export const changedFields = (
  *
  * The student's record and nothing else. Name and mobile belong to the linked
  * party — one person can be a library student, a shop customer and a guardian
- * at once — so they are edited on the customer page, which the link here opens.
+ * at once — so the page's separate shared-identity drawer edits them in place.
  * The guardian is not here either: the khata's relations section already adds,
  * changes and unlinks one, and a second editor would be a second set of rules.
  * Seat and shift stay with the seat dialog, which the desk uses.
@@ -224,12 +221,6 @@ export function MemberEditDrawer({
         >
           {(field) => <UbTextArea {...field} rows={3} maxLength={2000} disabled={busy} />}
         </UbField>
-        <UbText variant="caption" tone="tertiary">
-          {t('library.member.edit.nameHint')}{' '}
-          <UbLink href={`${ROUTES.PARTIES}/${member.party.id}`}>
-            {t('library.member.edit.nameLink')}
-          </UbLink>
-        </UbText>
       </UbForm>
     </UbDrawer>
   );

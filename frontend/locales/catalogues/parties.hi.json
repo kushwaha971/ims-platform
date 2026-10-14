@@ -147,6 +147,8 @@
   "parties.form.title.edit": "पार्टी बदलें",
   "parties.form.type.required": "चुनें कि यह ग्राहक है, सप्लायर है, या दोनों।",
   "parties.form.warning.gstinState": "सेव हो गया। जीएसटीआईएन राज्य {gstinState} का है, और आपने {state} चुना।",
+  "parties.identity.shared": "इस व्यक्ति का नाम और मोबाइल सभी ऐप में एक ही रहेगा।",
+  "parties.identity.title": "नाम या मोबाइल बदलें",
   "parties.list.add": "पार्टी जोड़ें",
   "parties.list.bulk.clearSelection": "चयन हटाएँ",
   "parties.list.caption": "ग्राहक, किसका कितना बाकी है, और पिछली एंट्री को कितना समय हुआ",

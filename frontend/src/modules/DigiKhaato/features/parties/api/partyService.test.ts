@@ -1,6 +1,6 @@
 import { api } from 'src/api/AxiosInstances';
 
-import { createParty, listParties, updateParty } from './partyService';
+import { createParty, listParties, updateParty, updatePartyIdentity } from './partyService';
 
 import type { PartyFormValues } from '../types/party.types';
 
@@ -333,3 +333,16 @@ const DETAIL_ROW = {
   opening_balance_as_of: null,
   created_at: '2026-01-05T08:00:00Z',
 };
+
+it('edits a shared identity without sending roles, balances or other profile fields', async () => {
+  const patch = jest.spyOn(api, 'patch').mockResolvedValue({
+    data: { data: DETAIL_ROW, meta: {} },
+  });
+  await updatePartyIdentity('p1', { name: ' Asha ', mobile: '' });
+  expect(patch).toHaveBeenCalledWith(
+    '/parties/p1',
+    { name: 'Asha', mobile: null },
+    expect.anything()
+  );
+  patch.mockRestore();
+});
