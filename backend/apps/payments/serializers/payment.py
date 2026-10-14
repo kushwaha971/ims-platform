@@ -30,6 +30,9 @@ class PaymentWriteSerializer(serializers.Serializer):
     reference = serializers.CharField(required=False, allow_blank=True, default="")
     note = serializers.CharField(required=False, allow_blank=True, default="")
     allocations = serializers.JSONField(required=False)
+    # DEC-019: keep the requested app for FIFO and unallocated advances too.
+    # Explicit allocations derive their bucket from the target; auto cannot.
+    bucket = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     context = serializers.CharField(required=False, allow_blank=True, default="")
 
 

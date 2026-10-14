@@ -7,6 +7,7 @@ import { addParty, must, newUser, uniq, uniqMobile } from "./lib/fixtures.mjs";
 
 const before = process.argv.includes("--before");
 const identityBefore = process.argv.includes("--identity-before");
+const overviewBefore = process.argv.includes("--overview-before");
 const out = process.env.SHOTS ?? "/tmp/student-workspace-look";
 const frontend = process.env.E2E_FRONTEND ?? "http://localhost:3000";
 const today = new Intl.DateTimeFormat("en-CA", {
@@ -88,6 +89,27 @@ try {
       waitUntil: "networkidle",
     });
     const studentUrl = page.url();
+    if (overviewBefore) {
+      assert.equal(
+        await page.getByTestId("library-member-fees-total").count(),
+        0,
+      );
+      assert.equal(
+        await page
+          .getByRole("button", { name: "Collect fees", exact: true })
+          .count(),
+        0,
+      );
+      await page.screenshot({
+        path: `${out}/${width}-overview-before.png`,
+        fullPage: true,
+      });
+      console.log(
+        `REPRODUCED ${width}: no fee totals or collection shortcut in the student overview`,
+      );
+      await context.close();
+      continue;
+    }
     if (identityBefore) {
       await page
         .getByRole("button", { name: "More actions", exact: true })
@@ -120,9 +142,21 @@ try {
       if (request.isNavigationRequest() && request.frame() === page.mainFrame())
         documentLoads++;
     });
-    await page
-      .getByRole("button", { name: "Take ₹900.00", exact: true })
-      .click();
+    if (before) {
+      await page
+        .getByRole("button", { name: "Take ₹900.00", exact: true })
+        .click();
+    } else {
+      await page.getByTestId("library-member-fees-total").waitFor();
+      assert.ok(
+        (
+          await page.getByTestId("library-member-fees-total").innerText()
+        ).includes("900.00"),
+      );
+      await page
+        .getByRole("button", { name: "Collect fees", exact: true })
+        .click();
+    }
     await page.getByTestId("payment-save").waitFor();
     await page
       .getByRole("textbox", { name: "Amount", exact: true })
@@ -140,10 +174,11 @@ try {
     const response = await saved;
     assert.equal(response.status(), 201);
     assert.equal(response.request().postDataJSON().bucket, "library");
+    if (!before)
+      assert.equal(response.request().postDataJSON().allocations, "auto");
     const payment = (await response.json()).data;
     await page.getByTestId("payment-saved").waitFor();
     await page.getByRole("button", { name: "Done", exact: true }).click();
-    await page.getByText("Part paid", { exact: true }).waitFor();
     assert.equal(page.url(), studentUrl);
     const result = await must(
       "GET",
@@ -152,6 +187,7 @@ try {
       owner.token,
     );
     assert.equal(result.dues_amount, "700.00");
+    await page.getByText("Part paid", { exact: true }).first().waitFor();
     const books = await must("GET", `/parties/${party.id}`, null, owner.token);
     assert.equal(
       books.balance,
@@ -176,6 +212,16 @@ try {
       );
     } else {
       const history = page.getByTestId("library-payment-history");
+      await page
+        .getByTestId("library-member-fees-paid")
+        .getByText("₹200.00", { exact: true })
+        .first()
+        .waitFor();
+      assert.ok(
+        (
+          await page.getByTestId("library-member-fees-total").innerText()
+        ).includes("900.00"),
+      );
       await history.getByText(payment.number, { exact: true }).waitFor();
       assert.equal(
         response.request().postDataJSON().note,
@@ -216,7 +262,9 @@ try {
       const identity = page.getByRole("dialog", {
         name: "Change name or mobile",
       });
-      await identity.getByRole("button", { name: "Save changes", exact: true }).waitFor();
+      await identity
+        .getByRole("button", { name: "Save changes", exact: true })
+        .waitFor();
       await identity
         .getByRole("textbox", { name: "Name", exact: true })
         .fill("Workspace Student Updated");

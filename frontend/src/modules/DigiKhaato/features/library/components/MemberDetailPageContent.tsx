@@ -97,6 +97,10 @@ const PartyIdentityDrawerLazy = dynamic(
   () => import('../../parties/components/PartyIdentityDrawer').then((m) => m.PartyIdentityDrawer),
   { ssr: false }
 );
+const PaymentFormDrawerLazy = dynamic(
+  () => import('../../payments/components/PaymentFormDrawer').then((m) => m.PaymentFormDrawer),
+  { ssr: false }
+);
 
 /**
  * F04 (LIB-04 §7, §8) — `/library/members/[membershipId]`: who the member is,
@@ -108,7 +112,7 @@ const PartyIdentityDrawerLazy = dynamic(
 export function MemberDetailPageContent({ id }: Readonly<{ id: string }>): React.JSX.Element {
   const { t } = useTranslation();
   const dispatch = useAppDispatch();
-  const { can } = usePermissions();
+  const { can, hasModule } = usePermissions();
   const isManager = useIsOwnerOrAdmin();
   const detail = useMemberDetail(id);
   const { types } = useAppSelector(selectLibraryMemberList);
@@ -118,6 +122,7 @@ export function MemberDetailPageContent({ id }: Readonly<{ id: string }>): React
   const [seating, setSeating] = useState(false);
   const [editing, setEditing] = useState(false);
   const [editingIdentity, setEditingIdentity] = useState(false);
+  const [collectingFees, setCollectingFees] = useState(false);
   const [messaging, setMessaging] = useState<MessageKind | null>(null);
   // Bumped when a message dialog closes, so the log shows a send at once.
   const [messageLogKey, setMessageLogKey] = useState(0);
@@ -430,6 +435,31 @@ export function MemberDetailPageContent({ id }: Readonly<{ id: string }>): React
                   </UbText>
                 )}
               </UbStack>
+              {detail.chargeTotals &&
+                [
+                  {
+                    key: 'total',
+                    label: 'library.member.fees.total',
+                    value: detail.chargeTotals.amount,
+                  },
+                  {
+                    key: 'paid',
+                    label: 'library.member.fees.paid',
+                    value: detail.chargeTotals.paid,
+                  },
+                ].map((figure) => (
+                  <UbStack
+                    key={figure.key}
+                    gap={0}
+                    className="min-w-28"
+                    data-testid={`library-member-fees-${figure.key}`}
+                  >
+                    <UbText variant="caption" tone="tertiary">
+                      {t(figure.label)}
+                    </UbText>
+                    <UbAmount value={figure.value} size="lg" />
+                  </UbStack>
+                ))}
               {member.loansOpen > 0 && (
                 <UbStack gap={0} className="min-w-28">
                   <UbText variant="caption" tone="tertiary">
@@ -503,26 +533,41 @@ export function MemberDetailPageContent({ id }: Readonly<{ id: string }>): React
                 </UbStack>
               )}
             </UbStack>
-            {!closed && detail.canWrite && (
+            {!closed && (
               <UbStack direction="row" gap={2} wrap>
-                <UbButton
-                  size="sm"
-                  variant="secondary"
-                  onClick={() => setSeating(true)}
-                  data-testid="library-member-place"
-                >
-                  {t(member.seat ? 'library.place.change' : 'library.place.give')}
-                </UbButton>
-                {member.seat && (
-                  <UbButton
-                    size="sm"
-                    variant="ghost"
-                    disabled={busy}
-                    onClick={() => void detail.place({ seatId: null })}
-                    data-testid="library-member-free-seat"
-                  >
-                    {t('library.place.free', { seat: member.seat.label })}
-                  </UbButton>
+                {hasModule('payments') &&
+                  can('payments.payment.write') &&
+                  isNonZero(member.duesAmount) && (
+                    <UbButton
+                      size="sm"
+                      onClick={() => setCollectingFees(true)}
+                      data-testid="library-member-collect-fees"
+                    >
+                      {t('library.member.fees.collect')}
+                    </UbButton>
+                  )}
+                {detail.canWrite && (
+                  <>
+                    <UbButton
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => setSeating(true)}
+                      data-testid="library-member-place"
+                    >
+                      {t(member.seat ? 'library.place.change' : 'library.place.give')}
+                    </UbButton>
+                    {member.seat && (
+                      <UbButton
+                        size="sm"
+                        variant="ghost"
+                        disabled={busy}
+                        onClick={() => void detail.place({ seatId: null })}
+                        data-testid="library-member-free-seat"
+                      >
+                        {t('library.place.free', { seat: member.seat.label })}
+                      </UbButton>
+                    )}
+                  </>
                 )}
               </UbStack>
             )}
@@ -618,6 +663,20 @@ export function MemberDetailPageContent({ id }: Readonly<{ id: string }>): React
           busy={busy}
           onClose={() => setSeating(false)}
           onSubmit={detail.place}
+        />
+      )}
+      {collectingFees && (
+        <PaymentFormDrawerLazy
+          context={{
+            direction: 'in',
+            partyId: member.party.id,
+            partyName: member.party.name,
+            receivable: member.duesAmount,
+            bucket: 'library',
+            entry: 'party',
+          }}
+          onSaved={() => setPaymentHistoryRevision((value) => value + 1)}
+          onClose={() => setCollectingFees(false)}
         />
       )}
       {editingIdentity && (

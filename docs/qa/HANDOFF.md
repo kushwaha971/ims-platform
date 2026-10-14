@@ -16,9 +16,10 @@ F12, FB4, and DEC-019 (each app keeps its own money).
 
 **Next, in this order:**
 1. UX16/UX17/UX18: coordinated person-workspace, seat-management and rendering passes.
-   The Library partial-fee/payment-history and shared name/mobile editing
-   workflows are done. Continue with the visible fee overview/quick actions,
-   then the remaining Lending, Shop, supplier and Udhaar workflows. UX16 as a
+   The Library partial-fee/payment-history, shared name/mobile editing and
+   top fee overview/direct collection workflows are done. Continue with the
+   remaining Lending, Shop, supplier and Udhaar workflows and the Library
+   reminder/renewal/seat checks. UX16 as a
    whole, UX17 and the cross-module UX18 audit remain pending.
    Apply the owner's additional [One Person, One Workspace requirements](one-person-workspace.md)
    throughout these passes, and complete a dedicated UX16 pass across Library,
@@ -54,6 +55,31 @@ F12, FB4, and DEC-019 (each app keeps its own money).
 Update the "Done" list in this file in the same commit as each item.
 
 ## Verification since 13 Oct 2026
+
+- UX16 Library overview/direct collection and local UX18 read guards (14 Oct)
+  are done and pushed. Total fees/charges and paid fees now use the existing
+  authoritative charge totals near the student's fee due. The Collect fees
+  shortcut opens the existing payment drawer in place and respects payment
+  module/write permissions. No second charge read was added for the overview.
+  The page assertion and four delayed-response/reset cases failed first;
+  student and charge reads now ignore superseded responses and other students.
+  Live testing uncovered a separate API-boundary defect: PaymentWriteSerializer
+  discarded `bucket`, so automatic Library collection fell back to Shop while
+  explicit charge allocation had worked. Five API regressions failed first.
+  The serializer now passes the bucket to the existing service, which retains
+  ownership, validates values and allocates using its existing rules. Tests
+  cover partial fees, excess Library advances and invalid buckets alongside a
+  real Shop invoice and independent Udhaar balance. All 61 focused backend and
+  31 focused frontend tests pass. `e2e/student-workspace-look.mjs` passes at
+  1280/360: ₹900 total, ₹200 paid, ₹700 due, receipt history refreshed once,
+  name/mobile edits in place, no document reloads/overflow and other books
+  unchanged. Both overview screenshots were read. Types, changed-file lint,
+  locale split/check, build and bundle gates pass; only four exceeded Library
+  budget scalars use measured + 0.5 KB. Full frontend: 4,028 passed and the same
+  three landing failures. Full backend: 4,510 passed, 16 skipped, two documented
+  timing benchmarks deselected and the same existing vocabulary failure
+  (`library_plan_no_end` is absent from the Appendix A expectation). This checkpoint
+  does not complete the whole UX16/17/18 passes.
 
 - UX16 shared student identity editing (14 Oct) is done and pushed. The old
   membership drawer linked to the person's separate account page to change

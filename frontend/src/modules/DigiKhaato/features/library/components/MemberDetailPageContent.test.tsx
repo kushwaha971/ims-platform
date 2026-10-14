@@ -8,6 +8,7 @@ import type { PermissionCode } from 'src/types/domain.types';
 
 import * as payments from 'modules/DigiKhaato/features/payments/api/paymentService';
 
+import * as chargeService from '../api/libraryChargeService';
 import * as service from '../api/libraryMemberService';
 
 import { MemberDetailPageContent } from './MemberDetailPageContent';
@@ -26,6 +27,10 @@ jest.mock('../api/libraryMemberService', () => ({
   listMembershipTypes: jest.fn(),
   actOnMember: jest.fn(),
   placeMember: jest.fn(),
+}));
+jest.mock('../api/libraryChargeService', () => ({
+  ...jest.requireActual('../api/libraryChargeService'),
+  listMemberCharges: jest.fn(),
 }));
 jest.mock('next/navigation', () => ({
   useRouter: () => ({ push: jest.fn(), replace: jest.fn() }),
@@ -106,9 +111,38 @@ beforeEach(() => {
   jest.clearAllMocks();
   jest.mocked(service.getMember).mockResolvedValue(ASHA);
   jest.mocked(service.listMembershipTypes).mockResolvedValue([]);
+  jest
+    .mocked(chargeService.listMemberCharges)
+    .mockResolvedValue({
+      rows: [],
+      totals: { amount: '0.00', paid: '0.00', waived: '0.00', due: '0.00' },
+    });
 });
 
 describe('MemberDetailPageContent', () => {
+  it('shows authoritative total and collected fees in the overview with one charge read', async () => {
+    signIn(['library.member.read', 'payments.payment.write'], 'owner', true);
+    jest.mocked(service.getMember).mockResolvedValue({ ...ASHA, duesAmount: '700.00' });
+    jest
+      .mocked(chargeService.listMemberCharges)
+      .mockResolvedValue({
+        rows: [],
+        totals: { amount: '900.00', paid: '200.00', waived: '0.00', due: '700.00' },
+      });
+    renderWithProviders(<MemberDetailPageContent id="m1" />);
+    expect(await screen.findByTestId('library-member-fees-total')).toHaveTextContent('₹900.00');
+    expect(screen.getByTestId('library-member-fees-paid')).toHaveTextContent('₹200.00');
+    expect(screen.getByRole('button', { name: 'Collect fees' })).toBeInTheDocument();
+    expect(chargeService.listMemberCharges).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps the collection shortcut hidden without the payment module', async () => {
+    signIn(['library.member.read', 'payments.payment.write']);
+    renderWithProviders(<MemberDetailPageContent id="m1" />);
+    await screen.findByTestId('library-member-number');
+    expect(screen.queryByRole('button', { name: 'Collect fees' })).not.toBeInTheDocument();
+  });
+
   it('offers shared identity editing here to a manager with party write permission', async () => {
     signIn(['library.member.read', 'library.member.write', 'parties.party.write']);
     renderWithProviders(<MemberDetailPageContent id="m1" />);

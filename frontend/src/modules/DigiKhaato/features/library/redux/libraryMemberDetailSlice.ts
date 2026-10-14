@@ -31,6 +31,8 @@ export interface LibraryMemberDetailState {
   /** F06 — every charge of this member, newest first, and their totals. */
   charges: ChargeRow[] | null;
   chargeTotals: ChargeTotals | null;
+  memberRequestId: string | null;
+  chargesRequestId: string | null;
 }
 
 const initialState: LibraryMemberDetailState = {
@@ -42,9 +44,11 @@ const initialState: LibraryMemberDetailState = {
   staleUrgency: null,
   charges: null,
   chargeTotals: null,
+  memberRequestId: null,
+  chargesRequestId: null,
 };
 
-const libraryMemberDetailSlice = createSlice({
+export const libraryMemberDetailSlice = createSlice({
   name: 'libraryMemberDetail',
   initialState,
   reducers: {},
@@ -52,6 +56,9 @@ const libraryMemberDetailSlice = createSlice({
     acceptInvalidation<LibraryMemberDetailState>('libraryMemberDetail')(builder);
     builder
       .addCase(fetchLibraryMember.pending, (state, action) => {
+        state.memberRequestId = action.meta.requestId;
+        // Any earlier charges read predates this refresh (or belongs to another student).
+        state.chargesRequestId = null;
         const same = state.member?.membershipId === action.meta.arg;
         state.status = same ? 'refreshing' : 'loading';
         if (!same) {
@@ -62,13 +69,16 @@ const libraryMemberDetailSlice = createSlice({
         state.error = null;
       })
       .addCase(fetchLibraryMember.fulfilled, (state, action) => {
+        if (state.memberRequestId !== action.meta.requestId) return;
+        state.memberRequestId = null;
         state.member = action.payload as Draft<MemberDetail>;
         state.status = 'succeeded';
         state.stale = false;
         state.staleUrgency = null;
       })
       .addCase(fetchLibraryMember.rejected, (state, action) => {
-        if (action.meta.aborted) return;
+        if (action.meta.aborted || state.memberRequestId !== action.meta.requestId) return;
+        state.memberRequestId = null;
         state.status = 'failed';
         state.error = (action.payload ?? null) as Draft<ApiErrorShape> | null;
       })
@@ -98,9 +108,22 @@ const libraryMemberDetailSlice = createSlice({
       .addCase(editLibraryMember.rejected, (state) => {
         state.actionStatus = 'failed';
       })
+      .addCase(fetchMemberCharges.pending, (state, action) => {
+        if (state.member?.membershipId === action.meta.arg)
+          state.chargesRequestId = action.meta.requestId;
+      })
       .addCase(fetchMemberCharges.fulfilled, (state, action) => {
+        if (
+          state.chargesRequestId !== action.meta.requestId ||
+          state.member?.membershipId !== action.meta.arg
+        )
+          return;
+        state.chargesRequestId = null;
         state.charges = action.payload.rows as Draft<ChargeRow>[];
         state.chargeTotals = action.payload.totals as Draft<ChargeTotals>;
+      })
+      .addCase(fetchMemberCharges.rejected, (state, action) => {
+        if (state.chargesRequestId === action.meta.requestId) state.chargesRequestId = null;
       })
       .addCase(resetAllFeatureState, () => initialState);
   },
