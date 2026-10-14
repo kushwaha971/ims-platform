@@ -69,6 +69,23 @@ describe('toWireBody', () => {
 });
 
 describe('paymentListQuery', () => {
+  /** UX16: a student's history must query only that person and the Library book. */
+  it('keeps the person and book scope on an inline payment history request', () => {
+    const query = paymentListQuery({
+      preset: 'all',
+      dateFrom: '',
+      dateTo: '',
+      tab: 'all',
+      mode: null,
+      q: '',
+      page: 1,
+      partyId: 'student-1',
+      bucket: 'library',
+    });
+    expect(new URLSearchParams(query.replace(/^\?/, '')).get('party_id')).toBe('student-1');
+    expect(new URLSearchParams(query.replace(/^\?/, '')).get('bucket')).toBe('library');
+  });
+
   it('maps the tabs onto direction and status', () => {
     const base = {
       preset: 'thisMonth',

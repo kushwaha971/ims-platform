@@ -57,7 +57,12 @@ const owing = (charge: ChargeRow): boolean => Number(charge.amountDue) > 0 && !c
 export function MemberChargesSection({
   member,
   t,
-}: Readonly<{ member: MemberDetail; t: TranslateFn }>): React.JSX.Element | null {
+  onPaymentSaved,
+}: Readonly<{
+  member: MemberDetail;
+  t: TranslateFn;
+  onPaymentSaved?: () => void;
+}>): React.JSX.Element | null {
   const charges = useMemberCharges(member.membershipId);
   const { actionStatus } = useAppSelector(selectLibraryMemberDetail);
   const [waiving, setWaiving] = useState<ChargeRow | null>(null);
@@ -173,6 +178,7 @@ export function MemberChargesSection({
       )}
       {collecting && (
         <PaymentFormDrawerLazy
+          onSaved={onPaymentSaved}
           context={{
             direction: 'in',
             partyId: member.party.id,

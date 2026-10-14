@@ -16,6 +16,10 @@ F12, FB4, and DEC-019 (each app keeps its own money).
 
 **Next, in this order:**
 1. UX16/UX17/UX18: coordinated person-workspace, seat-management and rendering passes.
+   The Library partial-fee/payment-history workflow is done. Continue with
+   student information editing and the visible fee overview/quick actions,
+   then the remaining Lending, Shop, supplier and Udhaar workflows. UX16 as a
+   whole, UX17 and the cross-module UX18 audit remain pending.
    Apply the owner's additional [One Person, One Workspace requirements](one-person-workspace.md)
    throughout these passes, and complete a dedicated UX16 pass across Library,
    Lending, Shop customer/supplier and Udhaar book person pages before the
@@ -50,6 +54,23 @@ F12, FB4, and DEC-019 (each app keeps its own money).
 Update the "Done" list in this file in the same commit as each item.
 
 ## Verification since 13 Oct 2026
+
+- UX16 Library payment/history workflow (14 Oct) is done and pushed. A ₹200
+  partial fee already saved correctly, but its history required another page.
+  The browser regression, a page assertion and a scoped-query assertion failed
+  first. Actual receipts now appear on the student, queried by both person and
+  Library bucket, with a separate lazy Redux read and guards against stale
+  replies, student switches and feature reset. The existing payment drawer's
+  successful-save callback refreshes this history; financial rules are unchanged.
+  All 29 focused tests pass. `e2e/student-workspace-look.mjs` passes at 1280/360:
+  ₹200 received, ₹700 due, one history refresh, no document reload, and neither
+  the same person's Shop-only ₹333 receipt nor their Udhaar ₹777 opening balance
+  appears in the history. Both final screenshots were read after dismissing the
+  temporary success toast. Types, changed-file lint, locale split/check, build
+  and bundle checks pass; four exceeded Library route limits use measured +
+  0.5 KB. Full frontend: 4,015 passed and the same three landing failures.
+  Backend source is unchanged. This completes the Library payment/history
+  workflow, not the entire Library workspace or UX16/17/18 requirements.
 
 - B43 (14 Oct): B17's card layout already fits large quantities at 1280/360,
   but the 1536 table had only 42 px for a value needing about 65 px. The new

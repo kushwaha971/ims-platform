@@ -216,6 +216,8 @@ export const toWireBody = (values: PaymentFormValues): Record<string, unknown> =
 /** The list query for a set of filters — shared by the page and its tests. */
 export const paymentListQuery = (filters: PaymentFilters): string =>
   toQueryString({
+    party_id: filters.partyId || undefined,
+    bucket: filters.bucket,
     date_from: filters.dateFrom || undefined,
     date_to: filters.dateTo || undefined,
     direction: filters.tab === 'in' || filters.tab === 'out' ? filters.tab : undefined,

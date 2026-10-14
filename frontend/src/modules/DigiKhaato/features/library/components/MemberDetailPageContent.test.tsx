@@ -6,6 +6,8 @@ import { store } from 'src/redux/store';
 import { renderWithProviders } from 'src/tests/renderWithProviders';
 import type { PermissionCode } from 'src/types/domain.types';
 
+import * as payments from 'modules/DigiKhaato/features/payments/api/paymentService';
+
 import * as service from '../api/libraryMemberService';
 
 import { MemberDetailPageContent } from './MemberDetailPageContent';
@@ -29,6 +31,10 @@ jest.mock('next/navigation', () => ({
   useRouter: () => ({ push: jest.fn(), replace: jest.fn() }),
   usePathname: () => '/library/members/m1',
   useSearchParams: () => new URLSearchParams(),
+}));
+jest.mock('modules/DigiKhaato/features/payments/api/paymentService', () => ({
+  ...jest.requireActual('modules/DigiKhaato/features/payments/api/paymentService'),
+  listPayments: jest.fn(),
 }));
 
 const ASHA: MemberDetail = {
@@ -71,7 +77,11 @@ const ASHA: MemberDetail = {
 /* `role` defaults to the owner: editing, suspending, closing and re-admitting a
    student are the owner's or an admin's since 12 Oct 2026, so a session with
    no role sees none of them (`MemberEditDrawer.test.tsx` covers the roles). */
-const signIn = (permissions: PermissionCode[], role: string = 'owner'): void => {
+const signIn = (
+  permissions: PermissionCode[],
+  role: string = 'owner',
+  paymentsEnabled = false
+): void => {
   store.dispatch(
     sessionLoaded({
       user: {
@@ -86,7 +96,7 @@ const signIn = (permissions: PermissionCode[], role: string = 'owner'): void => 
       activeTenant: { id: 't1', name: 'Saraswati Library', timezone: 'Asia/Kolkata', role },
       tenants: [{ id: 't1', name: 'Saraswati Library', timezone: 'Asia/Kolkata' }],
       permissions,
-      enabledModules: ['library'],
+      enabledModules: paymentsEnabled ? ['library', 'payments'] : ['library'],
       version: 1,
     })
   );
@@ -99,6 +109,42 @@ beforeEach(() => {
 });
 
 describe('MemberDetailPageContent', () => {
+  /** UX16: a paid fee belongs on the student, never behind another person's page. */
+  it('shows the student’s scoped payment history on the same page', async () => {
+    jest.mocked(payments.listPayments).mockResolvedValue({
+      rows: [
+        {
+          id: 'pay1',
+          number: 'RCT/26-27/0001',
+          direction: 'in',
+          party: ASHA.party,
+          paymentDate: '2026-10-14',
+          amount: '200.00',
+          primaryMode: 'cash',
+          modesCount: 1,
+          reference: '',
+          status: 'recorded',
+          unallocatedAmount: '0.00',
+          allocatedAmount: '200.00',
+        },
+      ],
+      totals: { count: 1, countIn: 1, countOut: 0, amountIn: '200.00', amountOut: '0.00' },
+      page: 1,
+      pageSize: 25,
+      total: 1,
+    });
+    signIn(['library.member.read', 'payments.payment.read'], 'owner', true);
+    renderWithProviders(<MemberDetailPageContent id="m1" />);
+    const history = await screen.findByTestId('library-payment-history');
+    expect(await screen.findByText('RCT/26-27/0001')).toBeInTheDocument();
+    expect(history).toHaveTextContent('₹200.00');
+    expect(payments.listPayments).toHaveBeenCalledWith(
+      expect.objectContaining({ partyId: 'p1', bucket: 'library' }),
+      expect.anything()
+    );
+    expect(screen.queryByRole('link', { name: 'All payments' })).not.toBeInTheDocument();
+  });
+
   it('shows the number, the status and the block with its amounts grouped', async () => {
     signIn(['library.member.read', 'library.member.write', 'library.member.close']);
     renderWithProviders(<MemberDetailPageContent id="m1" />);

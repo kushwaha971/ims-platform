@@ -1,5 +1,6 @@
 {
  "//": [
+    "2026-10-14 UX16 student payment history: a lazy, scoped receipt read and its Library query metadata. Only four exceeded Library route limits use measured + 0.5 KB; the shared first-load baseline is unchanged.",
     "2026-10-14 B42: import kinds remember their owning app on shared deep links. Only two exceeded limits use measured + 0.5 KB: /parties/tags first load 301.0 and /imports/[id] route 50.6; existing history synchronization is reused.",
     "2026-10-14 B41: new shared Month/Year labels slightly raise first load. Only the exceeded /_not-found limit is raised from 239 to measured 239.0 + 0.5 KB; the calendar remains lazy.",
     "2026-10-14 B38: dated stock explanations in the editor and issue warning. Five exceeded limits use measured + 0.5 KB; about 0.2 KB of shared display logic/copy.",
@@ -1649,7 +1650,7 @@
    "firstLoad": 300.6
   },
   "/library/catalogue": {
-   "route": 77.1,
+   "route": 77.6,
    "firstLoad": 316.5
   },
   "/library/copies": {
@@ -1673,7 +1674,7 @@
    "firstLoad": 316.4
   },
   "/library/catalogue/[titleId]": {
-   "route": 67.1,
+   "route": 67.7,
    "firstLoad": 306.4
   },
   "/library/catalogue/categories": {
@@ -1689,7 +1690,7 @@
    "firstLoad": 315.9
   },
   "/library/seats": {
-   "route": 71.8,
+   "route": 72.3,
    "firstLoad": 311.0
   },
   "/library/fees": {
@@ -1737,7 +1738,7 @@
    "firstLoad": 239.5
   },
   "/library": {
-   "route": 73.2,
+   "route": 73.7,
    "firstLoad": 312.6
   },
   "/library/attendance": {

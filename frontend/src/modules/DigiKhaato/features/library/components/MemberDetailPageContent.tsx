@@ -25,7 +25,6 @@ import {
   UbCard,
   UbEmptyState,
   UbInfoRow,
-  UbLink,
   UbPageHeader,
   UbPageShell,
   UbPageSkeleton,
@@ -74,6 +73,10 @@ const MemberActionDialogLazy = dynamic(
 const MessageDialogLazy = dynamic(() => import('./MessageDialog').then((m) => m.MessageDialog), {
   ssr: false,
 });
+const MemberPaymentHistoryLazy = dynamic(
+  () => import('./MemberPaymentHistory').then((m) => m.MemberPaymentHistory),
+  { ssr: false }
+);
 /* Shop P0 — the student's UPI QR for the fee, with Share and Copy link. */
 const UpiPayQrDialogLazy = dynamic(
   () => import('../../payments/pay-link/components/UpiPayQrDialog').then((m) => m.UpiPayQrDialog),
@@ -109,6 +112,7 @@ export function MemberDetailPageContent({ id }: Readonly<{ id: string }>): React
   const [messaging, setMessaging] = useState<MessageKind | null>(null);
   // Bumped when a message dialog closes, so the log shows a send at once.
   const [messageLogKey, setMessageLogKey] = useState(0);
+  const [paymentHistoryRevision, setPaymentHistoryRevision] = useState(0);
   const [showingQr, setShowingQr] = useState(false);
   const { member } = detail;
 
@@ -362,7 +366,6 @@ export function MemberDetailPageContent({ id }: Readonly<{ id: string }>): React
               label={t(`library.member.status.${member.effectiveStatus}`)}
             />
           )}
-          <UbLink href={`${ROUTES.PARTIES}/${member.party.id}`}>{t('library.member.khata')}</UbLink>
         </UbStack>
 
         {closed && (
@@ -532,7 +535,16 @@ export function MemberDetailPageContent({ id }: Readonly<{ id: string }>): React
           t={t}
         />
 
-        <MemberChargesSection member={member} t={t} />
+        <MemberChargesSection
+          member={member}
+          t={t}
+          onPaymentSaved={() => setPaymentHistoryRevision((current) => current + 1)}
+        />
+        <MemberPaymentHistoryLazy
+          membershipId={member.membershipId}
+          partyId={member.party.id}
+          revision={paymentHistoryRevision}
+        />
 
         <MemberMessageLog membershipId={member.membershipId} refreshKey={messageLogKey} t={t} />
 
