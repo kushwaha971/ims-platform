@@ -55,12 +55,16 @@ export function CollectDialog({
   number,
   suggested,
   onClose,
+  loanSelector,
+  onSaved,
 }: Readonly<{
   loanId: string;
   name: string;
   number: string;
   suggested: string;
   onClose: () => void;
+  loanSelector?: React.ReactNode;
+  onSaved?: () => void;
 }>): React.JSX.Element {
   const { t } = useTranslation();
   const dispatch = useAppDispatch();
@@ -128,6 +132,7 @@ export function CollectDialog({
           },
         })
       );
+      onSaved?.();
       onClose();
     } else if (result.payload) {
       form.setError('amount', { message: result.payload.message });
@@ -158,9 +163,12 @@ export function CollectDialog({
       }
     >
       <UbForm id={formId} form={form} onSubmit={save}>
-        <UbText variant="caption" tone="tertiary">
-          {number}
-        </UbText>
+        {loanSelector}
+        {!loanSelector && (
+          <UbText variant="caption" tone="tertiary">
+            {number}
+          </UbText>
+        )}
         <UbField
           name="amount"
           label={t('lending.collect.amount')}

@@ -26,6 +26,7 @@ import {
   UbPageHeader,
   UbPageShell,
   UbPageSkeleton,
+  UbSectionHeading,
   UbStack,
   UbStatusBadge,
   UbStatusBanner,
@@ -54,6 +55,10 @@ import {
 
 import type { LendingMessageKind, LoanDue } from '../types/lending.types';
 import type { LoanPaper } from './print/LoanPapersPrint';
+
+// This workspace also opens lazily on the borrower, independently of its route.
+import 'src/i18n/catalogues/lending';
+import 'src/i18n/catalogues/payLink';
 
 const CollectDialogLazy = dynamic(() => import('./CollectDialog').then((m) => m.CollectDialog), {
   ssr: false,
@@ -98,7 +103,11 @@ const DUE_TONE: Readonly<Record<string, 'success' | 'warning' | 'error' | 'neutr
  * what is late, what is left, the instalments with what each has taken, every
  * collection with its mode and note, and the visits.
  */
-export function LoanPageContent({ id }: Readonly<{ id: string }>): React.JSX.Element {
+export function LoanPageContent({
+  id,
+  embedded = false,
+}: Readonly<{ id: string; embedded?: boolean }>): React.JSX.Element {
+  const Container = embedded ? UbStack : UbPageShell;
   const { t } = useTranslation();
   const dispatch = useAppDispatch();
   const state = useAppSelector(selectLendingLoans);
@@ -136,28 +145,24 @@ export function LoanPageContent({ id }: Readonly<{ id: string }>): React.JSX.Ele
     if (!canRead) return undefined;
     const promise = dispatch(fetchLendingLoan(id));
     return () => promise.abort();
-  }, [canRead, dispatch, id]);
-  const staleNow = state.stale && state.staleUrgency === 'now';
-  useEffect(() => {
-    if (canRead && staleNow) void dispatch(fetchLendingLoan(id));
-  }, [canRead, staleNow, dispatch, id]);
+  }, [canRead, dispatch, id, state.staleSeq]);
 
   if (!canRead) {
     return (
-      <UbPageShell>
+      <Container>
         <UbEmptyState
           variant="firstUse"
           title={t('lending.noAccess.title')}
           description={t('lending.noAccess.body')}
         />
-      </UbPageShell>
+      </Container>
     );
   }
   const loan = state.loan?.id === id ? state.loan : null;
   if (!loan) {
     if (state.status === 'failed') {
       return (
-        <UbPageShell>
+        <Container>
           <UbEmptyState
             variant="firstUse"
             title={t('lending.loan.notFound')}
@@ -167,7 +172,7 @@ export function LoanPageContent({ id }: Readonly<{ id: string }>): React.JSX.Ele
               </UbActionLink>
             }
           />
-        </UbPageShell>
+        </Container>
       );
     }
     return <UbPageSkeleton variant="card" />;
@@ -195,28 +200,31 @@ export function LoanPageContent({ id }: Readonly<{ id: string }>): React.JSX.Ele
           plan: t(`lending.plan.${loan.planType}`),
         });
 
+  const collectionAction =
+    active && canCollect ? (
+      <UbButton
+        onClick={() => setCollecting(true)}
+        data-testid="lending-loan-collect"
+        icon={<HandCoins className="h-4 w-4" aria-hidden />}
+        iconOnly="mobile"
+      >
+        {t('lending.collect.button', {
+          amount: formatInr(isNonZero(asked) ? asked : loan.instalmentAmount),
+        })}
+      </UbButton>
+    ) : undefined;
+
   return (
-    <UbPageShell>
-      <UbPageHeader
-        className="ub-print-hide"
-        title={loan.borrower.name}
-        actions={
-          active && canCollect ? (
-            // One Collect, with its amount, in the header (the owner's one-row
-            // header rule); the card used to carry a second one (L02 QA).
-            <UbButton
-              onClick={() => setCollecting(true)}
-              data-testid="lending-loan-collect"
-              icon={<HandCoins className="h-4 w-4" aria-hidden />}
-              iconOnly="mobile"
-            >
-              {t('lending.collect.button', {
-                amount: formatInr(isNonZero(asked) ? asked : loan.instalmentAmount),
-              })}
-            </UbButton>
-          ) : undefined
-        }
-      />
+    <Container className={embedded ? 'flex flex-col gap-4' : undefined}>
+      {embedded ? (
+        <UbSectionHeading title={loan.number} aside={collectionAction} className="ub-print-hide" />
+      ) : (
+        <UbPageHeader
+          className="ub-print-hide"
+          title={loan.borrower.name}
+          actions={collectionAction}
+        />
+      )}
       <UbStack gap={4} data-testid="lending-loan" className="ub-print-hide">
         {(loan.status === 'written_off' || loan.status === 'cancelled') && (
           <UbStatusBanner
@@ -243,9 +251,13 @@ export function LoanPageContent({ id }: Readonly<{ id: string }>): React.JSX.Ele
               label={t(`lending.status.${loan.status}`)}
             />
           )}
-          <UbLink href={`${ROUTES.PARTIES}/${loan.borrower.partyId}`}>
-            {t('lending.loan.ledger')}
-          </UbLink>
+          {!embedded && (
+            <UbLink
+              href={`${ROUTES.LENDING_LOANS}?borrower=${encodeURIComponent(loan.borrower.id)}`}
+            >
+              {t('lending.loan.ledger')}
+            </UbLink>
+          )}
         </UbStack>
 
         <UbCard padded>
@@ -645,6 +657,6 @@ export function LoanPageContent({ id }: Readonly<{ id: string }>): React.JSX.Ele
           onClose={() => setVisiting(false)}
         />
       )}
-    </UbPageShell>
+    </Container>
   );
 }

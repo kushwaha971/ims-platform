@@ -16,6 +16,7 @@ import {
   UbForm,
   UbListItemText,
   UbMoneyInput,
+  UbSelect,
   UbStack,
   UbText,
   UbTextInput,
@@ -36,10 +37,18 @@ import {
   type BorrowerSplitLoan,
   type CollectFormValues,
   type LendingPaymentMode,
+  type LoanRow,
 } from '../types/lending.types';
 import { useLendingSchemas } from '../validation/lendingSchemas';
 import { splitFromRefusal } from '../view-model/borrowerSplit';
 import { isNonZero } from '../view-model/lendingDisplay';
+
+import { CollectDialog } from './CollectDialog';
+
+type CollectionLoan = Pick<
+  LoanRow,
+  'id' | 'number' | 'status' | 'remaining' | 'instalmentAmount' | 'dueToday' | 'arrears'
+>;
 
 // Loaded with dynamic(), so its words come with its own chunk.
 import 'src/i18n/catalogues/lending';
@@ -79,7 +88,15 @@ export function CollectFromBorrowerDialog({
   borrowerId,
   name,
   onClose,
-}: Readonly<{ borrowerId: string; name: string; onClose: () => void }>): React.JSX.Element {
+  loans = [],
+  onLoanSaved,
+}: Readonly<{
+  borrowerId: string;
+  name: string;
+  onClose: () => void;
+  loans?: readonly CollectionLoan[];
+  onLoanSaved?: (loanId: string) => void;
+}>): React.JSX.Element {
   const { t } = useTranslation();
   const dispatch = useAppDispatch();
   const formId = useId();
@@ -97,9 +114,10 @@ export function CollectFromBorrowerDialog({
   const [split, setSplit] = useState<BorrowerSplit | null>(null);
   const [refusal, setRefusal] = useState('');
   const [changed, setChanged] = useState(false);
+  const [selectedLoan, setSelectedLoan] = useState<CollectionLoan | null>(null);
 
   useEffect(() => {
-    if (!amount || !(Number(amount) > 0)) return undefined;
+    if (selectedLoan || !amount || !(Number(amount) > 0)) return undefined;
     let request: { abort: () => void } | null = null;
     let live = true;
     const id = window.setTimeout(() => {
@@ -121,7 +139,7 @@ export function CollectFromBorrowerDialog({
       window.clearTimeout(id);
       request?.abort();
     };
-  }, [amount, dispatch, borrowerId]);
+  }, [amount, dispatch, borrowerId, selectedLoan]);
 
   // The split on screen must be the split of the amount in the box.
   const current =
@@ -157,6 +175,49 @@ export function CollectFromBorrowerDialog({
     }
   };
 
+  const loanSelector = (
+    <UbStack gap={1}>
+      <UbText variant="label">{t('lending.collectFrom.chooseLoan')}</UbText>
+      <UbSelect
+        aria-label={t('lending.collectFrom.chooseLoan')}
+        value={selectedLoan?.id ?? 'all'}
+        disabled={saving}
+        onChange={(id) =>
+          setSelectedLoan(
+            id === 'all' ? null : (loans.find((loan) => loan.id === id) ?? selectedLoan)
+          )
+        }
+        options={[
+          { value: 'all', label: t('lending.collectFrom.allLoans') },
+          ...loans
+            .filter((loan) => loan.status === 'active' && isNonZero(loan.remaining))
+            .map((loan) => ({
+              value: loan.id,
+              label: t('lending.collectFrom.loanOption', {
+                number: loan.number,
+                left: formatInr(loan.remaining),
+              }),
+            })),
+        ]}
+      />
+    </UbStack>
+  );
+  if (selectedLoan) {
+    const due = (Number(selectedLoan.dueToday) + Number(selectedLoan.arrears)).toFixed(2);
+    return (
+      <CollectDialog
+        key={selectedLoan.id}
+        loanId={selectedLoan.id}
+        name={name}
+        number={selectedLoan.number}
+        suggested={isNonZero(due) ? due : selectedLoan.instalmentAmount}
+        loanSelector={loanSelector}
+        onSaved={() => onLoanSaved?.(selectedLoan.id)}
+        onClose={onClose}
+      />
+    );
+  }
+
   return (
     <UbDialog
       open
@@ -183,6 +244,7 @@ export function CollectFromBorrowerDialog({
       }
     >
       <UbForm id={formId} form={form} onSubmit={save}>
+        {loanSelector}
         <UbText variant="body-sm" tone="secondary">
           {t('lending.collectFrom.hint', { name })}
         </UbText>

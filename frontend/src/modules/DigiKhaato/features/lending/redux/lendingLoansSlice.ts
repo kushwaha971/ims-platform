@@ -1,7 +1,7 @@
 import { createSlice, type Draft, type WithSlice } from '@reduxjs/toolkit';
 
 import { resetAllFeatureState } from 'src/redux/actions';
-import { acceptInvalidation } from 'src/redux/invalidation/listener';
+import { acceptInvalidation, takeReadSeq } from 'src/redux/invalidation/listener';
 import { rootReducer, type RootState } from 'src/redux/store';
 import type { ApiErrorShape, RequestStatus } from 'src/types/api.types';
 
@@ -22,6 +22,11 @@ export interface LendingLoansState {
   /** The server's: whether the business has any loan, whatever the filter. */
   hasLoans: boolean;
   listStatus: RequestStatus;
+  listBorrowerId: string | null;
+  listRequestId: string | null;
+  loanRequestId: string | null;
+  staleSeq: number;
+  readSeq: Record<string, number>;
   loan: LoanDetail | null;
   collections: CollectionRow[];
   visits: VisitRow[];
@@ -37,6 +42,11 @@ const initialState: LendingLoansState = {
   total: 0,
   hasLoans: true,
   listStatus: 'idle',
+  listBorrowerId: null,
+  listRequestId: null,
+  loanRequestId: null,
+  staleSeq: 0,
+  readSeq: {},
   loan: null,
   collections: [],
   visits: [],
@@ -47,17 +57,28 @@ const initialState: LendingLoansState = {
   staleUrgency: null,
 };
 
-const lendingLoansSlice = createSlice({
+export const lendingLoansSlice = createSlice({
   name: 'lendingLoans',
   initialState,
   reducers: {},
   extraReducers: (builder) => {
     acceptInvalidation<LendingLoansState>('lendingLoans')(builder);
     builder
-      .addCase(fetchLendingLoans.pending, (state) => {
+      .addCase(fetchLendingLoans.pending, (state, action) => {
+        const borrowerId = action.meta.arg.borrower ?? '';
+        if (state.listBorrowerId !== borrowerId) {
+          state.rows = [];
+          state.total = 0;
+        }
+        state.listBorrowerId = borrowerId;
+        state.listRequestId = action.meta.requestId;
+        state.readSeq[action.meta.requestId] = state.staleSeq;
         state.listStatus = state.rows.length ? 'refreshing' : 'loading';
       })
       .addCase(fetchLendingLoans.fulfilled, (state, action) => {
+        const readSeq = takeReadSeq(state.readSeq, action.meta.requestId);
+        if (state.listRequestId !== action.meta.requestId || readSeq !== state.staleSeq) return;
+        state.listRequestId = null;
         state.rows = action.payload.rows as Draft<LoanRow>[];
         state.total = action.payload.total;
         state.hasLoans = action.payload.hasLoans;
@@ -66,15 +87,27 @@ const lendingLoansSlice = createSlice({
         state.staleUrgency = null;
       })
       .addCase(fetchLendingLoans.rejected, (state, action) => {
-        if (action.meta.aborted) return;
+        const readSeq = takeReadSeq(state.readSeq, action.meta.requestId);
+        if (
+          action.meta.aborted ||
+          state.listRequestId !== action.meta.requestId ||
+          readSeq !== state.staleSeq
+        )
+          return;
+        state.listRequestId = null;
         state.listStatus = 'failed';
         state.error = (action.payload ?? null) as Draft<ApiErrorShape> | null;
       })
       .addCase(fetchLendingLoan.pending, (state, action) => {
+        state.loanRequestId = action.meta.requestId;
+        state.readSeq[action.meta.requestId] = state.staleSeq;
         state.status = state.loan?.id === action.meta.arg ? 'refreshing' : 'loading';
         if (state.loan?.id !== action.meta.arg) state.loan = null;
       })
       .addCase(fetchLendingLoan.fulfilled, (state, action) => {
+        const readSeq = takeReadSeq(state.readSeq, action.meta.requestId);
+        if (state.loanRequestId !== action.meta.requestId || readSeq !== state.staleSeq) return;
+        state.loanRequestId = null;
         state.loan = action.payload.loan as Draft<LoanDetail>;
         state.collections = action.payload.collections as Draft<CollectionRow>[];
         state.visits = action.payload.visits as Draft<VisitRow>[];
@@ -84,7 +117,14 @@ const lendingLoansSlice = createSlice({
         state.staleUrgency = null;
       })
       .addCase(fetchLendingLoan.rejected, (state, action) => {
-        if (action.meta.aborted) return;
+        const readSeq = takeReadSeq(state.readSeq, action.meta.requestId);
+        if (
+          action.meta.aborted ||
+          state.loanRequestId !== action.meta.requestId ||
+          readSeq !== state.staleSeq
+        )
+          return;
+        state.loanRequestId = null;
         state.status = 'failed';
         state.error = (action.payload ?? null) as Draft<ApiErrorShape> | null;
       })

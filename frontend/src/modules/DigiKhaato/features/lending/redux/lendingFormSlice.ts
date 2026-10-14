@@ -31,6 +31,7 @@ export interface LendingFormState {
   borrowerTotals: { left: string; late: string } | null;
   /** The borrower whose loans are being listed (`/lending/loans?borrower=`). */
   borrower: BorrowerRow | null;
+  borrowerRequestId: string | null;
   saving: boolean;
   stale: boolean;
   staleUrgency: 'now' | 'next-mount' | null;
@@ -44,6 +45,7 @@ const initialState: LendingFormState = {
   borrowersStatus: 'idle',
   borrowerTotals: null,
   borrower: null,
+  borrowerRequestId: null,
   saving: false,
   stale: false,
   staleUrgency: null,
@@ -69,7 +71,7 @@ const replaceBorrower = (state: Draft<LendingFormState>, next: BorrowerRow): voi
   }
 };
 
-const lendingFormSlice = createSlice({
+export const lendingFormSlice = createSlice({
   name: 'lendingForm',
   initialState,
   reducers: {},
@@ -104,13 +106,18 @@ const lendingFormSlice = createSlice({
       })
       // Somebody else's figures are never shown over a new name: cleared while
       // the next person's are read, and on a failure.
-      .addCase(fetchLendingBorrower.pending, (state) => {
-        state.borrower = null;
+      .addCase(fetchLendingBorrower.pending, (state, action) => {
+        state.borrowerRequestId = action.meta.requestId;
+        if (state.borrower?.id !== action.meta.arg) state.borrower = null;
       })
       .addCase(fetchLendingBorrower.fulfilled, (state, action) => {
+        if (state.borrowerRequestId !== action.meta.requestId) return;
+        state.borrowerRequestId = null;
         state.borrower = action.payload as Draft<BorrowerRow>;
       })
-      .addCase(fetchLendingBorrower.rejected, (state) => {
+      .addCase(fetchLendingBorrower.rejected, (state, action) => {
+        if (action.meta.aborted || state.borrowerRequestId !== action.meta.requestId) return;
+        state.borrowerRequestId = null;
         state.borrower = null;
       })
       .addCase(createLendingLoan.pending, (state) => {

@@ -18,8 +18,10 @@ F12, FB4, and DEC-019 (each app keeps its own money).
 1. UX16/UX17/UX18: coordinated person-workspace, seat-management and rendering passes.
    The Library partial-fee/payment-history, shared name/mobile editing and
    top fee overview/direct collection workflows are done. Continue with the
-   remaining Lending, Shop, supplier and Udhaar workflows and the Library
-   reminder/renewal/seat checks. UX16 as a
+   remaining Lending new-loan/reminder work, Shop, supplier and Udhaar
+   workflows and the Library reminder/renewal/seat checks. The Lending
+   choose-loan → yesterday's repayment → updated balance/schedule/history
+   workflow is also done. UX16 as a
    whole, UX17 and the cross-module UX18 audit remain pending.
    Apply the owner's additional [One Person, One Workspace requirements](one-person-workspace.md)
    throughout these passes, and complete a dedicated UX16 pass across Library,
@@ -55,6 +57,41 @@ F12, FB4, and DEC-019 (each app keeps its own money).
 Update the "Done" list in this file in the same commit as each item.
 
 ## Verification since 13 Oct 2026
+
+- UX16 selected-loan collection and inline borrower history, with local UX18
+  read guards (14 Oct), are done and pushed. The borrower dialog previously
+  offered only the existing automatic split; inspecting a schedule navigated
+  to another page. Both widths reproduced those gaps. The dialog now offers
+  All running loans or an individual loan, reusing the existing collection
+  flows. Borrower reads include later API pages, so the chooser does not omit
+  later loans. Saving one loan opens its existing schedule/collection workspace
+  inline, with one page heading; the standalone Account link now returns to
+  the borrower workspace rather than the independent Udhaar book.
+  Fail-first tests cover selection, pagination, inline presentation, stale
+  borrower/list/detail replies, reset, duplicate initial/stale reads and
+  pre-write responses. The existing invalidation sequence and `takeReadSeq`
+  now drive one read per affected view; same-person refreshes retain the
+  summary instead of blanking it. All 52 focused tests pass.
+  Live testing also found that replacing a grouped suggested ₹1,680 could
+  append the new text and silently retain the old amount after decimal
+  truncation. The shared money input now waits for native focus/selection to
+  finish, commits raw display synchronously and preserves the selected digits.
+  A selection test and the actual browser amount assertion failed first;
+  typing `120` now submits exactly ₹120.00. No financial calculation changed.
+  `e2e/borrower-workspace-look.mjs --print` passes at 1280/360: yesterday's ₹120
+  goes only to the second loan, leaving the first at ₹1,200 and the second at
+  ₹2,280, with the updated schedule and receipt on the borrower URL. It asserts
+  one list, one borrower and one selected-loan read, no document navigation,
+  no overflow and one page heading. Receipt printing excludes the surrounding
+  workspace. All five final screenshots were read. Screenshot/locale review
+  caught and fixed the reused component's missing UPI QR catalogue; its visible
+  label is now asserted. The Library payment/identity regression also passes
+  at both widths and its four screenshots were read. Types, changed-file lint,
+  locale split/check, build and bundle gates pass; only 19 exceeded budget
+  scalars use measured + 0.5 KB. Full frontend: 4,038 passed and the same three
+  landing failures. Backend is unchanged since the preceding 4,510-pass gate.
+  The environment transition preserved the work; interrupted frontend checks
+  were rerun to completion. UX16/17/18 as whole passes remain pending.
 
 - UX16 Library overview/direct collection and local UX18 read guards (14 Oct)
   are done and pushed. Total fees/charges and paid fees now use the existing

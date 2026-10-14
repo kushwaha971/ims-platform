@@ -70,6 +70,18 @@ describe('the value never becomes a number', () => {
 });
 
 describe('what the merchant sees while typing', () => {
+  it('keeps a selection over the same digits when focus removes grouping', async () => {
+    render(<Harness onValue={jest.fn()} initial="1680.00" />);
+    const field = screen.getByLabelText<HTMLInputElement>('Amount');
+    await act(async () => {
+      field.setSelectionRange(2, 5);
+      field.focus();
+    });
+    expect(field).toHaveValue('1680.00');
+    expect(field.selectionStart).toBe(1);
+    expect(field.selectionEnd).toBe(4);
+  });
+
   it('shows what was typed while focused and groups it on the way out', async () => {
     const user = userEvent.setup();
     const onValue = jest.fn();
@@ -124,7 +136,7 @@ describe('what the merchant sees while typing', () => {
     const user = userEvent.setup();
     render(<Prefill />);
     const field = screen.getByLabelText('Amount');
-    act(() => field.focus());
+    await act(async () => field.focus());
     act(() => screen.getByRole('button', { name: 'Prefill' }).click());
     expect(field).toHaveFocus();
     expect(field).toHaveValue('2300.00');

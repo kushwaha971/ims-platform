@@ -59,7 +59,17 @@ export const fetchLendingLoans = createAsyncThunk<
   Reject
 >('lendingLoans/fetch', async (params, { signal, rejectWithValue }) => {
   try {
-    return await (await service()).listLoans(params, signal);
+    const api = await service();
+    const first = await api.listLoans(params, signal);
+    // The borrower workspace lists every loan, so its collection chooser can
+    // reach loans beyond the first API page without leaving the person.
+    if (!params.borrower || params.status !== 'all' || params.q || params.page) return first;
+    const rows = [...first.rows];
+    for (let page = first.page + 1; page <= first.totalPages; page++) {
+      const next = await api.listLoans({ ...params, page: String(page) }, signal);
+      rows.push(...next.rows);
+    }
+    return { ...first, rows: [...new Map(rows.map((row) => [row.id, row])).values()] };
   } catch (error) {
     return rejectWithValue(toApiError(error, 'lending.loans.error'));
   }

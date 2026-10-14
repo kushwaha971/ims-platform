@@ -1,6 +1,8 @@
 'use client';
 
-import { forwardRef, memo, useCallback, useState, type InputHTMLAttributes } from 'react';
+import { forwardRef, memo, useCallback, useRef, useState, type InputHTMLAttributes } from 'react';
+
+import { flushSync } from 'react-dom';
 
 import { MLInput } from 'src/design-system/primitives';
 import { cn } from 'src/utils/cn';
@@ -25,13 +27,12 @@ import { cn } from 'src/utils/cn';
  * focus, like the amount owed prefilled into an autofocused drawer — and
  * groups it when focus leaves.
  *
- * The swap to raw text happens IN the focus handler, on the DOM, before
- * anything else can select (QA S-D2). Done by a re-render instead, it landed
- * after the selection a tab-in, select-all-then-type, paste-over or
- * Playwright's `fill` had just made, collapsed it to the end, and "500" was
- * appended: "1392.00500". A selection covering the whole grouped text is
- * carried over to the whole raw text; React then renders the same string and
- * leaves the selection alone. Every edit is parsed from what was shown (commas
+ * Native select() can focus before it establishes its selection. The focus
+ * handler waits one microtask for that call, commits the raw render
+ * synchronously, then maps the selection to the same digits without commas.
+ * A later render must not collapse a fresh select-all and append replacement
+ * text to the old amount (QA S-D2; UX16 browser regression). Blur cancels a
+ * pending focus transition. Every edit is parsed from what was shown (commas
  * and ₹ dropped) and truncated to the caller's decimal places.
  *
  * ── What it accepts ─────────────────────────────────────────────────────────
@@ -141,6 +142,7 @@ const UbMoneyInputInner = forwardRef<HTMLInputElement, UbMoneyInputProps>(
     ref
   ) {
     const [focused, setFocused] = useState(false);
+    const focusRequest = useRef(0);
 
     const handleChange = useCallback(
       (event: React.ChangeEvent<HTMLInputElement>) =>
@@ -173,18 +175,34 @@ const UbMoneyInputInner = forwardRef<HTMLInputElement, UbMoneyInputProps>(
           onFocus={(event) => {
             const input = event.currentTarget;
             const raw = value ?? '';
+            const request = ++focusRequest.current;
             if (input.value !== raw) {
-              const all =
-                input.value.length > 0 &&
-                input.selectionStart === 0 &&
-                input.selectionEnd === input.value.length;
-              input.value = raw;
-              if (all) input.setSelectionRange(0, raw.length);
-            }
-            setFocused(true);
+              // Native select() may focus the field before it establishes its
+              // range. Wait for that call to finish, then commit the raw render
+              // and restore the same digits before the next input event.
+              queueMicrotask(() => {
+                if (
+                  request !== focusRequest.current ||
+                  !input.isConnected ||
+                  input.ownerDocument.activeElement !== input
+                )
+                  return;
+                const shown = input.value;
+                const rawOffset = (offset: number | null) =>
+                  shown.slice(0, offset ?? shown.length).replace(/,/g, '').length;
+                const start = rawOffset(input.selectionStart);
+                const end = rawOffset(input.selectionEnd);
+                flushSync(() => setFocused(true));
+                input.setSelectionRange(
+                  Math.min(start, input.value.length),
+                  Math.min(end, input.value.length)
+                );
+              });
+            } else setFocused(true);
             onFocus?.(event);
           }}
           onBlur={(event) => {
+            focusRequest.current += 1;
             setFocused(false);
             // Committed to the caller's precision on the way out, so the form
             // holds "2300.00" rather than "2300." or "2300".

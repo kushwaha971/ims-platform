@@ -49,6 +49,10 @@ const CollectFromBorrowerDialogLazy = dynamic(
   () => import('./CollectFromBorrowerDialog').then((m) => m.CollectFromBorrowerDialog),
   { ssr: false }
 );
+const LoanWorkspaceLazy = dynamic(
+  () => import('./LoanPageContent').then((m) => m.LoanPageContent),
+  { ssr: false }
+);
 
 /* Owner, 12 Oct 2026 — the borrower's ⋯: edit, block, unblock. Each loads
    with the tap that opens it; the page a lender reads at the door carries none
@@ -97,9 +101,12 @@ export function LoansPageContent(): React.JSX.Element {
   const isManager = useIsOwnerOrAdmin();
   const canManage = hasModule('lending') && can('lending.borrower.write') && isManager;
   const [collecting, setCollecting] = useState(false);
+  const [selectedLoan, setSelectedLoan] = useState<string | null>(null);
   const [act, setAct] = useState<BorrowerAct | null>(null);
   const menuRef = useRef<HTMLButtonElement>(null);
   const borrowerId = useSearchParams().get('borrower') ?? '';
+  const matchingList = state.listBorrowerId === borrowerId;
+  const rows = matchingList ? state.rows : [];
   const { borrower } = useAppSelector(selectLendingForm);
   const person = borrowerId && borrower?.id === borrowerId ? borrower : null;
   // A blocked borrower is given no NEW loan; their running loans are collected as before.
@@ -111,23 +118,19 @@ export function LoansPageContent(): React.JSX.Element {
   useEffect(() => {
     if (!canRead) return undefined;
     const promise = dispatch(
-      fetchLendingLoans({ status, q: q || undefined, borrower: borrowerId || undefined })
+      fetchLendingLoans({
+        status: borrowerId ? 'all' : status,
+        q: q || undefined,
+        borrower: borrowerId || undefined,
+      })
     );
     return () => promise.abort();
-  }, [canRead, dispatch, status, q, borrowerId]);
+  }, [canRead, dispatch, status, q, borrowerId, state.staleSeq]);
   useEffect(() => {
     if (!canRead || !borrowerId) return undefined;
     const promise = dispatch(fetchLendingBorrower(borrowerId));
     return () => promise.abort();
-  }, [canRead, dispatch, borrowerId]);
-  const staleNow = state.stale && state.staleUrgency === 'now';
-  useEffect(() => {
-    if (!canRead || !staleNow) return;
-    void dispatch(
-      fetchLendingLoans({ status, q: q || undefined, borrower: borrowerId || undefined })
-    );
-    if (borrowerId) void dispatch(fetchLendingBorrower(borrowerId));
-  }, [canRead, staleNow, dispatch, status, q, borrowerId]);
+  }, [canRead, dispatch, borrowerId, state.staleSeq]);
 
   if (!canRead) {
     return (
@@ -144,6 +147,7 @@ export function LoansPageContent(): React.JSX.Element {
   return (
     <UbPageShell>
       <UbPageHeader
+        className="ub-print-hide"
         title={person ? person.name : t('lending.loans.title')}
         actions={
           canLend || (person && canManage) ? (
@@ -176,7 +180,7 @@ export function LoansPageContent(): React.JSX.Element {
           ) : undefined
         }
       />
-      <UbStack gap={4} data-testid="lending-loans">
+      <UbStack gap={4} data-testid="lending-loans" className="ub-print-hide">
         {person && blocked ? (
           /* Everybody who can read the page sees it, not only the owner: the
              collector at the door is who must not promise a new loan. */
@@ -197,6 +201,7 @@ export function LoansPageContent(): React.JSX.Element {
         {person?.summary ? (
           <UbStack gap={3} data-testid="lending-borrower-summary">
             <SummaryStatGrid storageKey="lendingBorrower">
+              <UbStatCard label={t('lending.loan.left')} value={formatInr(person.summary.left)} />
               <UbStatCard
                 label={t('lending.borrowers.given')}
                 value={formatInr(person.summary.given)}
@@ -210,7 +215,6 @@ export function LoansPageContent(): React.JSX.Element {
                 value={formatInr(person.summary.collected)}
                 tone="success"
               />
-              <UbStatCard label={t('lending.loan.left')} value={formatInr(person.summary.left)} />
               <UbStatCard
                 label={t('lending.borrowers.lateAmount')}
                 value={formatInr(person.summary.late)}
@@ -253,9 +257,9 @@ export function LoansPageContent(): React.JSX.Element {
             />
           </UbStack>
         )}
-        {state.listStatus === 'loading' || state.listStatus === 'idle' ? (
+        {!matchingList || state.listStatus === 'loading' || state.listStatus === 'idle' ? (
           <UbPageSkeleton variant="card" />
-        ) : state.rows.length === 0 ? (
+        ) : rows.length === 0 ? (
           <UbEmptyState
             // Nothing matches a search or a filter is a different thing from
             // "you have never given a loan", and says a different sentence.
@@ -271,7 +275,7 @@ export function LoansPageContent(): React.JSX.Element {
         ) : (
           <UbCard padded>
             <UbStack as="ul" gap={0} aria-label={t('lending.loans.title')}>
-              {state.rows.map((loan) => (
+              {rows.map((loan) => (
                 <UbStack
                   as="li"
                   key={loan.id}
@@ -280,7 +284,11 @@ export function LoansPageContent(): React.JSX.Element {
                 >
                   <UbPressable
                     className="w-full py-3 text-left"
-                    onClick={() => router.push(`${ROUTES.LENDING_LOANS}/${loan.id}`)}
+                    onClick={() =>
+                      person
+                        ? setSelectedLoan(loan.id)
+                        : router.push(`${ROUTES.LENDING_LOANS}/${loan.id}`)
+                    }
                   >
                     <UbStack direction="row" justify="between" align="start" gap={3}>
                       <UbListItemText
@@ -327,12 +335,26 @@ export function LoansPageContent(): React.JSX.Element {
             </UbStack>
           </UbCard>
         )}
-        {state.total > state.rows.length && (
+        {matchingList && state.total > rows.length && (
           <UbText variant="caption" tone="tertiary">
             {t('lending.loans.more', { shown: state.rows.length, total: state.total })}
           </UbText>
         )}
       </UbStack>
+      {person &&
+        selectedLoan &&
+        rows.some((loan) => loan.id === selectedLoan && loan.borrower.id === person.id) && (
+          <UbStack gap={3} data-testid="lending-borrower-loan-workspace">
+            <UbButton
+              variant="ghost"
+              className="ub-print-hide self-start"
+              onClick={() => setSelectedLoan(null)}
+            >
+              {t('common.action.close')}
+            </UbButton>
+            <LoanWorkspaceLazy key={selectedLoan} id={selectedLoan} embedded />
+          </UbStack>
+        )}
       {act === 'edit' && person && (
         <BorrowerEditDrawerLazy
           borrower={person}
@@ -350,7 +372,10 @@ export function LoansPageContent(): React.JSX.Element {
       )}
       {collecting && person && (
         <CollectFromBorrowerDialogLazy
+          key={person.id}
+          loans={rows.filter((loan) => loan.borrower.id === person.id)}
           borrowerId={person.id}
+          onLoanSaved={setSelectedLoan}
           name={person.name}
           onClose={() => setCollecting(false)}
         />

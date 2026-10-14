@@ -1,5 +1,6 @@
 {
  "//": [
+    "2026-10-14 UX16 borrower workspace: lazy loan selection/inline schedules and UX18 sequenced reads; shared money-input focus preserves replacement selection. Only 19 exceeded scalars use measured + 0.5 KB; shared baseline stays 239.1 KB.",
     "2026-10-14 UX16 student fee overview: authoritative total/paid figures and lazy in-place collection; UX18 read guards prevent old student/fee replies. Only 4 exceeded Library scalars use measured + 0.5 KB.",
     "2026-10-14 UX16 student identity: a lazy shared name/mobile drawer reuses the party-save flow and refreshes Library identity views. Only 13 exceeded scalars use measured + 0.5 KB; the shared app remains within 112 KB.",
     "2026-10-14 UX16 student payment history: a lazy, scoped receipt read and its Library query metadata. Only four exceeded Library route limits use measured + 0.5 KB; the shared first-load baseline is unchanged.",
@@ -1380,11 +1381,11 @@
    "firstLoad": 318.3
   },
   "/sales/challans/new": {
-   "route": 150.1,
+   "route": 150.6,
    "firstLoad": 389.7
   },
   "/sales/challans/[id]/edit": {
-   "route": 150.1,
+   "route": 150.7,
    "firstLoad": 389.7
   },
   "/purchases/orders/[id]": {
@@ -1397,11 +1398,11 @@
   },
   "/purchases/orders/new": {
    "route": 149.7,
-   "firstLoad": 388.6
+   "firstLoad": 389.1
   },
   "/purchases/orders/[id]/edit": {
-   "route": 149.5,
-   "firstLoad": 388.6
+   "route": 150.1,
+   "firstLoad": 389.2
   },
   "/sales/orders/[id]": {
    "route": 77.0,
@@ -1412,11 +1413,11 @@
    "firstLoad": 318.3
   },
   "/sales/orders/new": {
-   "route": 150.1,
+   "route": 150.6,
    "firstLoad": 389.6
   },
   "/sales/orders/[id]/edit": {
-   "route": 150.1,
+   "route": 150.7,
    "firstLoad": 389.7
   },
   "/parties": {
@@ -1428,11 +1429,11 @@
    "firstLoad": 336
   },
   "/sales/invoices/new": {
-   "route": 150.1,
+   "route": 150.6,
    "firstLoad": 389.6
   },
   "/sales/invoices/[id]/edit": {
-   "route": 150.1,
+   "route": 150.6,
    "firstLoad": 389.6
   },
   "/sales/invoices": {
@@ -1448,11 +1449,11 @@
    "firstLoad": 356
   },
   "/sales/estimates/new": {
-   "route": 150.1,
+   "route": 150.6,
    "firstLoad": 400
   },
   "/sales/estimates/[id]/edit": {
-   "route": 150.1,
+   "route": 150.6,
    "firstLoad": 400
   },
   "/sales/estimates/[id]": {
@@ -1605,7 +1606,7 @@
   },
   "/purchases/bills/[id]/edit": {
    "route": 149.7,
-   "firstLoad": 388.6
+   "firstLoad": 389.2
   },
   "/purchases/bills": {
    "route": 95,
@@ -1665,7 +1666,7 @@
   },
   "/library/settings": {
    "route": 114.2,
-   "firstLoad": 353.2
+   "firstLoad": 353.8
   },
   "/library/members": {
    "route": 84.4,
@@ -1757,15 +1758,15 @@
   },
   "/lending": {
    "route": 65.7,
-   "firstLoad": 304.7
+   "firstLoad": 305.2
   },
   "/lending/loans/[loanId]": {
-   "route": 64.7,
-   "firstLoad": 304.1
+   "route": 66.0,
+   "firstLoad": 305.1
   },
   "/lending/loans": {
-   "route": 69.4,
-   "firstLoad": 308.4
+   "route": 70.0,
+   "firstLoad": 309.1
   },
   "/customers": {
    "route": 110,
@@ -1796,7 +1797,7 @@
   },
   "/login/email": {
    "route": 58,
-   "firstLoad": 297
+   "firstLoad": 297.6
   },
   "/khata": {
    "route": 109,

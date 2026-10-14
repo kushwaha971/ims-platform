@@ -105,6 +105,7 @@ the render props.
 | One floating primary action on a phone | `UbFab` (56 px, safe-area aware, clears the toast via `useBottomInset`) — gallery only until a screen has no header room for its primary action |
 | Status pill | `UbStatusBadge` |
 | Money | `UbAmount` |
+| Editing an amount | `UbMoneyInput` — decimal strings, Indian grouping on blur, raw text on focus. Its focus transition waits for native selection, commits before typing and preserves the selected digits; replacement/paste must never append to a prefilled amount (UX16, 14 Oct 2026). |
 | Party picker source | `usePartySearch` (never a second debounced party fetch) |
 | Item picker source | `useItemSearch` from `features/inventory` (`{ trackedOnly }` for stock screens; `lookup(code)` for a scan) — never a second debounced item fetch |
 | A server-backed picker (search as you type, "Create …" row, scanner Enter) | `UbAsyncCombobox` (`shouldFilter={false}`; the caller owns the query). A fixed list stays `UbCombobox`, which now also takes `onCreate` |

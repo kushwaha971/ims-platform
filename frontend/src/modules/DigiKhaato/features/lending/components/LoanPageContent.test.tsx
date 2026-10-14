@@ -1,6 +1,7 @@
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
+import { cacheInvalidated } from 'src/redux/invalidation/listener';
 import { sessionLoaded } from 'src/redux/slice/sessionSlice';
 import { store } from 'src/redux/store';
 import { renderWithProviders } from 'src/tests/renderWithProviders';
@@ -128,6 +129,26 @@ beforeEach(() => {
 });
 
 describe('LoanPageContent', () => {
+  it('reads a newly opened stale loan only once', async () => {
+    jest.mocked(service.getLoan).mockClear().mockResolvedValue(loan());
+    signIn(PERMS);
+    store.dispatch(cacheInvalidated({ slices: ['lendingLoans'], urgency: 'now' }));
+    renderWithProviders(<LoanPageContent id="l1" embedded />);
+    await screen.findByTestId('lending-loan-schedule');
+    expect(service.getLoan).toHaveBeenCalledTimes(1);
+  });
+
+  it('renders an inline loan workspace without another page heading or account navigation', async () => {
+    jest.mocked(service.getLoan).mockResolvedValue(loan());
+    signIn(PERMS);
+    renderWithProviders(<LoanPageContent id="l1" embedded />);
+    await screen.findByTestId('lending-loan-schedule');
+    expect(screen.queryByRole('heading', { level: 1 })).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 2, name: 'LN-0001' })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Account' })).not.toBeInTheDocument();
+    expect(screen.getByTestId('lending-loan-collections')).toBeInTheDocument();
+  });
+
   it('offers one Collect with its amount, and no "Not paid" while nothing is due', async () => {
     jest.mocked(service.getLoan).mockResolvedValue(loan());
     signIn(PERMS);
