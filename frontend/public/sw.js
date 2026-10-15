@@ -1,4 +1,3 @@
-/* eslint-disable */
 /**
  * YourKhata's service worker — Part 19 §19.10.2, written by hand (ADR-021: Workbox
  * is not on the list). QA B50 (12 Oct 2026): the installed app had a manifest and

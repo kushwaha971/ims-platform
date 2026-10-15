@@ -69,7 +69,7 @@ function UbLoadMoreBase({
         <button
           type="button"
           // Not a focus target in a listbox: the keyboard pages with ↓ instead.
-          tabIndex={-1}
+          tabIndex={as === 'li' ? -1 : 0}
           onMouseDown={(event) => event.preventDefault()}
           onClick={() => latest.current()}
           className="ds-body-s-medium text-text-accent hover:underline"

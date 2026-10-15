@@ -8,7 +8,6 @@ import { useForm, useWatch } from 'react-hook-form';
 import {
   UbButton,
   UbChoiceChips,
-  UbDialog,
   UbField,
   UbForm,
   UbStack,
@@ -26,6 +25,8 @@ import { useCatalogueSchemas } from '../validation/catalogueSchemas';
 import { noteRequired } from '../view-model/copyDisplay';
 
 // Loaded with dynamic(), so its words come with its own chunk.
+import { LibraryDialog } from './LibraryOverlays';
+
 import 'src/i18n/catalogues/library';
 import 'src/i18n/catalogues/validation';
 
@@ -67,7 +68,7 @@ export function WithdrawCopyDialog({
   );
 
   return (
-    <UbDialog
+    <LibraryDialog
       open
       onOpenChange={(next) => !next && onClose()}
       title={t('library.withdraw.title', { number })}
@@ -115,6 +116,6 @@ export function WithdrawCopyDialog({
           </UbField>
         </UbForm>
       </UbStack>
-    </UbDialog>
+    </LibraryDialog>
   );
 }

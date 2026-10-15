@@ -100,6 +100,8 @@ export interface SeatFilters {
   readonly zone: string;
   readonly freeOnly: boolean;
   readonly unpaidOnly: boolean;
+  readonly query?: string;
+  readonly occupancy?: 'all' | SeatDayState;
 }
 
 /**
@@ -108,6 +110,23 @@ export interface SeatFilters {
  * unpaid or overdue fee among the holders in view.
  */
 export const seatMatches = (seat: SeatMapRow, filters: SeatFilters, wholeDay: boolean): boolean => {
+  const query = filters.query?.trim().toLocaleLowerCase() ?? '';
+  if (
+    query &&
+    ![
+      seat.label,
+      seat.zone,
+      ...seat.holders.flatMap((person) => [person.name, person.memberNumber, person.mobile]),
+    ].some((value) => value.toLocaleLowerCase().includes(query))
+  )
+    return false;
+  if (
+    wholeDay &&
+    filters.occupancy &&
+    filters.occupancy !== 'all' &&
+    seat.dayState !== filters.occupancy
+  )
+    return false;
   if (filters.zone && seat.zone !== filters.zone) return false;
   if (filters.freeOnly && (wholeDay ? seat.dayState !== 'free' : seat.viewState !== 'free'))
     return false;

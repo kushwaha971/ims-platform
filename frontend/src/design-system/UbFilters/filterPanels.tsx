@@ -141,7 +141,9 @@ function SpecField({
   spec,
   draft,
   setDraft,
+  compact,
 }: Readonly<{
+  compact: boolean;
   spec: UbFilterSpec;
   draft: UbFilterValues;
   setDraft: (patch: UbFilterValues) => void;
@@ -158,6 +160,7 @@ function SpecField({
     ];
     return (
       <UbRadioGroup
+        className={compact ? 'gap-0 [&>label>button]:mt-0 [&>label]:items-center' : undefined}
         name={`filter-${spec.key}`}
         ariaLabel={spec.label}
         value={draft[spec.key] ?? ''}
@@ -208,6 +211,7 @@ function SpecField({
 }
 
 export interface FilterSheetDrawerProps {
+  readonly compact?: boolean;
   readonly open: boolean;
   readonly onOpenChange: (open: boolean) => void;
   readonly specs: readonly UbFilterSpec[];
@@ -229,6 +233,7 @@ export function FilterSheetDrawer({
   values,
   onApply,
   labels,
+  compact = false,
 }: Readonly<FilterSheetDrawerProps>): React.JSX.Element {
   const [draft, setDraftState] = useState<UbFilterValues>(values);
   const setDraft = (patch: UbFilterValues) =>
@@ -249,6 +254,11 @@ export function FilterSheetDrawer({
     <UbDrawer
       open={open}
       onOpenChange={onOpenChange}
+      className={
+        compact
+          ? '[&>div:last-child>button]:flex-1 [&>div:last-child]:flex-row [&>div:last-child]:gap-2 [&>div:last-child]:pb-[max(1rem,env(safe-area-inset-bottom,0px))] [&>div]:p-4'
+          : undefined
+      }
       title={labels.title}
       closeLabel={labels.close}
       footer={
@@ -270,9 +280,14 @@ export function FilterSheetDrawer({
     >
       <div className="flex flex-col divide-y divide-border-hairline">
         {specs.map((spec) => (
-          <fieldset key={spec.key} className="flex min-w-0 flex-col gap-2 py-4 first:pt-0">
-            <legend className="ds-label mb-2 text-text-primary">{spec.label}</legend>
-            <SpecField spec={spec} draft={draft} setDraft={setDraft} />
+          <fieldset
+            key={spec.key}
+            className={cn('flex min-w-0 flex-col gap-2 first:pt-0', compact ? 'py-3' : 'py-4')}
+          >
+            <legend className={cn('ds-label text-text-primary', compact ? 'mb-1' : 'mb-2')}>
+              {spec.label}
+            </legend>
+            <SpecField compact={compact} spec={spec} draft={draft} setDraft={setDraft} />
           </fieldset>
         ))}
       </div>

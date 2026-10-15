@@ -52,6 +52,8 @@ export interface MemberSummary {
   readonly membershipId: string;
   readonly partyId: string;
   readonly name: string;
+  readonly mobile?: string | null;
+  readonly locationLabel?: string;
   readonly memberNumber: string;
   readonly type: { readonly id: string; readonly name: string; readonly maxCopies: number };
   readonly status: string;
@@ -135,6 +137,8 @@ export type MemberFilters = Readonly<{
 }>;
 
 export interface MemberTotals {
+  readonly active?: number;
+  readonly expired?: number;
   readonly members: number;
   readonly dues: string;
   readonly depositsHeld: string;

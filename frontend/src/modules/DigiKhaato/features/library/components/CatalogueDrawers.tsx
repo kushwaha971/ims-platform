@@ -11,7 +11,6 @@ import {
   UbChoiceChips,
   UbDateInput,
   UbDisclosure,
-  UbDrawer,
   UbField,
   UbForm,
   UbListItemText,
@@ -48,6 +47,8 @@ import { useCatalogueSchemas } from '../validation/catalogueSchemas';
 import { shelfLine } from '../view-model/copyDisplay';
 
 // Loaded with dynamic(), so its words come with its own chunk.
+import { LibraryDrawer } from './LibraryOverlays';
+
 import 'src/i18n/catalogues/library';
 import 'src/i18n/catalogues/validation';
 
@@ -97,7 +98,7 @@ function AddBookDrawer({ form, query }: Readonly<{ form: FormApi; query: string 
   const matches = probe && form.matchesFor === probe ? form.matches : [];
 
   return (
-    <UbDrawer
+    <LibraryDrawer
       open
       onOpenChange={(next) => !next && form.close()}
       title={t('library.catalogue.add')}
@@ -150,7 +151,7 @@ function AddBookDrawer({ form, query }: Readonly<{ form: FormApi; query: string 
           today={form.today}
         />
       </UbForm>
-    </UbDrawer>
+    </LibraryDrawer>
   );
 }
 
@@ -170,7 +171,7 @@ function AddCopiesDrawer({
   });
 
   return (
-    <UbDrawer
+    <LibraryDrawer
       open
       onOpenChange={(next) => !next && form.close()}
       title={t('library.title.addCopies')}
@@ -194,7 +195,7 @@ function AddCopiesDrawer({
           autoFocus
         />
       </UbForm>
-    </UbDrawer>
+    </LibraryDrawer>
   );
 }
 
@@ -214,7 +215,7 @@ function EditTitleDrawer({ form, titleId }: Readonly<{ form: FormApi; titleId: s
   if (!current) return null;
 
   return (
-    <UbDrawer
+    <LibraryDrawer
       open
       onOpenChange={(next) => !next && form.close()}
       title={t('library.title.edit')}
@@ -230,7 +231,7 @@ function EditTitleDrawer({ form, titleId }: Readonly<{ form: FormApi; titleId: s
       >
         <TitleFields t={t} categories={form.categories} autoFocus />
       </UbForm>
-    </UbDrawer>
+    </LibraryDrawer>
   );
 }
 

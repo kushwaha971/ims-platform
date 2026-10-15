@@ -20,7 +20,7 @@ import {
   type UbFilterSpec,
   type UbFilterValues,
 } from 'src/design-system';
-import { UbDataGrid, type UbDataGridEmptyStates } from 'src/design-system/UbDataGrid';
+import { type UbDataGridEmptyStates } from 'src/design-system/UbDataGrid';
 import { useAppDispatch, useAppSelector } from 'src/hooks/useAppStore';
 import { useCommittedSearch } from 'src/hooks/useCommittedSearch';
 import { useTranslation } from 'src/hooks/useTranslation';
@@ -39,6 +39,7 @@ import { listGridState } from '../view-model/copyDisplay';
 
 import { CatalogueActionsMenu } from './CatalogueActionsMenu';
 import { createTitleColumns } from './CatalogueColumns';
+import { LibraryRecordGrid } from './LibraryRecordGrid';
 
 /** The drawers load with the tap that opens them, not with the list (CLAUDE.md). */
 const CatalogueDrawersLazy = dynamic(
@@ -194,6 +195,7 @@ export function CatalogueListPageContent(): React.JSX.Element {
               <UbButton
                 icon={<Plus className="h-4 w-4" aria-hidden />}
                 iconOnly="mobile"
+                className="max-sm:h-10 max-sm:w-10"
                 onClick={() => openAdd()}
                 data-testid="library-add-book"
               >
@@ -226,7 +228,7 @@ export function CatalogueListPageContent(): React.JSX.Element {
           </UbStack>
         }
       />
-      <UbStack gap={4} data-testid="library-catalogue-screen">
+      <UbStack gap={3} data-testid="library-catalogue-screen">
         {emptyBook ? (
           <UbEmptyState
             variant="firstUse"
@@ -262,6 +264,8 @@ export function CatalogueListPageContent(): React.JSX.Element {
                 closeLabel={t('common.action.close')}
               />
               <UbFilterSheet
+                compact
+                className="h-10"
                 specs={sheetSpecs}
                 values={sheetValues}
                 onApply={applySheet}
@@ -282,7 +286,7 @@ export function CatalogueListPageContent(): React.JSX.Element {
                 clearAll: t('common.filters.clearAll'),
               }}
             />
-            <UbDataGrid
+            <LibraryRecordGrid
               rows={list.rows}
               columns={columns}
               rowId={rowId}

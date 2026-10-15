@@ -4,27 +4,31 @@ import { useState } from 'react';
 
 import dynamic from 'next/dynamic';
 
-import { MessageCircle, Phone } from 'lucide-react';
+import { Armchair, MessageCircle } from 'lucide-react';
 
 import {
   UbActionLink,
+  UbAvatar,
   UbButton,
-  UbCard,
   UbConfirmDialog,
-  UbListItemText,
+  UbLink,
   UbStack,
   UbStatusBadge,
   UbText,
 } from 'src/design-system';
 import { useAppDispatch } from 'src/hooks/useAppStore';
+import { usePermissions } from 'src/hooks/usePermissions';
 import { useTranslation } from 'src/hooks/useTranslation';
 import { showSnackbar } from 'src/redux/slice/snackbarSlice';
 import { ROUTES } from 'src/routes';
 import { formatBusinessDate } from 'src/utils/dates';
 import { formatInr } from 'src/utils/money';
+import { formatPhoneForDisplay } from 'src/utils/share';
 
 import { placeLibraryMember } from '../redux/libraryMemberThunk';
 import { FEE_TONE, isNonZero, shiftHours } from '../view-model/memberDisplay';
+
+import { CatalogueActionsMenu } from './CatalogueActionsMenu';
 
 import type { SeatMapRow, SeatOccupant } from '../types/seat.types';
 
@@ -45,9 +49,18 @@ const MessageDialogLazy = dynamic(() => import('./MessageDialog').then((m) => m.
 export function SeatPanel({
   seat,
   canWrite,
-}: Readonly<{ seat: SeatMapRow; canWrite: boolean }>): React.JSX.Element {
+  admissionHref,
+  onOpenMember,
+}: Readonly<{
+  seat: SeatMapRow;
+  canWrite: boolean;
+  admissionHref?: string;
+  onOpenMember?: (id: string) => void;
+}>): React.JSX.Element {
   const { t } = useTranslation();
   const dispatch = useAppDispatch();
+  const { can, hasModule } = usePermissions();
+  const canCollect = hasModule('payments') && can('payments.payment.write');
   const [messaging, setMessaging] = useState<SeatOccupant | null>(null);
   const [freeing, setFreeing] = useState<SeatOccupant | null>(null);
   const [busy, setBusy] = useState(false);
@@ -84,9 +97,22 @@ export function SeatPanel({
   };
 
   return (
-    <UbCard padded>
+    <UbStack gap={4}>
       <UbStack gap={3} data-testid="library-seat-detail">
-        <UbText variant="label">{t('library.seats.detailTitle', { seat: seat.label })}</UbText>
+        {seat.zone && (
+          <UbText variant="body-sm" tone="tertiary">
+            {seat.zone}
+          </UbText>
+        )}
+        {canWrite && admissionHref && (
+          <UbActionLink
+            href={admissionHref}
+            variant={seat.holders.length === 0 ? 'primary' : 'secondary'}
+            className="self-start"
+          >
+            {t('library.members.add')}
+          </UbActionLink>
+        )}
         {seat.holders.length === 0 ? (
           <UbText variant="body-sm" tone="tertiary">
             {t('library.seats.freeAllDay')}
@@ -95,83 +121,119 @@ export function SeatPanel({
           seat.holders.map((o) => (
             <UbStack
               key={o.membershipId}
-              gap={2}
-              className="border-b border-border-hairline pb-3 last:border-b-0 last:pb-0"
+              gap={3}
+              className="rounded-card border border-border-hairline bg-surface-card p-4 shadow-1"
               data-testid={`library-seat-holder-${o.membershipId}`}
             >
               <UbStack direction="row" justify="between" align="start" gap={2}>
-                <UbListItemText
-                  primary={o.name}
-                  secondary={[
-                    o.memberNumber,
-                    o.shift
-                      ? `${o.shift.name} ${shiftHours(o.shift)}`
-                      : t('library.seats.day.allDay'),
-                    o.validUntil
-                      ? t('library.member.validUntilOn', {
-                          date: formatBusinessDate(o.validUntil),
-                        })
-                      : '',
-                  ]
-                    .filter(Boolean)
-                    .join(' · ')}
-                />
+                <UbAvatar name={o.name} className="bg-primary-50 text-text-accent" />
+                <UbStack gap={0} className="min-w-0 flex-1">
+                  <UbText variant="body-medium" className="break-words">
+                    {o.name}
+                  </UbText>
+                  {o.mobile ? (
+                    <UbLink
+                      href={`tel:${o.mobile}`}
+                      variant="caption"
+                      tone="secondary"
+                      underline={false}
+                      className="ub-hit self-start"
+                    >
+                      {formatPhoneForDisplay(o.mobile)}
+                    </UbLink>
+                  ) : (
+                    <UbText variant="caption" tone="tertiary">
+                      {o.memberNumber}
+                    </UbText>
+                  )}
+                </UbStack>
                 <UbStack gap={1} align="end" className="shrink-0">
                   <UbStatusBadge
                     tone={FEE_TONE[o.feeState]}
-                    label={t(`library.fee.${o.feeState}`)}
+                    label={
+                      isNonZero(o.duesAmount)
+                        ? t('library.fee.amountDue', { amount: formatInr(o.duesAmount) })
+                        : t(`library.fee.${o.feeState}`)
+                    }
                   />
                   {o.otherShift && (
                     <UbStatusBadge tone="neutral" label={t('library.seats.view.other_shift')} />
                   )}
                 </UbStack>
               </UbStack>
-              {o.mobile && (
-                <UbActionLink
-                  href={`tel:${o.mobile}`}
-                  variant="ghost"
-                  size="sm"
-                  icon={<Phone className="h-4 w-4" aria-hidden />}
-                  className="self-start"
-                >
-                  {o.mobile}
-                </UbActionLink>
-              )}
+              <UbStack className="grid grid-cols-2 gap-3 border-t border-border-hairline pt-3">
+                <UbStack gap={1}>
+                  <UbText variant="caption" tone="tertiary">
+                    {t('library.enrol.shift')}
+                  </UbText>
+                  <UbText variant="body-sm-medium">
+                    {o.shift?.name || t('library.seats.day.allDay')}
+                  </UbText>
+                  {o.shift && (
+                    <UbText variant="caption" tone="secondary">
+                      {shiftHours(o.shift)}
+                    </UbText>
+                  )}
+                </UbStack>
+                <UbStack gap={1}>
+                  <UbText variant="caption" tone="tertiary">
+                    {t('library.member.validUntil')}
+                  </UbText>
+                  <UbText variant="body-sm-medium">
+                    {o.validUntil ? formatBusinessDate(o.validUntil) : t('library.member.noExpiry')}
+                  </UbText>
+                </UbStack>
+              </UbStack>
               <UbStack direction="row" gap={2} wrap>
                 <UbActionLink
                   href={`${ROUTES.LIBRARY_MEMBERS}/${o.membershipId}`}
-                  variant="secondary"
+                  onClick={(event) => {
+                    if (
+                      onOpenMember &&
+                      !event.metaKey &&
+                      !event.ctrlKey &&
+                      !event.shiftKey &&
+                      !event.altKey
+                    ) {
+                      event.preventDefault();
+                      onOpenMember(o.membershipId);
+                    }
+                  }}
+                  variant={canCollect && isNonZero(o.duesAmount) ? 'primary' : 'secondary'}
                   size="sm"
                 >
-                  {isNonZero(o.duesAmount)
+                  {canCollect && isNonZero(o.duesAmount)
                     ? t('library.seats.collect', { amount: formatInr(o.duesAmount) })
                     : t('library.seats.open')}
                 </UbActionLink>
                 {canWrite && (
                   <>
                     <UbButton
-                      variant="secondary"
+                      variant="outlineNeutral"
                       size="sm"
                       icon={<MessageCircle className="h-4 w-4" aria-hidden />}
                       onClick={() => setMessaging(o)}
                     >
                       {t('library.seats.message')}
                     </UbButton>
-                    <UbActionLink
-                      href={`${ROUTES.LIBRARY_MEMBERS}/${o.membershipId}`}
-                      variant="secondary"
+                    <CatalogueActionsMenu
                       size="sm"
-                    >
-                      {t('library.seats.change')}
-                    </UbActionLink>
-                    <UbButton
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => setFreeing(o)}
-                      data-testid="library-seat-free"
-                    >
-                      {t('library.seats.free')}
-                    </UbButton>
+                      t={t}
+                      items={[
+                        {
+                          key: 'changeSeat',
+                          label: t('library.seats.change'),
+                          icon: Armchair,
+                          action: onOpenMember ? () => onOpenMember(o.membershipId) : undefined,
+                        },
+                        {
+                          key: 'freeSeat',
+                          label: t('library.seats.free'),
+                          icon: Armchair,
+                          action: () => setFreeing(o),
+                        },
+                      ]}
+                    />
                   </>
                 )}
               </UbStack>
@@ -201,6 +263,6 @@ export function SeatPanel({
           busyLabel={t('library.working')}
         />
       )}
-    </UbCard>
+    </UbStack>
   );
 }

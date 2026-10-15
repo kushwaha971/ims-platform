@@ -40,6 +40,8 @@ export interface UbFilterSheetProps {
   readonly labels: UbFilterSheetLabels;
   /** Show the word beside the icon. Default true; a phone toolbar may pass false. */
   readonly showText?: boolean;
+  /** Compact section spacing for dense record screens. */
+  readonly compact?: boolean;
   readonly className?: string;
 }
 
@@ -51,6 +53,7 @@ function UbFilterSheetBase({
   onApply,
   labels,
   showText = true,
+  compact = false,
   className,
 }: Readonly<UbFilterSheetProps>) {
   const [open, setOpen] = useState(false);
@@ -88,6 +91,7 @@ function UbFilterSheetBase({
       {loaded && (
         <loaded.FilterSheetDrawer
           key={opening}
+          compact={compact}
           open={open}
           onOpenChange={setOpen}
           specs={specs}

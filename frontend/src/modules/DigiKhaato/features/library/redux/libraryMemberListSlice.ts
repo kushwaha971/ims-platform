@@ -39,6 +39,7 @@ export type LibraryMemberListState = LibraryListState<MemberFilters, MemberSumma
   hasAny: boolean | null;
   types: MembershipType[];
   enrolling: boolean;
+  pages: Record<number, MemberSummary[]>;
 };
 
 const initialState: LibraryMemberListState = {
@@ -47,14 +48,20 @@ const initialState: LibraryMemberListState = {
   hasAny: null,
   types: [],
   enrolling: false,
+  pages: {},
 };
 
-const libraryMemberListSlice = createSlice({
+export const libraryMemberListSlice = createSlice({
   name: 'libraryMemberList',
   initialState,
   reducers: {
     memberFiltersChanged(state, action: PayloadAction<Partial<MemberFilters>>) {
+      const previous = { ...state.filters, page: '1' };
       applyFilterPatch(state, action.payload);
+      if (JSON.stringify(previous) !== JSON.stringify({ ...state.filters, page: '1' })) {
+        state.pages = {};
+        state.rows = [];
+      }
     },
   },
   extraReducers: (builder) => {
@@ -65,6 +72,16 @@ const libraryMemberListSlice = createSlice({
         listFulfilled(state, action.meta.arg, action.payload);
         // The late-response guard applies to the totals as to the rows.
         if (state.answered === JSON.stringify(action.meta.arg)) {
+          if (action.payload.page === 1) state.pages = {};
+          state.pages[action.payload.page] = action.payload.rows as Draft<MemberSummary>[];
+          state.rows = Object.keys(state.pages)
+            .map(Number)
+            .sort((a, b) => a - b)
+            .flatMap((page) => state.pages[page] ?? [])
+            .filter(
+              (row, index, rows) =>
+                rows.findIndex((other) => other.membershipId === row.membershipId) === index
+            );
           state.totals = action.payload.totals as Draft<MemberTotals>;
           state.hasAny = action.payload.hasAny ?? null;
         }

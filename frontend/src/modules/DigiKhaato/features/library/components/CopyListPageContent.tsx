@@ -17,7 +17,7 @@ import {
   type UbFilterSpec,
   type UbFilterValues,
 } from 'src/design-system';
-import { UbDataGrid, type UbDataGridEmptyStates } from 'src/design-system/UbDataGrid';
+import { type UbDataGridEmptyStates } from 'src/design-system/UbDataGrid';
 import { useAppDispatch, useAppSelector } from 'src/hooks/useAppStore';
 import { useCommittedSearch } from 'src/hooks/useCommittedSearch';
 import { useTranslation } from 'src/hooks/useTranslation';
@@ -32,6 +32,7 @@ import { COPY_STATUSES, type CopyFilters, type CopyRow } from '../types/catalogu
 import { listGridState } from '../view-model/copyDisplay';
 
 import { createCopyColumns } from './CatalogueColumns';
+import { LibraryRecordGrid } from './LibraryRecordGrid';
 
 /**
  * F03 (LIB-02 FR-10) — `/library/copies`: every physical book, in accession
@@ -160,7 +161,7 @@ export function CopyListPageContent(): React.JSX.Element {
   return (
     <UbPageShell>
       <UbPageHeader title={t('library.copies.title')} />
-      <UbStack gap={4} data-testid="library-copies-screen">
+      <UbStack gap={3} data-testid="library-copies-screen">
         <UbSearchInput
           value={search}
           onChange={setSearch}
@@ -186,6 +187,8 @@ export function CopyListPageContent(): React.JSX.Element {
             closeLabel={t('common.action.close')}
           />
           <UbFilterSheet
+            compact
+            className="h-10"
             specs={sheetSpecs}
             values={sheetValues}
             onApply={applySheet}
@@ -206,7 +209,7 @@ export function CopyListPageContent(): React.JSX.Element {
             clearAll: t('common.filters.clearAll'),
           }}
         />
-        <UbDataGrid
+        <LibraryRecordGrid
           rows={list.rows}
           columns={columns}
           rowId={rowId}

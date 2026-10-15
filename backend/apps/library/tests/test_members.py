@@ -374,3 +374,22 @@ def test_a_deposit_not_collected_at_admission_is_owed_and_can_be_taken_later(
     assert taken["deposit"]["held"] == "500.00"
     assert taken["deposit"]["due"] == "0.00"
     assert taken["dues_amount"] == "200.00"
+
+
+def test_list_exposes_contact_and_counts_effective_states_for_student_cards(
+    api_as: Any, library_on: Any
+) -> None:
+    """Cards show real contact data and server-wide counts even with pagination."""
+    owner, _ = api_as(library_on, role="owner")
+    party = PartyFactory(tenant=library_on, mobile="9876543219", billing_address={"city": "Rampur"})
+    enrolled = _enrol(owner, library_on, party).json()["data"]
+    other = _enrol(owner, library_on, PartyFactory(tenant=library_on), key="other").json()["data"]
+    LibraryMembership.objects.filter(pk=other["membership_id"]).update(
+        starts_on=dt.date(2025, 1, 1), valid_until=dt.date(2025, 6, 30)
+    )
+    response = owner.get(reverse(MEMBERS)).json()
+    row = next(r for r in response["data"] if r["membership_id"] == enrolled["membership_id"])
+    assert row["mobile"] == "9876543219"
+    assert row["location_label"] == "Rampur"
+    assert response["meta"]["totals"]["active"] == 1
+    assert response["meta"]["totals"]["expired"] == 1

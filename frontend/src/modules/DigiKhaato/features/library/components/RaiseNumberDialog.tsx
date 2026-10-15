@@ -5,19 +5,13 @@ import { useId, useMemo } from 'react';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useForm } from 'react-hook-form';
 
-import {
-  UbButton,
-  UbDialog,
-  UbField,
-  UbForm,
-  UbStack,
-  UbText,
-  UbTextInput,
-} from 'src/design-system';
+import { UbButton, UbField, UbForm, UbStack, UbText, UbTextInput } from 'src/design-system';
 import { useTranslation } from 'src/hooks/useTranslation';
 import { readDetailNumber } from 'src/utils/errorDetails';
 
 import { useLibrarySettingsSchemas } from '../validation/settingsSchemas';
+
+import { LibraryDialog } from './LibraryOverlays';
 
 import type { SaveOutcome } from '../hooks/useLibrarySettings';
 import type { LibraryNumberKind, RaiseNumberFormValues } from '../types/settings.types';
@@ -69,7 +63,7 @@ export function RaiseNumberDialog({
   };
 
   return (
-    <UbDialog
+    <LibraryDialog
       open
       onOpenChange={(next) => !next && onClose()}
       title={t(`library.settings.number.${kind}`)}
@@ -100,6 +94,6 @@ export function RaiseNumberDialog({
           </UbField>
         </UbForm>
       </UbStack>
-    </UbDialog>
+    </LibraryDialog>
   );
 }

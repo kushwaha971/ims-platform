@@ -8,7 +8,6 @@ import { useForm } from 'react-hook-form';
 import {
   UbButton,
   UbChoiceChips,
-  UbDialog,
   UbField,
   UbForm,
   UbMoneyInput,
@@ -23,6 +22,8 @@ import { applyServerErrors } from 'src/utils/applyServerErrors';
 import { saveLibraryPlan } from '../redux/libraryMemberThunk';
 import { PLAN_LENGTHS, type PlanFormValues } from '../types/plan.types';
 import { useSeatSchemas } from '../validation/seatSchemas';
+
+import { LibraryDialog } from './LibraryOverlays';
 
 import type { MembershipType } from '../types/member.types';
 
@@ -121,7 +122,7 @@ export function PlanDialog({
   );
 
   return (
-    <UbDialog
+    <LibraryDialog
       open
       onOpenChange={(next) => !next && onClose()}
       title={t(plan ? 'library.plans.edit' : 'library.plans.add')}
@@ -168,6 +169,6 @@ export function PlanDialog({
           {money('depositAmount')}
         </UbStack>
       </UbForm>
-    </UbDialog>
+    </LibraryDialog>
   );
 }

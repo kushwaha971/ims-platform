@@ -7,7 +7,6 @@ import { IndianRupee, Receipt, Wallet } from 'lucide-react';
 import { SummaryStatGrid } from 'src/components/stats/SummaryStatGrid';
 import {
   UbActionLink,
-  UbCard,
   UbChoiceChips,
   UbDivider,
   UbEmptyState,
@@ -29,6 +28,8 @@ import { todayInTenantTz } from 'src/utils/dates';
 import { formatInr, isNegativeAmount } from 'src/utils/money';
 
 import { fetchLibraryMoney } from '../redux/libraryMoneyThunk';
+
+import { LibraryCard } from './LibraryCard';
 
 import type { LibraryMoney } from '../types/money.types';
 
@@ -119,7 +120,7 @@ export function MoneyPageContent(): React.JSX.Element {
             : undefined
         }
       />
-      <UbStack gap={4} data-testid="library-money">
+      <UbStack gap={3} data-testid="library-money">
         {emptyBook ? (
           <UbEmptyState
             variant="firstUse"
@@ -174,7 +175,7 @@ export function MoneyPageContent(): React.JSX.Element {
                 tone={isNegativeAmount(shown.profit) ? 'danger' : 'success'}
               />
             </SummaryStatGrid>
-            <UbCard padded>
+            <LibraryCard padded>
               <UbStack gap={2} data-testid="library-money-in">
                 <UbText variant="label">{t('library.money.inTitle')}</UbText>
                 {shown.income.length === 0 ? (
@@ -191,8 +192,8 @@ export function MoneyPageContent(): React.JSX.Element {
                   ))
                 )}
               </UbStack>
-            </UbCard>
-            <UbCard padded>
+            </LibraryCard>
+            <LibraryCard padded>
               <UbStack gap={2} data-testid="library-money-out">
                 <UbText variant="label">{t('library.money.outTitle')}</UbText>
                 {shown.expenses.length === 0 ? (
@@ -216,7 +217,7 @@ export function MoneyPageContent(): React.JSX.Element {
                   value={formatInr(shown.profit.replace('-', ''))}
                 />
               </UbStack>
-            </UbCard>
+            </LibraryCard>
           </>
         )}
       </UbStack>

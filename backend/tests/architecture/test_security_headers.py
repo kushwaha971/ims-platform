@@ -30,6 +30,7 @@ _PROD_ENV = {
     # DEC-014 — production signs in by OTP, so it has Message Central
     # credentials; without them `check --deploy` rightly fails (platform.E001),
     # asserted in `test_auth_flags.py`. Placeholders are what "configured" means.
+    "UB_OTP_PROVIDER": "message_central",
     "MC_CUSTOMER_ID": "C-PLACEHOLDER",
     "MC_PASSWORD": "placeholder-not-a-real-password",
 }

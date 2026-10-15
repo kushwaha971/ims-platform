@@ -272,3 +272,20 @@ describe('UbDialog — returning focus when the opener is not there to receive i
     expect(screen.getByRole('button', { name: 'More' })).toHaveFocus();
   });
 });
+
+it('restores scrolling when nested overlays unmount during navigation', () => {
+  // Parent cleanup can run before child cleanup on a route transition.
+  const before = document.body.style.overflow;
+  document.body.style.overflow = 'auto';
+  const view = render(
+    <>
+      <UbDialog open onOpenChange={jest.fn()} title="Seat" closeLabel="Close seat" />
+      <UbDialog open onOpenChange={jest.fn()} title="Student" closeLabel="Close student" />
+    </>
+  );
+  expect(document.body.style.overflow).toBe('hidden');
+  view.unmount();
+  const restored = document.body.style.overflow;
+  document.body.style.overflow = before;
+  expect(restored).toBe('auto');
+});

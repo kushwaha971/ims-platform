@@ -9,7 +9,6 @@ import * as Yup from 'yup';
 import {
   UbButton,
   UbChoiceChips,
-  UbDialog,
   UbField,
   UbForm,
   UbMoneyInput,
@@ -31,6 +30,8 @@ import {
   type ManualChargeKind,
   type WaiveFormValues,
 } from '../types/charge.types';
+
+import { LibraryDialog } from './LibraryOverlays';
 
 import type { ChargeOutcome } from '../hooks/useMemberCharges';
 
@@ -88,7 +89,7 @@ export function WaiveChargeDialog({
   const amount = useWatch({ control: form.control, name: 'amount' });
 
   return (
-    <UbDialog
+    <LibraryDialog
       open
       onOpenChange={(next) => !next && onClose()}
       title={t('library.charge.waive.title')}
@@ -131,6 +132,9 @@ export function WaiveChargeDialog({
           }
         }}
       >
+        <UbText variant="body-sm" tone="secondary">
+          {t('library.charge.waive.body')}
+        </UbText>
         <UbField name="amount" label={t('library.charge.waive.amount')} required placeholder="0.00">
           {(field) => (
             <UbMoneyInput
@@ -151,7 +155,7 @@ export function WaiveChargeDialog({
           })}
         </UbText>
       </UbForm>
-    </UbDialog>
+    </LibraryDialog>
   );
 }
 
@@ -190,7 +194,7 @@ export function ReverseChargeDialog({
   };
 
   return (
-    <UbDialog
+    <LibraryDialog
       open
       onOpenChange={(next) => !next && onClose()}
       title={t('library.charge.reverse.title')}
@@ -232,7 +236,7 @@ export function ReverseChargeDialog({
           </UbText>
         )}
       </UbStack>
-    </UbDialog>
+    </LibraryDialog>
   );
 }
 
@@ -277,7 +281,7 @@ export function ManualChargeDialog({
   );
 
   return (
-    <UbDialog
+    <LibraryDialog
       open
       onOpenChange={(next) => !next && onClose()}
       title={t('library.charge.add')}
@@ -349,7 +353,7 @@ export function ManualChargeDialog({
           })}
         </UbText>
       </UbForm>
-    </UbDialog>
+    </LibraryDialog>
   );
 }
 
@@ -377,7 +381,7 @@ export function MarkLostDialog({
   const [reason, setReason] = useState('');
   const [failure, setFailure] = useState<string | null>(null);
   return (
-    <UbDialog
+    <LibraryDialog
       open
       onOpenChange={(next) => !next && onClose()}
       title={t('library.charge.lost.title')}
@@ -428,6 +432,6 @@ export function MarkLostDialog({
           </UbText>
         )}
       </UbStack>
-    </UbDialog>
+    </LibraryDialog>
   );
 }

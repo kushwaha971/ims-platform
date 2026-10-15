@@ -4,8 +4,10 @@ import { useCallback, useState, type ComponentType } from 'react';
 
 import { MoreHorizontal } from 'lucide-react';
 
-import { UbButton, UbDialog, UbStack } from 'src/design-system';
+import { UbButton, UbStack, type UbButtonSize } from 'src/design-system';
 import type { TranslateFn } from 'src/hooks/useTranslation';
+
+import { LibraryDialog } from './LibraryOverlays';
 
 export interface CatalogueAction {
   readonly key: string;
@@ -24,7 +26,12 @@ export interface CatalogueAction {
 export function CatalogueActionsMenu({
   t,
   items,
-}: Readonly<{ t: TranslateFn; items: readonly CatalogueAction[] }>): React.JSX.Element | null {
+  size = 'md',
+}: Readonly<{
+  t: TranslateFn;
+  items: readonly CatalogueAction[];
+  size?: UbButtonSize;
+}>): React.JSX.Element | null {
   const [open, setOpen] = useState(false);
   const run = useCallback((action?: () => void) => {
     setOpen(false);
@@ -37,6 +44,14 @@ export function CatalogueActionsMenu({
     <>
       <UbButton
         variant="outlineNeutral"
+        size={size}
+        className={
+          size === 'lg'
+            ? 'max-sm:h-11 max-sm:w-11'
+            : size === 'sm'
+              ? 'max-sm:h-7 max-sm:w-7'
+              : 'max-sm:h-10 max-sm:w-10'
+        }
         icon={<MoreHorizontal className="h-4 w-4" aria-hidden />}
         iconOnly="mobile"
         aria-label={t('library.actions.more')}
@@ -45,7 +60,7 @@ export function CatalogueActionsMenu({
       >
         {t('library.actions.moreShort')}
       </UbButton>
-      <UbDialog
+      <LibraryDialog
         open={open}
         onOpenChange={setOpen}
         title={t('library.actions.more')}
@@ -66,7 +81,7 @@ export function CatalogueActionsMenu({
             </UbButton>
           ))}
         </UbStack>
-      </UbDialog>
+      </LibraryDialog>
     </>
   );
 }

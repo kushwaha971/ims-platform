@@ -6,7 +6,6 @@ import dynamic from 'next/dynamic';
 
 import {
   UbButton,
-  UbCard,
   UbChoiceChips,
   UbEmptyState,
   UbListItemText,
@@ -28,6 +27,8 @@ import { MODE_SHORTCUTS } from '../view-model/counterDisplay';
 
 import { CounterMemberPanel } from './CounterMemberPanel';
 import { CounterSessionList } from './CounterSessionList';
+import { LibraryCard } from './LibraryCard';
+import { LIBRARY_OVERLAY_CLASSNAME } from './LibraryOverlays';
 
 /** The prompts load with the scan that needs them, and are preloaded on idle (LIB-06 §7). */
 const loadPrompts = () => import('./CounterPrompts');
@@ -176,11 +177,11 @@ export function CounterPageContent(): React.JSX.Element {
     />
   ) : (
     mode === 'issue' && (
-      <UbCard padded>
+      <LibraryCard padded>
         <UbText variant="body-sm" tone="tertiary">
           {t('library.counter.noMemberYet')}
         </UbText>
-      </UbCard>
+      </LibraryCard>
     )
   );
 
@@ -190,7 +191,7 @@ export function CounterPageContent(): React.JSX.Element {
   return (
     <UbPageShell>
       <UbPageHeader title={t('library.counter.title')} />
-      <UbStack gap={4} className="lg:grid lg:grid-cols-[3fr_2fr] lg:items-start lg:gap-6">
+      <UbStack gap={3} className="lg:grid lg:grid-cols-[3fr_2fr] lg:items-start lg:gap-6">
         <UbStack gap={3} className="min-w-0">
           <UbChoiceChips<CounterMode>
             id="library-counter-mode"
@@ -238,7 +239,7 @@ export function CounterPageContent(): React.JSX.Element {
           {isMobileLayer && memberPanel}
 
           {search && (
-            <UbCard padded>
+            <LibraryCard padded>
               {search.results.length === 0 ? (
                 <UbText variant="body-sm" tone="tertiary">
                   {t('library.counter.noMember', { q: search.code })}
@@ -268,11 +269,11 @@ export function CounterPageContent(): React.JSX.Element {
                   ))}
                 </UbStack>
               )}
-            </UbCard>
+            </LibraryCard>
           )}
 
           {prompt?.kind === 'alreadyWith' && member && (
-            <UbCard padded>
+            <LibraryCard padded>
               <UbStack data-testid="counter-already-with" gap={2}>
                 <UbText variant="body-sm">
                   {t('library.counter.alreadyWith', { name: member.name, title: prompt.title })}
@@ -300,7 +301,7 @@ export function CounterPageContent(): React.JSX.Element {
                   </UbButton>
                 </UbStack>
               </UbStack>
-            </UbCard>
+            </LibraryCard>
           )}
 
           {counter.session.length === 0 && pending.length === 0 ? (
@@ -346,6 +347,7 @@ export function CounterPageContent(): React.JSX.Element {
       )}
       {collecting?.charge && (
         <PaymentFormDrawerLazy
+          className={LIBRARY_OVERLAY_CLASSNAME}
           context={{
             direction: 'in',
             partyId: collecting.charge.partyId,

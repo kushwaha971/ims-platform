@@ -23,6 +23,7 @@ APPENDIX_A = {
     "library_category_in_use": 409,
     "library_location_in_use": 409,
     "library_membership_exists": 409,
+    "library_plan_no_end": 409,  # Renew cannot extend a plan without an end date.
     "library_member_number_taken": 409,
     "library_membership_closed": 409,
     "library_membership_has_loans": 409,

@@ -1,36 +1,40 @@
 'use client';
 
-import { useEffect, useId, useMemo } from 'react';
+import { useEffect, useId, useMemo, useState, useSyncExternalStore } from 'react';
 
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useForm, useWatch, type UseFormReturn } from 'react-hook-form';
 
 import {
   UbButton,
-  UbCard,
   UbChoiceChips,
   UbDateInput,
-  UbDrawer,
+  UbDisclosure,
   UbField,
   UbForm,
   UbMoneyInput,
-  UbNativeSelect,
+  UbCombobox,
   UbPhoneInput,
+  UbPressable,
   UbStack,
   UbText,
   UbTextInput,
 } from 'src/design-system';
+import { useAppDispatch } from 'src/hooks/useAppStore';
 import { useTranslation } from 'src/hooks/useTranslation';
+import { showSnackbar } from 'src/redux/slice/snackbarSlice';
 import { formatInr } from 'src/utils/money';
+import { phoneContactsSupported, pickPhoneContact } from 'src/utils/phoneContacts';
 
-import { PartyPickerField } from 'modules/DigiKhaato/features/parties/components/PartyPickerField';
-import { useCanSearchParties } from 'modules/DigiKhaato/features/parties/hooks/usePartySearch';
 import { PaymentModeEditor } from 'modules/DigiKhaato/features/payments/components/PaymentModeEditor';
 import type { PaymentFormValues } from 'modules/DigiKhaato/features/payments/types/payment.types';
 
 import { useSeats } from '../hooks/useSeats';
 import { useMemberSchemas } from '../validation/memberSchemas';
 import { enrolCost, isNonZero, shiftHours } from '../view-model/memberDisplay';
+
+import { LibraryCard } from './LibraryCard';
+import { LibraryDrawer } from './LibraryOverlays';
 
 import type { EnrolFormValues, MembershipType } from '../types/member.types';
 import type { UseFormSetError } from 'react-hook-form';
@@ -43,6 +47,9 @@ import 'src/i18n/catalogues/payments';
 import 'src/i18n/catalogues/validation';
 
 /** One empty payment line — the editor's starting row. */
+const subscribeContactSupport = () => () => {};
+const noContactSupport = () => false;
+
 const FIRST_LINE: EnrolFormValues['lines'][number] = {
   mode: 'cash',
   upiApp: '',
@@ -92,17 +99,20 @@ const DEFAULTS: EnrolFormValues = {
  */
 export function EnrolMemberDrawer({
   types,
+  initialPlacement,
   busy,
   onClose,
   onSubmit,
 }: Readonly<{
   types: readonly MembershipType[];
+  initialPlacement?: Readonly<{ seatId: string; shiftId: string }>;
   busy: boolean;
   onClose: () => void;
   onSubmit: (values: EnrolFormValues, setError: UseFormSetError<EnrolFormValues>) => Promise<void>;
 }>): React.JSX.Element {
   const { t } = useTranslation();
   const formId = useId();
+  const [extraOpen, setExtraOpen] = useState(false);
   const { enrolSchema } = useMemberSchemas();
   const active = useMemo(() => types.filter((type) => type.isActive), [types]);
   const form = useForm<EnrolFormValues>({
@@ -112,42 +122,58 @@ export function EnrolMemberDrawer({
       // QA B26 — the plan starts empty and is chosen: the newest plan used to be
       // pre-selected, and a ₹0 one quietly admitted students as "Paid".
       ...DEFAULTS,
+      seatId: initialPlacement?.seatId ?? '',
+      shiftId: initialPlacement?.shiftId ?? '',
     },
   });
-  const [mode, _partyId, partyName, typeId, collectNow, shiftId, existingStudent] = useWatch({
+  const [typeId, collectNow, shiftId, existingStudent] = useWatch({
     control: form.control,
-    name: [
-      'partyMode',
-      'partyId',
-      'partyName',
-      'membershipTypeId',
-      'collectNow',
-      'shiftId',
-      'existingStudent',
-    ],
+    name: ['membershipTypeId', 'collectNow', 'shiftId', 'existingStudent'],
   });
   // W03 — the desks free in the chosen shift ('' = free all day).
   const seating = useSeats(shiftId ?? '');
   const freeSeats = useMemo(
     () =>
       seating.map?.shiftId === (shiftId ?? '')
-        ? seating.map.seats.filter((seat) => seat.occupants.length === 0)
+        ? seating.map.seats.filter((seat) => seat.viewState === 'free')
         : [],
     [seating.map, shiftId]
   );
+  // A contextual seat is only a suggestion. The server map still decides whether
+  // it can be selected; stale or unavailable URL suggestions never survive.
+  useEffect(() => {
+    if (seating.mapStatus !== 'succeeded' || seating.map?.shiftId !== (shiftId ?? '')) return;
+    const selected = form.getValues('seatId');
+    if (selected && !freeSeats.some((seat) => seat.id === selected)) form.setValue('seatId', '');
+  }, [form, freeSeats, seating.map, seating.mapStatus, shiftId]);
   const hasSeats = seating.seats.length > 0;
   const type = active.find((row) => row.id === typeId);
   const cost = enrolCost(type);
-  const canSearchParties = useCanSearchParties();
-  const enrolPickerLabels = useMemo(
-    () => ({
-      clear: (name: string) => t('library.enrol.person.clear', { name }),
-      noAccess: t('library.enrol.person.none'),
-      results: t('library.enrol.person.results'),
-      noMatch: t('library.enrol.person.none'),
-    }),
-    [t]
+  const dispatch = useAppDispatch();
+  const contactSupported = useSyncExternalStore(
+    subscribeContactSupport,
+    phoneContactsSupported,
+    noContactSupport
   );
+  const [pickingContact, setPickingContact] = useState(false);
+  const chooseContact = async () => {
+    setPickingContact(true);
+    try {
+      const contact = await pickPhoneContact();
+      if (contact) {
+        form.setValue('name', contact.name, { shouldDirty: true, shouldValidate: true });
+        form.setValue('mobile', contact.mobile, { shouldDirty: true, shouldValidate: true });
+      }
+    } catch (error) {
+      if (!(error instanceof DOMException && error.name === 'AbortError')) {
+        dispatch(
+          showSnackbar({ severity: 'error', message: t('library.enrol.phoneContact.error') })
+        );
+      }
+    } finally {
+      setPickingContact(false);
+    }
+  };
   const asksMoney = isNonZero(cost.fees) || isNonZero(cost.deposit);
   const payWay: PayWay = existingStudent
     ? 'already'
@@ -169,7 +195,7 @@ export function EnrolMemberDrawer({
   }, [cost.fees, getFieldState, getValues, setValue]);
 
   return (
-    <UbDrawer
+    <LibraryDrawer
       open
       onOpenChange={(next) => !next && onClose()}
       title={t('library.enrol.title')}
@@ -192,68 +218,45 @@ export function EnrolMemberDrawer({
       }
     >
       <UbForm id={formId} form={form} onSubmit={(values) => onSubmit(values, form.setError)}>
-        <UbField name="partyMode" label={t('library.enrol.who')} controlOwnsLabel>
-          {(field) => (
-            <UbChoiceChips<'new' | 'existing'>
-              id={field.id}
-              ariaLabel={t('library.enrol.who')}
-              value={field.value as 'new' | 'existing'}
-              onChange={(next) => field.onChange(next)}
-              onBlur={field.onBlur}
-              options={[
-                { value: 'new', label: t('library.enrol.who.new') },
-                { value: 'existing', label: t('library.enrol.who.existing') },
-              ]}
-              disabled={busy || !canSearchParties}
-            />
+        <UbText variant="label">{t('library.enrol.section.student')}</UbText>
+        <UbStack gap={2}>
+          <UbButton
+            variant="outlineNeutral"
+            disabled={busy || !contactSupported}
+            busy={pickingContact}
+            onClick={chooseContact}
+          >
+            {t('library.enrol.phoneContact.choose')}
+          </UbButton>
+          {!contactSupported && (
+            <UbText variant="caption" tone="secondary">
+              {t('library.enrol.phoneContact.unsupported')}
+            </UbText>
           )}
+        </UbStack>
+        <UbField
+          name="name"
+          label={t('library.enrol.name')}
+          placeholder={t('library.enrol.name.placeholder')}
+          required
+        >
+          {(field) => <UbTextInput {...field} autoComplete="name" disabled={busy} />}
+        </UbField>
+        <UbField
+          name="mobile"
+          label={t('library.enrol.mobile')}
+          placeholder={t('library.enrol.mobile.placeholder')}
+          optionalLabel={t('common.field.optional')}
+        >
+          {(field) => <UbPhoneInput {...field} disabled={busy} />}
         </UbField>
 
-        {mode === 'new' ? (
-          <>
-            <UbField
-              name="name"
-              label={t('library.enrol.name')}
-              placeholder={t('library.enrol.name.placeholder')}
-              required
-            >
-              {(field) => <UbTextInput {...field} autoComplete="off" disabled={busy} />}
-            </UbField>
-            <UbField
-              name="mobile"
-              label={t('library.enrol.mobile')}
-              placeholder={t('library.enrol.mobile.placeholder')}
-              optionalLabel={t('common.field.optional')}
-            >
-              {(field) => <UbPhoneInput {...field} disabled={busy} />}
-            </UbField>
-          </>
-        ) : (
-          <UbField
-            name="partyId"
-            label={t('library.enrol.person')}
-            placeholder={t('library.enrol.person.placeholder')}
-            required
-          >
-            {(field) => (
-              <PartyPickerField
-                field={field}
-                pickedName={partyName}
-                onPick={(id, name) => {
-                  form.setValue('partyId', id, { shouldValidate: true });
-                  form.setValue('partyName', name);
-                }}
-                labels={enrolPickerLabels}
-                t={t}
-                disabled={busy}
-              />
-            )}
-          </UbField>
-        )}
-
+        <UbText variant="label" className="border-t border-border-hairline pt-4">
+          {t('library.enrol.section.plan')}
+        </UbText>
         <UbField name="membershipTypeId" label={t('library.enrol.type')} required>
           {(field) => (
-            <UbNativeSelect
+            <UbCombobox
               name={field.name}
               id={field.id}
               aria-label={t('library.enrol.type')}
@@ -261,6 +264,9 @@ export function EnrolMemberDrawer({
               onChange={field.onChange}
               invalid={field.invalid}
               placeholder={t('library.enrol.type.placeholder')}
+              searchPlaceholder={t('library.plan.search')}
+              emptyLabel={t('library.plan.noMatches')}
+              onBlur={field.onBlur}
               options={active.map((row) => ({ value: row.id, label: row.name }))}
             />
           )}
@@ -293,7 +299,7 @@ export function EnrolMemberDrawer({
           )}
         </UbField>
         {existingStudent && (
-          <UbCard padded>
+          <LibraryCard padded>
             <UbStack gap={3} data-testid="library-enrol-existing">
               <UbStack direction="row" gap={3} className="max-sm:flex-col">
                 <UbField
@@ -360,41 +366,61 @@ export function EnrolMemberDrawer({
                 </UbField>
               </UbStack>
             </UbStack>
-          </UbCard>
+          </LibraryCard>
         )}
 
         {(seating.activeShifts.length > 0 || hasSeats) && (
-          <UbStack direction="row" gap={3} className="max-sm:flex-col">
+          <UbStack gap={4}>
+            <UbText variant="label">{t('library.enrol.shift')}</UbText>
             {seating.activeShifts.length > 0 && (
               <UbField
                 name="shiftId"
+                controlOwnsLabel
                 label={t('library.enrol.shift')}
                 optionalLabel={t('common.field.optional')}
                 className="flex-1"
               >
                 {(field) => (
-                  <UbNativeSelect
-                    name={field.name}
+                  <UbStack
                     id={field.id}
+                    role="group"
                     aria-label={t('library.enrol.shift')}
-                    value={String(field.value ?? '')}
-                    onChange={(next: string) => {
-                      field.onChange(next);
-                      // A desk free in one shift may be taken in the next.
-                      form.setValue('seatId', '');
-                    }}
-                    placeholder={t('library.enrol.shift.placeholder')}
-                    options={seating.activeShifts.map((shift) => ({
-                      value: shift.id,
-                      label: `${shift.name} (${shiftHours(shift)})`,
-                    }))}
-                  />
+                    className="grid grid-cols-2 gap-2 sm:grid-cols-3"
+                  >
+                    {[
+                      { id: '', name: t('library.seats.day.allDay'), startsAt: '', endsAt: '' },
+                      ...seating.activeShifts,
+                    ].map((shift) => (
+                      <UbPressable
+                        key={shift.id}
+                        disabled={busy}
+                        aria-pressed={String(field.value ?? '') === shift.id}
+                        onClick={() => {
+                          field.onChange(shift.id);
+                          form.setValue('seatId', '');
+                        }}
+                        className={
+                          String(field.value ?? '') === shift.id
+                            ? 'min-h-16 rounded-control border border-accent bg-primary-50 p-3'
+                            : 'border-border-default min-h-16 rounded-control border bg-surface-card p-3'
+                        }
+                      >
+                        <UbText variant="body-sm-medium">{shift.name}</UbText>
+                        {shift.id && (
+                          <UbText variant="caption" tone="tertiary">
+                            {shiftHours(shift)}
+                          </UbText>
+                        )}
+                      </UbPressable>
+                    ))}
+                  </UbStack>
                 )}
               </UbField>
             )}
             {hasSeats && (
               <UbField
                 name="seatId"
+                controlOwnsLabel
                 label={t('library.enrol.seat')}
                 optionalLabel={t('common.field.optional')}
                 hint={
@@ -405,79 +431,129 @@ export function EnrolMemberDrawer({
                 className="flex-1"
               >
                 {(field) => (
-                  <UbNativeSelect
-                    name={field.name}
-                    id={field.id}
-                    aria-label={t('library.enrol.seat')}
-                    value={String(field.value ?? '')}
-                    onChange={field.onChange}
-                    placeholder={t('library.enrol.seat.placeholder')}
-                    options={freeSeats.map((seat) => ({
-                      value: seat.id,
-                      label: seat.zone ? `${seat.label} · ${seat.zone}` : seat.label,
-                    }))}
-                  />
+                  <UbStack id={field.id} role="group" aria-label={t('library.enrol.seat')} gap={2}>
+                    <UbText variant="label">{t('library.enrol.seat')}</UbText>
+                    <UbStack className="grid grid-cols-4 gap-2">
+                      {seating.seats
+                        .filter((seat) => seat.isActive)
+                        .map((seat) => {
+                          const available = freeSeats.some((free) => free.id === seat.id);
+                          const selected = field.value === seat.id;
+                          return (
+                            <UbPressable
+                              key={seat.id}
+                              disabled={busy || !available}
+                              aria-pressed={selected}
+                              aria-label={`${seat.label}, ${t(available ? 'library.seats.shift.available' : 'library.seats.shift.taken')}`}
+                              onClick={() => field.onChange(selected ? '' : seat.id)}
+                              className={
+                                selected
+                                  ? 'min-h-14 rounded-control border border-accent bg-primary-50 p-2 text-center'
+                                  : available
+                                    ? 'min-h-14 rounded-control border border-success/30 bg-transparent p-2 text-center'
+                                    : 'min-h-14 rounded-control border border-border-hairline bg-surface-sunken p-2 text-center opacity-50'
+                              }
+                            >
+                              <UbText
+                                variant="body-sm-medium"
+                                tone={available ? 'success' : 'tertiary'}
+                              >
+                                {seat.label}
+                              </UbText>
+                            </UbPressable>
+                          );
+                        })}
+                    </UbStack>
+                    <UbButton
+                      variant="ghost"
+                      size="sm"
+                      disabled={busy}
+                      onClick={() => field.onChange('')}
+                      aria-pressed={!field.value}
+                    >
+                      {t('library.members.noSeat')}
+                    </UbButton>
+                  </UbStack>
                 )}
               </UbField>
             )}
           </UbStack>
         )}
 
-        <UbField
-          name="lockerLabel"
-          label={t('library.enrol.locker')}
-          placeholder={t('library.enrol.locker.placeholder')}
-          optionalLabel={t('common.field.optional')}
+        <UbDisclosure
+          label={t('library.enrol.section.extra')}
+          open={
+            extraOpen ||
+            (
+              [
+                'lockerLabel',
+                'groupLabel',
+                'memberNumber',
+                'guardianName',
+                'guardianMobile',
+              ] as const
+            ).some((field) => Boolean(form.formState.errors[field]))
+          }
+          onOpenChange={setExtraOpen}
         >
-          {(field) => <UbTextInput {...field} autoComplete="off" disabled={busy} />}
-        </UbField>
+          <UbStack gap={3}>
+            <UbField
+              name="lockerLabel"
+              label={t('library.enrol.locker')}
+              placeholder={t('library.enrol.locker.placeholder')}
+              optionalLabel={t('common.field.optional')}
+            >
+              {(field) => <UbTextInput {...field} autoComplete="off" disabled={busy} />}
+            </UbField>
 
-        <UbStack direction="row" gap={3} className="max-sm:flex-col">
-          <UbField
-            name="groupLabel"
-            label={t('library.enrol.group')}
-            placeholder={t('library.enrol.group.placeholder')}
-            optionalLabel={t('common.field.optional')}
-            className="flex-1"
-          >
-            {(field) => <UbTextInput {...field} disabled={busy} />}
-          </UbField>
-          <UbField
-            name="memberNumber"
-            label={t('library.enrol.number')}
-            placeholder={t('library.enrol.number.placeholder')}
-            hint={t('library.enrol.number.hint')}
-            optionalLabel={t('common.field.optional')}
-            className="flex-1"
-          >
-            {(field) => <UbTextInput {...field} autoComplete="off" disabled={busy} />}
-          </UbField>
-        </UbStack>
+            <UbStack direction="row" gap={3} className="max-sm:flex-col">
+              <UbField
+                name="groupLabel"
+                label={t('library.enrol.group')}
+                placeholder={t('library.enrol.group.placeholder')}
+                optionalLabel={t('common.field.optional')}
+                className="flex-1"
+              >
+                {(field) => <UbTextInput {...field} disabled={busy} />}
+              </UbField>
+              <UbField
+                name="memberNumber"
+                label={t('library.enrol.number')}
+                placeholder={t('library.enrol.number.placeholder')}
+                hint={t('library.enrol.number.hint')}
+                optionalLabel={t('common.field.optional')}
+                className="flex-1"
+              >
+                {(field) => <UbTextInput {...field} autoComplete="off" disabled={busy} />}
+              </UbField>
+            </UbStack>
 
-        <UbText variant="label">{t('library.enrol.guardian')}</UbText>
-        <UbStack direction="row" gap={3} className="max-sm:flex-col">
-          <UbField
-            name="guardianName"
-            label={t('library.enrol.guardian.name')}
-            placeholder={t('library.enrol.guardian.name.placeholder')}
-            optionalLabel={t('common.field.optional')}
-            className="flex-1"
-          >
-            {(field) => <UbTextInput {...field} disabled={busy} />}
-          </UbField>
-          <UbField
-            name="guardianMobile"
-            label={t('library.enrol.guardian.mobile')}
-            placeholder={t('library.enrol.mobile.placeholder')}
-            optionalLabel={t('common.field.optional')}
-            className="flex-1"
-          >
-            {(field) => <UbPhoneInput {...field} disabled={busy} />}
-          </UbField>
-        </UbStack>
+            <UbText variant="label">{t('library.enrol.guardian')}</UbText>
+            <UbStack direction="row" gap={3} className="max-sm:flex-col">
+              <UbField
+                name="guardianName"
+                label={t('library.enrol.guardian.name')}
+                placeholder={t('library.enrol.guardian.name.placeholder')}
+                optionalLabel={t('common.field.optional')}
+                className="flex-1"
+              >
+                {(field) => <UbTextInput {...field} disabled={busy} />}
+              </UbField>
+              <UbField
+                name="guardianMobile"
+                label={t('library.enrol.guardian.mobile')}
+                placeholder={t('library.enrol.mobile.placeholder')}
+                optionalLabel={t('common.field.optional')}
+                className="flex-1"
+              >
+                {(field) => <UbPhoneInput {...field} disabled={busy} />}
+              </UbField>
+            </UbStack>
+          </UbStack>
+        </UbDisclosure>
 
         {asksMoney && !existingStudent && (
-          <UbCard padded>
+          <LibraryCard padded>
             <UbStack data-testid="library-enrol-fees" gap={2}>
               {isNonZero(cost.fees) && (
                 <UbStack direction="row" justify="between" gap={2}>
@@ -503,9 +579,9 @@ export function EnrolMemberDrawer({
                 />
               )}
             </UbStack>
-          </UbCard>
+          </LibraryCard>
         )}
       </UbForm>
-    </UbDrawer>
+    </LibraryDrawer>
   );
 }

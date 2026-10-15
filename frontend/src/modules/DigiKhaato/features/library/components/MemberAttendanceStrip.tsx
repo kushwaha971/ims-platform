@@ -2,13 +2,15 @@
 
 import { useEffect } from 'react';
 
-import { UbCard, UbStack, UbText } from 'src/design-system';
+import { UbStack, UbText } from 'src/design-system';
 import { useAppDispatch, useAppSelector } from 'src/hooks/useAppStore';
 import type { TranslateFn } from 'src/hooks/useTranslation';
 import { cn } from 'src/utils/cn';
 
 import { selectLibraryAttendance } from '../redux/libraryAttendanceSlice';
 import { fetchMemberAttendance } from '../redux/libraryAttendanceThunk';
+
+import { LibraryCard } from './LibraryCard';
 
 /**
  * W05 — the student page's month: one square per day so far, filled when they
@@ -43,11 +45,13 @@ export function MemberAttendanceStrip({
   const came = new Set(member.days.map((day) => Number(day.slice(8, 10))));
 
   return (
-    <UbCard padded>
-      <UbStack gap={2} data-testid="library-member-attendance">
+    <LibraryCard padded={false}>
+      <UbStack gap={3} className="p-3" data-testid="library-member-attendance">
         <UbStack direction="row" justify="between" gap={2}>
-          <UbText variant="label">{t('library.attendance.thisMonth')}</UbText>
-          <UbText variant="body-sm" tone="secondary">
+          <UbText as="h2" variant="body-medium">
+            {t('library.attendance.thisMonth')}
+          </UbText>
+          <UbText variant="caption" tone="secondary">
             {t('library.attendance.daysOf', {
               came: [...came].filter((day) => day >= first).length,
               days: daysSoFar,
@@ -69,6 +73,6 @@ export function MemberAttendanceStrip({
           ))}
         </UbStack>
       </UbStack>
-    </UbCard>
+    </LibraryCard>
   );
 }

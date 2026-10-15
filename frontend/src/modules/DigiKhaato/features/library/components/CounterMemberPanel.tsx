@@ -1,11 +1,13 @@
 'use client';
 
-import { UbAmount, UbButton, UbCard, UbStack, UbStatusBadge, UbText } from 'src/design-system';
+import { UbAmount, UbButton, UbStack, UbStatusBadge, UbText } from 'src/design-system';
 import type { TranslateFn } from 'src/hooks/useTranslation';
 import { formatBusinessDate } from 'src/utils/dates';
 import { formatInr } from 'src/utils/money';
 
 import { blockParams, isNonZero, STATUS_TONE } from '../view-model/memberDisplay';
+
+import { LibraryCard } from './LibraryCard';
 
 import type { CounterMember } from '../types/counter.types';
 
@@ -34,7 +36,7 @@ export function CounterMemberPanel({
   onFinish: () => void;
 }>): React.JSX.Element {
   return (
-    <UbCard padded>
+    <LibraryCard padded>
       <UbStack data-testid="counter-member-panel" gap={3}>
         <UbStack gap={1}>
           <UbStack direction="row" justify="between" align="start" gap={2}>
@@ -153,6 +155,6 @@ export function CounterMemberPanel({
           {t('library.counter.finish')}
         </UbButton>
       </UbStack>
-    </UbCard>
+    </LibraryCard>
   );
 }

@@ -9,9 +9,7 @@ import { Ban, Undo2, Wrench } from 'lucide-react';
 import {
   UbActionLink,
   UbButton,
-  UbCard,
   UbEmptyState,
-  UbInfoRow,
   UbLink,
   UbPageHeader,
   UbPageShell,
@@ -36,6 +34,7 @@ import {
 
 import { CatalogueActionsMenu } from './CatalogueActionsMenu';
 import { CopyStatusBadge } from './CopyStatusBadge';
+import { LibraryCard, LibraryFacts } from './LibraryCard';
 
 /** The reason dialog loads with the tap that opens it (CLAUDE.md). */
 const WithdrawCopyDialogLazy = dynamic(
@@ -151,7 +150,7 @@ export function CopyDetailPageContent({ id }: Readonly<{ id: string }>): React.J
           />
         }
       />
-      <UbStack gap={4} data-testid="library-copy-screen">
+      <UbStack gap={3} data-testid="library-copy-screen">
         <UbStack gap={1}>
           <UbLink href={`${ROUTES.LIBRARY_CATALOGUE}/${copy.title.id}`} variant="body">
             {copy.title.title}
@@ -165,7 +164,7 @@ export function CopyDetailPageContent({ id }: Readonly<{ id: string }>): React.J
         </UbStack>
 
         {copy.status === 'withdrawn' && copy.withdrawnReason && (
-          <UbCard>
+          <LibraryCard>
             <UbStack gap={1}>
               <UbText variant="body-sm">
                 {t('library.copy.withdrawnLine', {
@@ -179,18 +178,14 @@ export function CopyDetailPageContent({ id }: Readonly<{ id: string }>): React.J
                 </UbText>
               )}
             </UbStack>
-          </UbCard>
+          </LibraryCard>
         )}
 
-        <UbCard>
-          <UbStack gap={1}>
-            {facts.map(([label, value]) => (
-              <UbInfoRow key={label} label={label} value={value} />
-            ))}
-          </UbStack>
-        </UbCard>
+        <LibraryCard>
+          <LibraryFacts items={facts} />
+        </LibraryCard>
 
-        <UbCard title={t('library.copy.history')}>
+        <LibraryCard title={t('library.copy.history')}>
           <UbStack gap={3} data-testid="library-copy-history">
             {copy.events.map((event) => (
               <UbStack key={event.id} gap={0}>
@@ -206,7 +201,7 @@ export function CopyDetailPageContent({ id }: Readonly<{ id: string }>): React.J
               </UbStack>
             ))}
           </UbStack>
-        </UbCard>
+        </LibraryCard>
       </UbStack>
 
       {withdrawing && (

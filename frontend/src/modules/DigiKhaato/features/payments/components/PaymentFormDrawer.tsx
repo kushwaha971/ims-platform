@@ -82,10 +82,13 @@ export function PaymentFormDrawer({
   context,
   onClose,
   onSaved,
+  className,
 }: Readonly<{
   context: PaymentContext;
   onClose: () => void;
   onSaved?: (result: PaymentSaveResult) => void;
+  /** Optional module-specific overlay spacing; payment behaviour is unchanged. */
+  className?: string;
 }>): React.JSX.Element {
   const { t } = useTranslation();
   const { paymentSchema } = usePaymentSchemas();
@@ -215,6 +218,7 @@ export function PaymentFormDrawer({
   if (saved) {
     return (
       <UbDrawer
+        className={className}
         open
         onOpenChange={(next) => !next && onClose()}
         title={title}
@@ -250,6 +254,7 @@ export function PaymentFormDrawer({
 
   return (
     <UbDrawer
+      className={className}
       open
       onOpenChange={(next) => !next && onClose()}
       title={title}

@@ -8,12 +8,11 @@ import { useForm } from 'react-hook-form';
 import {
   UbButton,
   UbDateInput,
-  UbDialog,
   UbField,
   UbChoiceChips,
   UbForm,
   UbMoneyInput,
-  UbNativeSelect,
+  UbCombobox,
   UbStack,
   UbSwitch,
   UbText,
@@ -25,6 +24,8 @@ import { formatInr } from 'src/utils/money';
 
 import { useMemberSchemas } from '../validation/memberSchemas';
 import { isNonZero, renewalPreview } from '../view-model/memberDisplay';
+
+import { LibraryDialog } from './LibraryOverlays';
 
 import type { MemberAction } from '../api/libraryMemberService';
 import type { ActOutcome } from '../hooks/useMemberDetail';
@@ -112,7 +113,7 @@ function ConfirmDialog({ kind, member, today, busy, onClose, onSubmit }: Props):
   const [failure, setFailure] = useState<string | null>(null);
   const form = useForm<Record<string, never>>({ defaultValues: {} });
   return (
-    <UbDialog
+    <LibraryDialog
       open
       onOpenChange={(next) => !next && onClose()}
       title={t(`library.member.${kind}.title`, { name: member.name })}
@@ -153,7 +154,7 @@ function ConfirmDialog({ kind, member, today, busy, onClose, onSubmit }: Props):
           {null}
         </UbForm>
       </UbStack>
-    </UbDialog>
+    </LibraryDialog>
   );
 }
 
@@ -169,7 +170,7 @@ function SuspendDialog({ member, busy, onClose, onSubmit }: Props): React.JSX.El
     defaultValues: { reason: '', until: '' },
   });
   return (
-    <UbDialog
+    <LibraryDialog
       open
       onOpenChange={(next) => !next && onClose()}
       title={t('library.member.suspend.title', { name: member.name })}
@@ -214,7 +215,7 @@ function SuspendDialog({ member, busy, onClose, onSubmit }: Props): React.JSX.El
           </UbField>
         </UbForm>
       </UbStack>
-    </UbDialog>
+    </LibraryDialog>
   );
 }
 
@@ -231,7 +232,7 @@ function CloseDialog({ member, busy, onClose, onSubmit }: Props): React.JSX.Elem
   });
   const booksOut = member.loansOpen > 0;
   return (
-    <UbDialog
+    <LibraryDialog
       open
       onOpenChange={(next) => !next && onClose()}
       title={t('library.member.close.title', { name: member.name })}
@@ -302,7 +303,7 @@ function CloseDialog({ member, busy, onClose, onSubmit }: Props): React.JSX.Elem
           </UbForm>
         </UbStack>
       )}
-    </UbDialog>
+    </LibraryDialog>
   );
 }
 
@@ -312,7 +313,7 @@ function RejoinDialog({ member, types, busy, onClose, onSubmit }: Props): React.
   const [typeId, setTypeId] = useState(member.type.id);
   const [failure, setFailure] = useState<string | null>(null);
   return (
-    <UbDialog
+    <LibraryDialog
       open
       onOpenChange={(next) => !next && onClose()}
       title={t('library.member.rejoin.title', { name: member.name })}
@@ -341,7 +342,9 @@ function RejoinDialog({ member, types, busy, onClose, onSubmit }: Props): React.
         <UbText variant="body-sm" tone="secondary">
           {t('library.member.rejoin.body')}
         </UbText>
-        <UbNativeSelect
+        <UbCombobox
+          searchPlaceholder={t('library.plan.search')}
+          emptyLabel={t('library.plan.noMatches')}
           name="library-rejoin-type"
           aria-label={t('library.enrol.type')}
           value={typeId}
@@ -354,7 +357,7 @@ function RejoinDialog({ member, types, busy, onClose, onSubmit }: Props): React.
           </UbText>
         )}
       </UbStack>
-    </UbDialog>
+    </LibraryDialog>
   );
 }
 
@@ -377,7 +380,7 @@ function ChangePlanDialog({ member, types, busy, onClose, onSubmit }: Props): Re
     defaultValues: { reason: '', until: '' },
   });
   return (
-    <UbDialog
+    <LibraryDialog
       open
       onOpenChange={(next) => !next && onClose()}
       title={t('library.member.changePlan.title', { name: member.name })}
@@ -404,7 +407,9 @@ function ChangePlanDialog({ member, types, busy, onClose, onSubmit }: Props): Re
           <UbText variant="body-sm" tone="secondary">
             {t('library.member.changePlan.body', { type: member.type.name })}
           </UbText>
-          <UbNativeSelect
+          <UbCombobox
+            searchPlaceholder={t('library.plan.search')}
+            emptyLabel={t('library.plan.noMatches')}
             name="library-change-plan"
             aria-label={t('library.member.changePlan.to')}
             value={typeId}
@@ -430,7 +435,7 @@ function ChangePlanDialog({ member, types, busy, onClose, onSubmit }: Props): Re
           </UbForm>
         </UbStack>
       )}
-    </UbDialog>
+    </LibraryDialog>
   );
 }
 
@@ -452,7 +457,7 @@ function DepositDialog({ member, busy, onClose, onSubmit }: Props): React.JSX.El
     defaultValues: { amount: due, paymentMode: 'cash' },
   });
   return (
-    <UbDialog
+    <LibraryDialog
       open
       onOpenChange={(next) => !next && onClose()}
       title={t('library.member.deposit.title', { name: member.name })}
@@ -512,6 +517,6 @@ function DepositDialog({ member, busy, onClose, onSubmit }: Props): React.JSX.El
           </UbField>
         </UbStack>
       </UbForm>
-    </UbDialog>
+    </LibraryDialog>
   );
 }

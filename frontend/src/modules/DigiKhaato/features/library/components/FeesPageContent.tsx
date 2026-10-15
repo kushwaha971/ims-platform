@@ -3,15 +3,14 @@
 import { useEffect, useState } from 'react';
 
 import dynamic from 'next/dynamic';
-import { useRouter } from 'next/navigation';
 
 import { Plus } from 'lucide-react';
 
 import { SummaryStatGrid } from 'src/components/stats/SummaryStatGrid';
 import {
+  UbAvatar,
   UbAmount,
   UbButton,
-  UbCard,
   UbEmptyState,
   UbListItemText,
   UbPageHeader,
@@ -26,7 +25,6 @@ import {
 import { useAppDispatch, useAppSelector } from 'src/hooks/useAppStore';
 import { usePermissions } from 'src/hooks/usePermissions';
 import { useTranslation } from 'src/hooks/useTranslation';
-import { ROUTES } from 'src/routes';
 import { formatBusinessDate } from 'src/utils/dates';
 import { formatInr } from 'src/utils/money';
 
@@ -35,6 +33,9 @@ import { fetchLibraryFeesBoard } from '../redux/libraryHomeThunk';
 import { selectLibraryMemberList } from '../redux/libraryMemberListSlice';
 import { fetchLibraryMembershipTypes } from '../redux/libraryMemberThunk';
 import { isNonZero } from '../view-model/memberDisplay';
+
+import { LibraryCard } from './LibraryCard';
+import { LIBRARY_OVERLAY_CLASSNAME } from './LibraryOverlays';
 
 import type { FeesBoardUnpaid } from '../types/home.types';
 import type { MembershipType } from '../types/member.types';
@@ -50,6 +51,11 @@ const PaymentFormDrawerLazy = dynamic(
     import('modules/DigiKhaato/features/payments/components/PaymentFormDrawer').then(
       (m) => m.PaymentFormDrawer
     ),
+  { ssr: false }
+);
+
+const MemberDetailDrawerLazy = dynamic(
+  () => import('./MemberDetailDrawer').then((m) => m.MemberDetailDrawer),
   { ssr: false }
 );
 
@@ -69,7 +75,7 @@ export function FeesPageContent(): React.JSX.Element {
   const canRead = hasModule('library') && can('library.member.read');
   const canManage = hasModule('library') && can('library.settings.manage');
   const [editing, setEditing] = useState<MembershipType | 'new' | null>(null);
-  const router = useRouter();
+  const [selectedMember, setSelectedMember] = useState<string | null>(null);
   const { board, boardStatus, stale } = useAppSelector(selectLibraryHome);
   // The member page's own rule: a library-only business runs no Payments app.
   const canCollect = can('payments.payment.write');
@@ -103,9 +109,12 @@ export function FeesPageContent(): React.JSX.Element {
   }
 
   return (
-    <UbPageShell width="measure">
+    <UbPageShell>
       <UbPageHeader title={t('library.fees.title')} />
-      <UbStack gap={5}>
+      {selectedMember && (
+        <MemberDetailDrawerLazy id={selectedMember} onClose={() => setSelectedMember(null)} />
+      )}
+      <UbStack gap={3}>
         {/* The approved design (12 Oct 2026): the desk's list — what is left
             to collect and what came in, then Not paid with Take fee on each
             row, then Paid this month. A library with no student yet sees one
@@ -119,14 +128,14 @@ export function FeesPageContent(): React.JSX.Element {
         ) : board.students === 0 ? (
           /* Owner, 12 Oct 2026: with the fee plans right below, a tall empty
              box only pushed them down a screen. One short note instead. */
-          <UbCard padded data-testid="library-fees-empty">
+          <LibraryCard padded data-testid="library-fees-empty">
             <UbText variant="body-sm-medium">{t('library.fees.empty.title')}</UbText>
             <UbText variant="body-sm" tone="tertiary">
               {t('library.fees.empty.body')}
             </UbText>
-          </UbCard>
+          </LibraryCard>
         ) : (
-          <UbStack gap={4} data-testid="library-fees-board">
+          <UbStack gap={3} data-testid="library-fees-board">
             <SummaryStatGrid storageKey="libraryFees">
               <UbStatCard
                 label={t('library.fees.board.toCollect')}
@@ -146,94 +155,97 @@ export function FeesPageContent(): React.JSX.Element {
                   {t('library.home.allPaid')}
                 </UbText>
               ) : (
-                <UbCard padded>
-                  <UbStack as="ul" gap={0} aria-label={t('library.fees.board.notPaid')}>
-                    {board.notPaid.map((row) => (
-                      <UbStack
-                        as="li"
-                        key={row.membershipId}
-                        direction="row"
-                        justify="between"
-                        align="center"
-                        gap={3}
-                        className="border-b border-border-hairline py-2.5 last:border-b-0"
+                <UbStack as="ul" gap={3} aria-label={t('library.fees.board.notPaid')}>
+                  {board.notPaid.map((row) => (
+                    <UbStack
+                      as="li"
+                      key={row.membershipId}
+                      direction="row"
+                      justify="between"
+                      align="center"
+                      gap={3}
+                      className="rounded-card border border-border-hairline bg-surface-card p-3 shadow-2"
+                    >
+                      <UbAvatar name={row.name} size="sm" />
+                      <UbPressable
+                        className="min-w-0 flex-1 text-left"
+                        onClick={() => setSelectedMember(row.membershipId)}
                       >
-                        <UbPressable
-                          className="min-w-0 flex-1 text-left"
-                          onClick={() =>
-                            router.push(`${ROUTES.LIBRARY_MEMBERS}/${row.membershipId}`)
+                        <UbListItemText
+                          primary={
+                            <UbText variant="body-sm-medium" className="break-words">
+                              {row.name}
+                            </UbText>
                           }
-                        >
-                          <UbListItemText
-                            primary={row.name}
-                            secondary={[
-                              row.plan,
-                              t('library.fees.board.since', {
-                                date: formatBusinessDate(row.since),
-                              }),
-                            ]
-                              .filter(Boolean)
-                              .join(' · ')}
-                          />
-                        </UbPressable>
-                        <UbStack direction="row" align="center" gap={2} className="shrink-0">
-                          <UbAmount
-                            value={row.owes}
-                            tone="receivable"
-                            label={t('library.member.owes')}
-                            labelHidden
-                          />
-                          {canCollect && (
-                            <UbButton
-                              size="sm"
-                              onClick={() => setTaking(row)}
-                              data-testid="library-take-fee"
-                            >
-                              {t('library.fees.board.take')}
-                            </UbButton>
-                          )}
-                        </UbStack>
+                          secondary={[
+                            row.plan,
+                            t('library.fees.board.since', {
+                              date: formatBusinessDate(row.since),
+                            }),
+                          ]
+                            .filter(Boolean)
+                            .join(' · ')}
+                        />
+                      </UbPressable>
+                      <UbStack direction="row" align="center" gap={2} className="shrink-0">
+                        <UbAmount
+                          value={row.owes}
+                          tone="receivable"
+                          label={t('library.member.owes')}
+                          labelHidden
+                        />
+                        {canCollect && (
+                          <UbButton
+                            size="sm"
+                            onClick={() => setTaking(row)}
+                            data-testid="library-take-fee"
+                          >
+                            {t('library.fees.board.take')}
+                          </UbButton>
+                        )}
                       </UbStack>
-                    ))}
-                  </UbStack>
-                </UbCard>
+                    </UbStack>
+                  ))}
+                </UbStack>
               )}
             </UbStack>
             {board.paid.length > 0 && (
               <UbStack gap={2}>
                 <UbText variant="label">{t('library.fees.board.paid')}</UbText>
-                <UbCard padded>
-                  <UbStack as="ul" gap={0} aria-label={t('library.fees.board.paid')}>
-                    {board.paid.map((row) => (
-                      <UbStack
-                        as="li"
-                        key={row.paymentId}
-                        direction="row"
-                        justify="between"
-                        align="center"
-                        gap={3}
-                        className="border-b border-border-hairline py-2.5 last:border-b-0"
-                      >
-                        <UbListItemText
-                          primary={row.name}
-                          secondary={[
-                            formatBusinessDate(row.on),
-                            MODES.has(row.mode) ? t(`library.fees.mode.${row.mode}`) : '',
-                          ]
-                            .filter(Boolean)
-                            .join(' · ')}
-                        />
-                        <UbAmount
-                          value={row.amount}
-                          tone="payable"
-                          label={t('library.fees.board.paid')}
-                          labelHidden
-                          className="shrink-0"
-                        />
-                      </UbStack>
-                    ))}
-                  </UbStack>
-                </UbCard>
+                <UbStack as="ul" gap={3} aria-label={t('library.fees.board.paid')}>
+                  {board.paid.map((row) => (
+                    <UbStack
+                      as="li"
+                      key={row.paymentId}
+                      direction="row"
+                      justify="between"
+                      align="center"
+                      gap={3}
+                      className="rounded-card border border-border-hairline bg-surface-card p-3 shadow-2"
+                    >
+                      <UbListItemText
+                        primary={
+                          <UbText variant="body-sm-medium" className="break-words">
+                            {row.name}
+                          </UbText>
+                        }
+                        secondary={[
+                          formatBusinessDate(row.on),
+                          MODES.has(row.mode) ? t(`library.fees.mode.${row.mode}`) : '',
+                        ]
+                          .filter(Boolean)
+                          .join(' · ')}
+                      />
+                      <UbAmount
+                        value={row.amount}
+                        tone="payable"
+                        label={t('library.fees.board.paid')}
+                        labelHidden
+                        className="shrink-0"
+                      />
+                    </UbStack>
+                  ))}
+                </UbStack>
               </UbStack>
             )}
           </UbStack>
@@ -259,7 +271,7 @@ export function FeesPageContent(): React.JSX.Element {
               {t('library.plans.none')}
             </UbText>
           ) : (
-            <UbCard padded>
+            <LibraryCard padded>
               <UbStack as="ul" gap={0} aria-label={t('library.plans.title')}>
                 {types.map((plan) => (
                   <UbStack as="li" key={plan.id} gap={0}>
@@ -300,12 +312,13 @@ export function FeesPageContent(): React.JSX.Element {
                   </UbStack>
                 ))}
               </UbStack>
-            </UbCard>
+            </LibraryCard>
           )}
         </UbStack>
       </UbStack>
       {taking && (
         <PaymentFormDrawerLazy
+          className={LIBRARY_OVERLAY_CLASSNAME}
           context={{
             direction: 'in',
             partyId: taking.partyId,

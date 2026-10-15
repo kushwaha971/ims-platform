@@ -12,6 +12,7 @@ import {
   DoorClosed,
   MessageCircle,
   Pencil,
+  Phone,
   QrCode,
   Receipt,
   RefreshCw,
@@ -22,9 +23,8 @@ import {
   UbActionLink,
   UbAmount,
   UbButton,
-  UbCard,
+  UbDisclosure,
   UbEmptyState,
-  UbInfoRow,
   UbPageHeader,
   UbPageShell,
   UbPageSkeleton,
@@ -59,6 +59,8 @@ import {
 } from '../view-model/memberDisplay';
 
 import { CatalogueActionsMenu } from './CatalogueActionsMenu';
+import { LibraryCard } from './LibraryCard';
+import { LIBRARY_OVERLAY_CLASSNAME } from './LibraryOverlays';
 import { MemberAttendanceStrip } from './MemberAttendanceStrip';
 import { MemberChargesSection } from './MemberChargesSection';
 import { MemberMessageLog } from './MemberMessageLog';
@@ -89,6 +91,8 @@ const SeatDialogLazy = dynamic(() => import('./SeatDialog').then((m) => m.SeatDi
 });
 /* A form belongs in the chunk that OPENS it (CLAUDE.md): RHF's resolver and the
    schema load with the tap on "Edit details", not with the page. */
+const SUMMARY_AMOUNT_ALIGNMENT = 'items-start [&>span[aria-hidden]>span]:min-w-0';
+
 const MemberEditDrawerLazy = dynamic(
   () => import('./MemberEditDrawer').then((m) => m.MemberEditDrawer),
   { ssr: false }
@@ -109,8 +113,12 @@ const PaymentFormDrawerLazy = dynamic(
  * line, the number is monospace. Renew is the one primary action; the rest are
  * behind ⋯ (the LED-02 lesson — five buttons made a page wider than a phone).
  */
-export function MemberDetailPageContent({ id }: Readonly<{ id: string }>): React.JSX.Element {
+export function MemberDetailPageContent({
+  id,
+  embedded = false,
+}: Readonly<{ id: string; embedded?: boolean }>): React.JSX.Element {
   const { t } = useTranslation();
+  const DetailShell = embedded ? UbStack : UbPageShell;
   const dispatch = useAppDispatch();
   const { can, hasModule } = usePermissions();
   const isManager = useIsOwnerOrAdmin();
@@ -138,19 +146,19 @@ export function MemberDetailPageContent({ id }: Readonly<{ id: string }>): React
 
   if (!detail.canRead) {
     return (
-      <UbPageShell>
+      <DetailShell>
         <UbEmptyState
           variant="firstUse"
           title={t('library.noAccess.title')}
           description={t('library.noAccess.body')}
         />
-      </UbPageShell>
+      </DetailShell>
     );
   }
   if (detail.status === 'failed' && !member) {
     const notFound = detail.error?.status === 404;
     return (
-      <UbPageShell>
+      <DetailShell>
         <UbEmptyState
           variant={notFound ? 'firstUse' : 'error'}
           title={t(notFound ? 'library.member.notFound' : 'library.member.error.title')}
@@ -169,7 +177,7 @@ export function MemberDetailPageContent({ id }: Readonly<{ id: string }>): React
             )
           }
         />
-      </UbPageShell>
+      </DetailShell>
     );
   }
   if (!member) return <UbPageSkeleton variant="card" />;
@@ -217,8 +225,12 @@ export function MemberDetailPageContent({ id }: Readonly<{ id: string }>): React
   ].filter((fact): fact is [string, string] => fact[1] !== '');
 
   return (
-    <UbPageShell>
+    <DetailShell>
       <UbPageHeader
+        wrapTitle={embedded}
+        className={
+          embedded ? '[&>div:first-child]:items-start [&_h1]:min-h-10 [&_h1]:leading-10' : undefined
+        }
         title={member.name}
         actions={
           <UbStack direction="row" gap={2}>
@@ -234,7 +246,7 @@ export function MemberDetailPageContent({ id }: Readonly<{ id: string }>): React
                 {t('library.member.renew')}
               </UbButton>
             )}
-            {!closed && detail.canWrite && !renewable && (
+            {!closed && detail.canWrite && !renewable && !embedded && (
               <UbButton
                 variant="secondary"
                 icon={<ArrowLeftRight className="h-4 w-4" aria-hidden />}
@@ -316,6 +328,17 @@ export function MemberDetailPageContent({ id }: Readonly<{ id: string }>): React
                    drawn for anybody else (§19.7.5). Kept on any status: a closed
                    student's note or number can still be wrong. */
                 {
+                  key: 'freeSeat',
+                  label: t('library.place.free', { seat: member.seat?.label ?? '' }),
+                  icon: Armchair,
+                  action:
+                    embedded && member.seat && detail.canWrite && !closed && !busy
+                      ? () => {
+                          void detail.place({ seatId: null });
+                        }
+                      : undefined,
+                },
+                {
                   key: 'edit',
                   label: t('library.member.edit'),
                   icon: Pencil,
@@ -371,7 +394,7 @@ export function MemberDetailPageContent({ id }: Readonly<{ id: string }>): React
           </UbStack>
         }
       />
-      <UbStack gap={4}>
+      <UbStack gap={3} className="mx-auto w-full max-w-6xl">
         <UbStack direction="row" gap={2} align="center" wrap>
           <UbText variant="body-sm" className="ds-mono" data-testid="library-member-number">
             {member.memberNumber}
@@ -380,7 +403,11 @@ export function MemberDetailPageContent({ id }: Readonly<{ id: string }>): React
           {member.feeState !== 'on_hold' && (
             <UbStatusBadge
               tone={FEE_TONE[member.feeState]}
-              label={feeLabel(t, member.feeState, member.validUntil)}
+              label={
+                embedded && isNonZero(member.duesAmount)
+                  ? t('library.members.totals.dues', { amount: formatInr(member.duesAmount) })
+                  : feeLabel(t, member.feeState, member.validUntil)
+              }
             />
           )}
           {suspended && (
@@ -414,10 +441,14 @@ export function MemberDetailPageContent({ id }: Readonly<{ id: string }>): React
           />
         )}
 
-        <UbCard padded>
-          <UbStack gap={3}>
-            <UbStack direction="row" gap={4} wrap>
-              <UbStack gap={0} className="min-w-28" data-testid="library-member-seat">
+        <LibraryCard padded={false}>
+          <UbStack gap={3} className="p-3">
+            <UbStack
+              className={
+                embedded ? 'grid grid-cols-2 gap-3' : 'grid grid-cols-2 gap-3 md:grid-cols-4'
+              }
+            >
+              <UbStack gap={0} className="min-w-0" data-testid="library-member-seat">
                 <UbText variant="caption" tone="tertiary">
                   {t('library.members.column.seat')}
                 </UbText>
@@ -435,6 +466,16 @@ export function MemberDetailPageContent({ id }: Readonly<{ id: string }>): React
                   </UbText>
                 )}
               </UbStack>
+              {embedded &&
+                member.feeState === 'no_fee' &&
+                !isNonZero(detail.chargeTotals?.paid ?? '0.00') && (
+                  <UbStack gap={1} className="min-w-0">
+                    <UbText variant="caption" tone="tertiary">
+                      {t('library.fees.title')}
+                    </UbText>
+                    <UbText variant="body-sm-medium">{t('library.fee.no_fee')}</UbText>
+                  </UbStack>
+                )}
               {detail.chargeTotals &&
                 [
                   {
@@ -447,21 +488,35 @@ export function MemberDetailPageContent({ id }: Readonly<{ id: string }>): React
                     label: 'library.member.fees.paid',
                     value: detail.chargeTotals.paid,
                   },
-                ].map((figure) => (
-                  <UbStack
-                    key={figure.key}
-                    gap={0}
-                    className="min-w-28"
-                    data-testid={`library-member-fees-${figure.key}`}
-                  >
-                    <UbText variant="caption" tone="tertiary">
-                      {t(figure.label)}
-                    </UbText>
-                    <UbAmount value={figure.value} size="lg" />
-                  </UbStack>
-                ))}
+                ]
+                  .filter(
+                    (figure) =>
+                      !embedded ||
+                      (figure.key === 'paid' &&
+                        (member.feeState !== 'no_fee' || isNonZero(figure.value)))
+                  )
+                  .map((figure) => (
+                    <UbStack
+                      key={figure.key}
+                      gap={0}
+                      className="min-w-0"
+                      data-testid={`library-member-fees-${figure.key}`}
+                    >
+                      <UbText variant="caption" tone="tertiary">
+                        {t(figure.label)}
+                      </UbText>
+                      <UbAmount
+                        value={figure.value}
+                        size="lg"
+                        tone={figure.key === 'paid' ? 'payable' : 'neutral'}
+                        label={t(figure.label)}
+                        labelHidden
+                        className={SUMMARY_AMOUNT_ALIGNMENT}
+                      />
+                    </UbStack>
+                  ))}
               {member.loansOpen > 0 && (
-                <UbStack gap={0} className="min-w-28">
+                <UbStack gap={0} className="min-w-0">
                   <UbText variant="caption" tone="tertiary">
                     {t('library.member.booksOut')}
                   </UbText>
@@ -478,33 +533,35 @@ export function MemberDetailPageContent({ id }: Readonly<{ id: string }>): React
                   )}
                 </UbStack>
               )}
-              <UbStack gap={0} className="min-w-28">
-                <UbText variant="caption" tone="tertiary">
-                  {t(depositDue ? 'library.member.toCollect' : 'library.member.owes')}
-                </UbText>
-                {isNonZero(owedInAll) ? (
-                  <UbAmount
-                    value={owedInAll}
-                    size="lg"
-                    tone="receivable"
-                    label={t('library.member.owes')}
-                    labelHidden
-                  />
-                ) : (
-                  <UbText variant="metric-sm">{t('library.member.noDues')}</UbText>
-                )}
-                {depositDue && (
-                  <UbText
-                    variant="caption"
-                    tone="tertiary"
-                    data-testid="library-member-owes-deposit"
-                  >
-                    {t('library.member.owesInclDeposit', { deposit: formatInr(depositDue) })}
+              {(!embedded || depositDue) && (
+                <UbStack gap={0} className="min-w-0">
+                  <UbText variant="caption" tone="tertiary">
+                    {t(depositDue ? 'library.member.toCollect' : 'library.member.owes')}
                   </UbText>
-                )}
-              </UbStack>
+                  {isNonZero(owedInAll) ? (
+                    <UbAmount
+                      value={owedInAll}
+                      size="lg"
+                      tone="receivable"
+                      label={t('library.member.owes')}
+                      labelHidden
+                    />
+                  ) : (
+                    <UbText variant="metric-sm">{t('library.member.noDues')}</UbText>
+                  )}
+                  {depositDue && (
+                    <UbText
+                      variant="caption"
+                      tone="tertiary"
+                      data-testid="library-member-owes-deposit"
+                    >
+                      {t('library.member.owesInclDeposit', { deposit: formatInr(depositDue) })}
+                    </UbText>
+                  )}
+                </UbStack>
+              )}
               {member.deposit && (
-                <UbStack gap={0} className="min-w-28">
+                <UbStack gap={0} className="min-w-0">
                   <UbText variant="caption" tone="tertiary">
                     {t('library.member.depositHeld')}
                   </UbText>
@@ -534,7 +591,12 @@ export function MemberDetailPageContent({ id }: Readonly<{ id: string }>): React
               )}
             </UbStack>
             {!closed && (
-              <UbStack direction="row" gap={2} wrap>
+              <UbStack
+                direction="row"
+                gap={2}
+                wrap
+                className={embedded ? 'grid grid-cols-2' : undefined}
+              >
                 {hasModule('payments') &&
                   can('payments.payment.write') &&
                   isNonZero(member.duesAmount) && (
@@ -546,17 +608,27 @@ export function MemberDetailPageContent({ id }: Readonly<{ id: string }>): React
                       {t('library.member.fees.collect')}
                     </UbButton>
                   )}
+                {embedded && detail.canWrite && !renewable && (
+                  <UbButton
+                    size="sm"
+                    variant="outlineNeutral"
+                    onClick={() => setDialog('changePlan')}
+                    data-testid="library-member-change-plan"
+                  >
+                    {t('library.member.changePlan')}
+                  </UbButton>
+                )}
                 {detail.canWrite && (
                   <>
                     <UbButton
                       size="sm"
-                      variant="secondary"
+                      variant="outlineNeutral"
                       onClick={() => setSeating(true)}
                       data-testid="library-member-place"
                     >
                       {t(member.seat ? 'library.place.change' : 'library.place.give')}
                     </UbButton>
-                    {member.seat && (
+                    {member.seat && !embedded && (
                       <UbButton
                         size="sm"
                         variant="ghost"
@@ -581,61 +653,102 @@ export function MemberDetailPageContent({ id }: Readonly<{ id: string }>): React
               </UbStack>
             )}
           </UbStack>
-        </UbCard>
+        </LibraryCard>
 
-        <UbCard padded>
-          <UbStack gap={2}>
-            {facts.map(([label, value]) => (
-              <UbInfoRow key={label} label={label} value={value} />
-            ))}
-          </UbStack>
-        </UbCard>
-
-        <MemberAttendanceStrip
-          membershipId={member.membershipId}
-          startsOn={member.startsOn}
-          today={today}
-          t={t}
-        />
-
-        <MemberChargesSection
-          member={member}
-          t={t}
-          onPaymentSaved={() => setPaymentHistoryRevision((current) => current + 1)}
-        />
-        <MemberPaymentHistoryLazy
-          membershipId={member.membershipId}
-          partyId={member.party.id}
-          revision={paymentHistoryRevision}
-        />
-
-        <MemberMessageLog membershipId={member.membershipId} refreshKey={messageLogKey} t={t} />
-
-        {member.periods.length > 0 && (
-          <UbCard padded>
-            <UbStack gap={2}>
-              <UbText variant="label">{t('library.member.history')}</UbText>
-              {member.periods.map((period, index) => (
-                <UbStack key={`${period.onDate}-${index}`} gap={0}>
-                  <UbText variant="body-sm">{t(`library.member.period.${period.kind}`)}</UbText>
-                  <UbText variant="caption" tone="tertiary">
-                    {[
-                      formatBusinessDate(period.onDate),
-                      period.validUntil
-                        ? t('library.member.validUntilOn', {
-                            date: formatBusinessDate(period.validUntil),
-                          })
-                        : t('library.member.noExpiry'),
-                      period.reason,
-                    ]
-                      .filter(Boolean)
-                      .join(' · ')}
-                  </UbText>
-                </UbStack>
-              ))}
+        <UbStack
+          className={embedded ? 'grid gap-4' : 'grid items-start gap-4 lg:grid-cols-[2fr_1fr]'}
+        >
+          <LibraryCard padded={false}>
+            <UbStack gap={3} className="p-3">
+              <UbText as="h2" variant="body-medium">
+                {t('library.member.contactDetails')}
+              </UbText>
+              <UbStack className="grid grid-cols-2 gap-x-4 gap-y-3">
+                {facts.map(([label, value]) => (
+                  <UbStack key={label} gap={1} className="min-w-0">
+                    <UbText variant="caption" tone="tertiary">
+                      {label}
+                    </UbText>
+                    {label === t('library.member.mobile') && member.party.mobile ? (
+                      <UbActionLink
+                        href={`tel:${member.party.mobile}`}
+                        variant="ghost"
+                        size="sm"
+                        className="justify-start p-0"
+                        icon={<Phone className="h-4 w-4" aria-hidden />}
+                      >
+                        {value}
+                      </UbActionLink>
+                    ) : (
+                      <UbText variant="body-sm-medium" className="break-words">
+                        {value}
+                      </UbText>
+                    )}
+                  </UbStack>
+                ))}
+              </UbStack>
             </UbStack>
-          </UbCard>
-        )}
+          </LibraryCard>
+
+          <MemberAttendanceStrip
+            membershipId={member.membershipId}
+            startsOn={member.startsOn}
+            today={today}
+            t={t}
+          />
+        </UbStack>
+
+        <UbDisclosure
+          label={t('library.member.activityDetails')}
+          defaultOpen={!embedded}
+          keepMounted
+          className="rounded-none border-0 [&>[role=region]]:px-0 [&>[role=region]]:pb-0 [&>button]:rounded-none"
+        >
+          <UbStack gap={3}>
+            <UbStack className={embedded ? 'grid gap-4' : 'grid items-start gap-4 xl:grid-cols-2'}>
+              <MemberChargesSection
+                member={member}
+                t={t}
+                onPaymentSaved={() => setPaymentHistoryRevision((current) => current + 1)}
+              />
+              <MemberPaymentHistoryLazy
+                membershipId={member.membershipId}
+                partyId={member.party.id}
+                revision={paymentHistoryRevision}
+              />
+            </UbStack>
+
+            <MemberMessageLog membershipId={member.membershipId} refreshKey={messageLogKey} t={t} />
+
+            {member.periods.length > 0 && (
+              <LibraryCard padded={false}>
+                <UbStack gap={3} className="p-3">
+                  <UbText as="h2" variant="body-medium">
+                    {t('library.member.history')}
+                  </UbText>
+                  {member.periods.map((period, index) => (
+                    <UbStack key={`${period.onDate}-${index}`} gap={0}>
+                      <UbText variant="body-sm">{t(`library.member.period.${period.kind}`)}</UbText>
+                      <UbText variant="caption" tone="tertiary">
+                        {[
+                          formatBusinessDate(period.onDate),
+                          period.validUntil
+                            ? t('library.member.validUntilOn', {
+                                date: formatBusinessDate(period.validUntil),
+                              })
+                            : t('library.member.noExpiry'),
+                          period.reason,
+                        ]
+                          .filter(Boolean)
+                          .join(' · ')}
+                      </UbText>
+                    </UbStack>
+                  ))}
+                </UbStack>
+              </LibraryCard>
+            )}
+          </UbStack>
+        </UbDisclosure>
       </UbStack>
 
       {showingQr && (
@@ -667,6 +780,7 @@ export function MemberDetailPageContent({ id }: Readonly<{ id: string }>): React
       )}
       {collectingFees && (
         <PaymentFormDrawerLazy
+          className={LIBRARY_OVERLAY_CLASSNAME}
           context={{
             direction: 'in',
             partyId: member.party.id,
@@ -705,6 +819,6 @@ export function MemberDetailPageContent({ id }: Readonly<{ id: string }>): React
           onSubmit={(body) => detail.act(dialog, body)}
         />
       )}
-    </UbPageShell>
+    </DetailShell>
   );
 }

@@ -10,6 +10,8 @@ const PUBLIC_ASSET_CACHE = 'public, max-age=86400, stale-while-revalidate=604800
 
 const nextConfig = {
   reactStrictMode: true,
+  // Keep the local development badge from covering Home on the mobile tab bar.
+  devIndicators: false,
   poweredByHeader: false,
   output: 'standalone',
   /**

@@ -19,8 +19,7 @@
  * KNOWN GAPS versus Radix, and why they are acceptable at MVP:
  *  - no `aria-hidden` / `inert` on the background tree (the trap is complete,
  *    so keyboard and screen-reader focus cannot leave the dialog anyway);
- *  - no nested-overlay stack (nothing in Sprints 1–3 opens a dialog from a
- *    dialog; a second one would need a depth counter for the scroll lock);
+ *  - nested dialogs share a reference-counted scroll lock;
  *  - the menu closes on choosing an item unless its selection is cancelled,
  *    on outside pointerdown and on Escape, and does not implement typeahead.
  */
@@ -58,6 +57,25 @@ const focusableWithin = (root: HTMLElement): readonly HTMLElement[] =>
   Array.from(root.querySelectorAll<HTMLElement>(FOCUSABLE)).filter(
     (node) => !node.hasAttribute('hidden') && node.getAttribute('aria-hidden') !== 'true'
   );
+
+/** Dialogs share a lock: route cleanup may release parent before child. */
+const bodyScrollLocks = new WeakMap<HTMLElement, { count: number; previous: string }>();
+const acquireBodyScrollLock = (body: HTMLElement): (() => void) => {
+  const lock = bodyScrollLocks.get(body) ?? { count: 0, previous: body.style.overflow };
+  lock.count += 1;
+  bodyScrollLocks.set(body, lock);
+  body.style.overflow = 'hidden';
+  let released = false;
+  return () => {
+    if (released) return;
+    released = true;
+    lock.count -= 1;
+    if (lock.count === 0) {
+      body.style.overflow = lock.previous;
+      bodyScrollLocks.delete(body);
+    }
+  };
+};
 
 // ── Dialog ───────────────────────────────────────────────────────────────────
 
@@ -177,8 +195,7 @@ export function MLDialog({
   // Move focus in, lock scroll — and undo both.
   useEffect(() => {
     if (!open || typeof document === 'undefined') return undefined;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
+    const releaseScrollLock = acquireBodyScrollLock(document.body);
 
     const panel = panelRef.current;
     /* Read once, on open: the caller's control (the khata's ⋯) is mounted by
@@ -224,7 +241,7 @@ export function MLDialog({
     }
 
     return () => {
-      document.body.style.overflow = previousOverflow;
+      releaseScrollLock();
       restoreTarget(openerRef.current, fallback)?.focus();
     };
     /* Both extra deps are stable for the dialog's life — a state value set
@@ -422,7 +439,7 @@ export function MLDialogFooter({
        and a 480 px dialog clipped the first one to "cel" rather than wrap. */
     <div
       className={cn(
-        'flex gap-3 border-t border-border-hairline p-6',
+        'flex gap-3 border-t border-border-hairline p-6 pb-[max(1.5rem,env(safe-area-inset-bottom,0px))]',
         order === 'as-written' ? 'flex-col' : 'flex-col-reverse',
         'sm:flex-row sm:flex-wrap sm:justify-end sm:gap-3',
         className

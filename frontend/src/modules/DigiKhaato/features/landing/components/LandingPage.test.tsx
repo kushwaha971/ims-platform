@@ -92,8 +92,10 @@ describe('LandingPage', () => {
     screen
       .getAllByRole('link', { name: 'Log in' })
       .forEach((link) => expect(link).toHaveAttribute('href', '/login'));
-    expect(screen.getByRole('link', { name: 'Terms' })).toHaveAttribute('href', '/legal/terms');
-    expect(screen.getByRole('link', { name: 'Privacy' })).toHaveAttribute('href', '/legal/privacy');
+    // The owner removed the Legal footer section; direct legal routes remain available.
+    expect(screen.queryByRole('navigation', { name: 'Legal' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Terms' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Privacy' })).not.toBeInTheDocument();
   });
 
   it('links every anchor in the header to a section that exists', () => {

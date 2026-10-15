@@ -9,13 +9,11 @@ import { useForm, useWatch } from 'react-hook-form';
 import {
   UbActionLink,
   UbButton,
-  UbCard,
   UbChoiceChips,
-  UbDrawer,
   UbField,
   UbForm,
   UbListItemText,
-  UbNativeSelect,
+  UbCombobox,
   UbStack,
   UbStatusBadge,
   UbText,
@@ -30,6 +28,9 @@ import { selectLibrarySeats } from '../redux/librarySeatsSlice';
 import { fetchLibraryShifts } from '../redux/librarySeatThunk';
 import { AUDIENCES, BULK_KINDS, CUSTOM_MESSAGE_MAX, PERSONAL_TOKENS } from '../types/message.types';
 import { useMessageSchemas } from '../validation/messageSchemas';
+
+import { LibraryCard } from './LibraryCard';
+import { LibraryDrawer } from './LibraryOverlays';
 
 import type {
   Audience,
@@ -116,7 +117,7 @@ export function BulkMessageDrawer({
   };
 
   return (
-    <UbDrawer
+    <LibraryDrawer
       open
       onOpenChange={(next) => !next && onClose()}
       title={t('library.messages.bulk.title')}
@@ -189,7 +190,9 @@ export function BulkMessageDrawer({
           {audience === 'shift' && (
             <UbField name="shiftId" label={t('library.messages.bulk.shift')} required>
               {(field) => (
-                <UbNativeSelect
+                <UbCombobox
+                  searchPlaceholder={t('library.select.search')}
+                  emptyLabel={t('library.select.noMatches')}
                   {...field}
                   placeholder={t('library.messages.bulk.shift.placeholder')}
                   options={shifts.map((shift) => ({ value: shift.id, label: shift.name }))}
@@ -226,7 +229,7 @@ export function BulkMessageDrawer({
               : t('library.messages.bulk.ready', { count: rows.length, sent: sent.size })}
           </UbText>
           {rows.map((row) => (
-            <UbCard key={row.membershipId} padded>
+            <LibraryCard key={row.membershipId} padded>
               <UbStack gap={2} data-testid={`library-bulk-row-${row.membershipId}`}>
                 <UbListItemText
                   primary={row.name}
@@ -268,10 +271,10 @@ export function BulkMessageDrawer({
                   )}
                 </UbStack>
               </UbStack>
-            </UbCard>
+            </LibraryCard>
           ))}
         </UbStack>
       )}
-    </UbDrawer>
+    </LibraryDrawer>
   );
 }

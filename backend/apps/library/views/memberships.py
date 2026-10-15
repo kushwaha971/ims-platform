@@ -25,7 +25,7 @@ from apps.common.permissions import HasPermission, ModuleEnabled, OwnerOrAdmin
 from apps.common.responses import StandardResponse
 from apps.common.tenancy import get_effective_tenant
 from apps.library.models import LibraryMembership
-from apps.library.selectors.members import list_members
+from apps.library.selectors.members import list_members, member_status_counts
 from apps.library.services import members
 from apps.library.services.charges import charge_json
 
@@ -127,6 +127,7 @@ class MemberListView(_MemberView):
         ).aggregate(total=Sum("held_amount"))["total"]
         totals = {
             "members": qs.count(),
+            **member_status_counts(qs, today),
             "dues": f"{Decimal(qs.aggregate(total=Sum('dues'))['total'] or ZERO):.2f}",
             "deposits_held": f"{Decimal(held or ZERO):.2f}",
         }

@@ -9,7 +9,6 @@ import { MessageCircle, Users } from 'lucide-react';
 import {
   UbAmount,
   UbButton,
-  UbCard,
   UbEmptyState,
   UbListItemText,
   UbPageHeader,
@@ -26,6 +25,8 @@ import { formatBusinessDate } from 'src/utils/dates';
 
 import { selectLibraryMessages } from '../redux/libraryMessagesSlice';
 import { fetchFeeReminders } from '../redux/libraryMessageThunk';
+
+import { LibraryCard } from './LibraryCard';
 
 import type { FeeReminderRow } from '../types/message.types';
 
@@ -113,13 +114,13 @@ export function MessagesPageContent(): React.JSX.Element {
             {t('library.messages.schedule')}
           </UbText>
           {state.rows.length === 0 ? (
-            <UbCard padded>
+            <LibraryCard padded>
               <UbText variant="body-sm" tone="tertiary">
                 {t('library.messages.none')}
               </UbText>
-            </UbCard>
+            </LibraryCard>
           ) : (
-            <UbCard padded>
+            <LibraryCard padded>
               <UbStack as="ul" gap={0} aria-label={t('library.messages.title')}>
                 {state.rows.map((row) => (
                   <UbStack
@@ -183,7 +184,7 @@ export function MessagesPageContent(): React.JSX.Element {
                   </UbStack>
                 ))}
               </UbStack>
-            </UbCard>
+            </LibraryCard>
           )}
         </UbStack>
       )}

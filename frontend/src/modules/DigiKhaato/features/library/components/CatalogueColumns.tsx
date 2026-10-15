@@ -120,7 +120,7 @@ export const createCopyColumns = ({
     id: 'place',
     header: t('library.column.place'),
     priority: 2,
-    cardSlot: 'none',
+    cardSlot: 'meta',
     widthShare: 16,
     cell: (row) => copyPlace(row),
   },

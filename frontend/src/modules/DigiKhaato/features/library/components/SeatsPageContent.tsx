@@ -4,10 +4,17 @@ import { useMemo, useState } from 'react';
 
 import dynamic from 'next/dynamic';
 
-import { Settings2 } from 'lucide-react';
+import { ChevronRight, Plus, Settings2 } from 'lucide-react';
 
 import {
+  UbActionLink,
+  UbLink,
+  UbAvatar,
   UbButton,
+  UbDisclosure,
+  UbSearchInput,
+  UbStatCard,
+  UbStatusBadge,
   UbEmptyState,
   UbFilterChip,
   UbFilterSelect,
@@ -21,10 +28,12 @@ import {
 import { usePermissions } from 'src/hooks/usePermissions';
 import { useTranslation } from 'src/hooks/useTranslation';
 import type { TranslateFn } from 'src/hooks/useTranslation';
+import { ROUTES } from 'src/routes';
 import { cn } from 'src/utils/cn';
+import { formatInr } from 'src/utils/money';
 
 import { useSeats } from '../hooks/useSeats';
-import { shiftHours } from '../view-model/memberDisplay';
+import { FEE_TONE, isNonZero, shiftHours } from '../view-model/memberDisplay';
 import {
   DAY_FILL,
   FEE_DOT,
@@ -39,7 +48,10 @@ import {
   type ViewTileState,
 } from '../view-model/seatDisplay';
 
-import type { LibraryShift, SeatMapRow } from '../types/seat.types';
+import { LibraryCard } from './LibraryCard';
+import { LibraryDrawer } from './LibraryOverlays';
+
+import type { SeatMapRow } from '../types/seat.types';
 
 /** The setup drawer loads with the tap that opens it (CLAUDE.md). */
 const SeatSetupDrawerLazy = dynamic(
@@ -82,6 +94,7 @@ const NO_FILTERS: SeatFilters = { zone: ALL_ZONES, freeOnly: false, unpaidOnly: 
 export function SeatsPageContent(): React.JSX.Element {
   const { t } = useTranslation();
   const [shiftId, setShiftId] = useState<string>(WHOLE_DAY);
+  const [selectedMember, setSelectedMember] = useState<string | null>(null);
   const [picked, setPicked] = useState<string | null>(null);
   const [filters, setFilters] = useState<SeatFilters>(NO_FILTERS);
   const [setup, setSetup] = useState(false);
@@ -103,7 +116,25 @@ export function SeatsPageContent(): React.JSX.Element {
     }
     return [...groups.entries()];
   }, [map, filters, wholeDay]);
+  const occupancyCounts = useMemo(() => {
+    const counts = { free: 0, partial: 0, full: 0 };
+    for (const seat of map?.seats ?? []) counts[seat.dayState] += 1;
+    return counts;
+  }, [map]);
   const chosen = map?.seats.find((seat) => seat.id === picked) ?? null;
+  const admissionShift = chosen
+    ? !wholeDay
+      ? chosen.viewState === 'free'
+        ? shiftId
+        : undefined
+      : chosen.dayState === 'free'
+        ? ''
+        : seating.activeShifts.find((shift) => !chosen.takenShiftIds.includes(shift.id))?.id
+    : undefined;
+  const admissionHref =
+    chosen && admissionShift !== undefined
+      ? `${ROUTES.LIBRARY_MEMBERS}?add=1&seat=${encodeURIComponent(chosen.id)}&admitShift=${encodeURIComponent(admissionShift)}`
+      : undefined;
 
   if (!seating.canRead) {
     return (
@@ -131,16 +162,27 @@ export function SeatsPageContent(): React.JSX.Element {
       <UbPageHeader
         title={t('library.seats.title')}
         actions={
-          seating.canManage ? (
-            <UbButton
-              variant="secondary"
-              icon={<Settings2 className="h-4 w-4" aria-hidden />}
-              onClick={() => setSetup(true)}
-              data-testid="library-seats-setup"
-            >
-              {t('library.seats.setup')}
-            </UbButton>
-          ) : undefined
+          <UbStack direction="row" gap={2} wrap>
+            {canWrite && (
+              <UbActionLink
+                href={`${ROUTES.LIBRARY_MEMBERS}?add=1`}
+                variant="primary"
+                icon={<Plus className="h-4 w-4" aria-hidden />}
+              >
+                {t('library.members.add')}
+              </UbActionLink>
+            )}
+            {seating.canManage && (
+              <UbButton
+                variant="secondary"
+                icon={<Settings2 className="h-4 w-4" aria-hidden />}
+                onClick={() => setSetup(true)}
+                data-testid="library-seats-setup"
+              >
+                {t('library.seats.setup')}
+              </UbButton>
+            )}
+          </UbStack>
         }
       />
       {seating.seats.length === 0 && seating.listsStatus === 'succeeded' ? (
@@ -159,7 +201,68 @@ export function SeatsPageContent(): React.JSX.Element {
       ) : !map ? (
         <UbPageSkeleton variant="card" />
       ) : (
-        <UbStack gap={4} data-testid="library-seats-screen">
+        <UbStack gap={3} data-testid="library-seats-screen">
+          {wholeDay && (
+            <UbStack
+              className="grid grid-cols-3 gap-2"
+              gap={0}
+              data-testid="library-seat-occupancy"
+            >
+              <UbPressable
+                aria-label={t('library.seats.filter.free')}
+                aria-pressed={filters.freeOnly}
+                className={cn('rounded-control', filters.freeOnly && 'ring-2 ring-accent')}
+                onClick={() =>
+                  setFilters((current) => ({
+                    ...current,
+                    freeOnly: !current.freeOnly,
+                    occupancy: 'all',
+                  }))
+                }
+              >
+                <UbStatCard
+                  value={String(occupancyCounts.free)}
+                  label={t('library.seats.state.free')}
+                  tone={occupancyCounts.free > 0 ? 'success' : undefined}
+                  className="bg-surface-card [&_*]:text-success"
+                />
+              </UbPressable>
+              {(['partial', 'full'] as const).map((occupancy) => (
+                <UbPressable
+                  key={occupancy}
+                  aria-label={t(`library.seats.day.${occupancy}`)}
+                  aria-pressed={filters.occupancy === occupancy}
+                  className={cn(
+                    'rounded-control',
+                    filters.occupancy === occupancy && 'ring-2 ring-accent'
+                  )}
+                  onClick={() =>
+                    setFilters((current) => ({
+                      ...current,
+                      occupancy: current.occupancy === occupancy ? 'all' : occupancy,
+                      freeOnly: false,
+                    }))
+                  }
+                >
+                  <UbStatCard
+                    value={String(occupancyCounts[occupancy])}
+                    label={t(`library.seats.day.${occupancy}`)}
+                    className={
+                      occupancy === 'partial'
+                        ? 'bg-surface-card [&_*]:text-warning'
+                        : 'bg-surface-card'
+                    }
+                  />
+                </UbPressable>
+              ))}
+            </UbStack>
+          )}
+          <UbSearchInput
+            value={filters.query ?? ''}
+            onChange={(query) => setFilters((current) => ({ ...current, query }))}
+            aria-label={t('library.seats.search')}
+            placeholder={t('library.seats.search')}
+          />
           <UbStack direction="row" gap={2} wrap align="center">
             {shiftOptions.length > 1 && (
               <UbFilterSelect
@@ -193,11 +296,13 @@ export function SeatsPageContent(): React.JSX.Element {
                 closeLabel={t('common.action.close')}
               />
             )}
-            <UbFilterChip
-              label={t('library.seats.filter.free')}
-              pressed={filters.freeOnly}
-              onToggle={(freeOnly) => setFilters((f) => ({ ...f, freeOnly }))}
-            />
+            {!wholeDay && (
+              <UbFilterChip
+                label={t('library.seats.filter.free')}
+                pressed={filters.freeOnly}
+                onToggle={(freeOnly) => setFilters((f) => ({ ...f, freeOnly, occupancy: 'all' }))}
+              />
+            )}
             <UbFilterChip
               label={t('library.seats.filter.unpaid')}
               pressed={filters.unpaidOnly}
@@ -214,7 +319,9 @@ export function SeatsPageContent(): React.JSX.Element {
             ].join(' · ')}
           </UbText>
 
-          <SeatLegend wholeDay={wholeDay} t={t} />
+          <UbDisclosure label={t('library.seats.guide')} keepMounted>
+            <SeatLegend wholeDay={wholeDay} t={t} />
+          </UbDisclosure>
 
           {zones.length === 0 && (
             <UbText variant="body-sm" tone="tertiary">
@@ -227,32 +334,170 @@ export function SeatsPageContent(): React.JSX.Element {
               <UbStack
                 as="ul"
                 gap={0}
-                className="grid grid-cols-4 gap-2 sm:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10"
+                className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3"
                 aria-label={zone || t('library.seats.title')}
               >
                 {seats.map((seat) => (
                   <UbStack as="li" key={seat.id} gap={0}>
-                    <SeatTile
-                      seat={seat}
-                      wholeDay={wholeDay}
-                      shifts={seating.activeShifts}
-                      picked={seat.id === picked}
-                      onPick={() => setPicked(seat.id === picked ? null : seat.id)}
-                      t={t}
-                    />
+                    <LibraryCard
+                      padded={false}
+                      elevated
+                      className={cn('[&>div]:p-0', 'bg-surface-card')}
+                    >
+                      <SeatTile
+                        seat={seat}
+                        wholeDay={wholeDay}
+                        activeShiftCount={seating.activeShifts.length}
+                        picked={seat.id === picked}
+                        onPick={() => setPicked(seat.id === picked ? null : seat.id)}
+                        t={t}
+                      />
+                      <UbStack gap={3} className="p-3" data-testid={`library-seat-card-${seat.id}`}>
+                        {wholeDay && seating.activeShifts.length > 0 && (
+                          <UbStack
+                            className="grid grid-cols-[repeat(auto-fit,minmax(4rem,1fr))] gap-1"
+                            gap={0}
+                          >
+                            {seating.activeShifts.map((shift) => (
+                              <UbStack
+                                key={shift.id}
+                                gap={1}
+                                className={cn(
+                                  'rounded-control px-2 py-2 text-center',
+                                  seat.takenShiftIds.includes(shift.id)
+                                    ? 'bg-surface-sunken'
+                                    : 'bg-success-dim'
+                                )}
+                              >
+                                <UbText variant="body-sm-medium">{shift.name}</UbText>
+                                <UbText
+                                  variant="caption"
+                                  tone={
+                                    seat.takenShiftIds.includes(shift.id) ? 'secondary' : 'success'
+                                  }
+                                >
+                                  {t(
+                                    seat.takenShiftIds.includes(shift.id)
+                                      ? 'library.seats.shift.taken'
+                                      : 'library.seats.shift.available'
+                                  )}
+                                </UbText>
+                              </UbStack>
+                            ))}
+                          </UbStack>
+                        )}
+                        {canWrite &&
+                          (wholeDay ? seat.dayState === 'free' : seat.viewState === 'free') && (
+                            <UbLink
+                              href={`${ROUTES.LIBRARY_MEMBERS}?add=1&seat=${encodeURIComponent(seat.id)}&admitShift=${encodeURIComponent(wholeDay ? '' : shiftId)}`}
+                              tone="success"
+                              underline={false}
+                              className="flex min-h-11 items-center justify-between gap-2 rounded-control bg-success-dim px-3 py-2"
+                            >
+                              {t('library.seats.allAvailable')}
+                              <UbText as="span" variant="body-sm-medium" tone="success">
+                                {t('library.seats.assign')}
+                              </UbText>
+                            </UbLink>
+                          )}
+                        {(wholeDay ? seat.holders : seat.occupants).map((person) => (
+                          <UbStack
+                            key={person.membershipId}
+                            direction="row"
+                            align="center"
+                            gap={2}
+                            className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 border-t border-border-hairline pt-3"
+                          >
+                            <UbAvatar
+                              name={person.name}
+                              size="sm"
+                              className="bg-primary-50 text-text-accent"
+                            />
+                            <UbStack gap={0} className="min-w-0 flex-1">
+                              <UbLink
+                                tone="primary"
+                                underline={false}
+                                href={`${ROUTES.LIBRARY_MEMBERS}/${person.membershipId}`}
+                                onClick={(event) => {
+                                  if (
+                                    !event.metaKey &&
+                                    !event.ctrlKey &&
+                                    !event.shiftKey &&
+                                    !event.altKey
+                                  ) {
+                                    event.preventDefault();
+                                    setSelectedMember(person.membershipId);
+                                  }
+                                }}
+                                className="block min-w-0 max-w-full whitespace-normal break-words text-left font-medium"
+                              >
+                                {person.name}
+                              </UbLink>
+                              <UbText variant="caption" tone="tertiary">
+                                {person.shift
+                                  ? `${person.shift.name} · ${shiftHours(person.shift)}`
+                                  : t('library.seats.day.allDay')}
+                              </UbText>
+                            </UbStack>
+                            <UbStack direction="row" gap={1} align="center" className="max-w-28">
+                              <UbStatusBadge
+                                tone={FEE_TONE[person.feeState]}
+                                label={
+                                  isNonZero(person.duesAmount)
+                                    ? t('library.fee.amountDue', {
+                                        amount: formatInr(person.duesAmount),
+                                      })
+                                    : t(`library.fee.${person.feeState}`)
+                                }
+                              />
+                              <ChevronRight
+                                className="h-4 w-4 shrink-0 text-text-tertiary"
+                                aria-hidden
+                              />
+                            </UbStack>
+                          </UbStack>
+                        ))}
+                      </UbStack>
+                    </LibraryCard>
                   </UbStack>
                 ))}
               </UbStack>
             </UbStack>
           ))}
 
-          {chosen && <SeatPanelLazy seat={chosen} canWrite={canWrite} />}
+          {chosen && (
+            <LibraryDrawer
+              open
+              title={t('library.seats.detailTitle', { seat: chosen.label })}
+              closeLabel={t('common.action.close')}
+              onOpenChange={(open) => !open && setPicked(null)}
+            >
+              <SeatPanelLazy
+                seat={chosen}
+                canWrite={canWrite}
+                admissionHref={admissionHref}
+                onOpenMember={setSelectedMember}
+              />
+            </LibraryDrawer>
+          )}
         </UbStack>
+      )}
+      {selectedMember && (
+        <MemberDetailDrawerLazy
+          key={selectedMember}
+          id={selectedMember}
+          onClose={() => setSelectedMember(null)}
+        />
       )}
       {setup && <SeatSetupDrawerLazy onClose={() => setSetup(false)} />}
     </UbPageShell>
   );
 }
+
+const MemberDetailDrawerLazy = dynamic(
+  () => import('./MemberDetailDrawer').then((m) => m.MemberDetailDrawer),
+  { ssr: false }
+);
 
 type T = TranslateFn;
 
@@ -260,14 +505,14 @@ type T = TranslateFn;
 function SeatTile({
   seat,
   wholeDay,
-  shifts,
+  activeShiftCount,
   picked,
   onPick,
   t,
 }: Readonly<{
   seat: SeatMapRow;
   wholeDay: boolean;
-  shifts: readonly LibraryShift[];
+  activeShiftCount: number;
   picked: boolean;
   onPick: () => void;
   t: T;
@@ -275,13 +520,14 @@ function SeatTile({
   const viewState = viewTileState(seat);
   const word = wholeDay ? dayTileLabel(seat, t) : t(`library.seats.view.${viewState}`);
   const fill = wholeDay
-    ? DAY_FILL[seat.dayState]
+    ? seat.dayState === 'free'
+      ? 'bg-success text-text-inverse border-success'
+      : 'bg-text-primary text-text-inverse border-text-primary'
     : viewState === 'other_shift'
       ? OTHER_SHIFT_FILL
       : SEAT_FILL[viewState];
-  // The fee dot: across the day, everybody on the desk; in a shift, this shift's.
+  // Keep the worst fee in the whole-day tile's accessible name; rows show each fee.
   const fee = wholeDay ? worstFee(seat.holders) : null;
-  const taken = new Set(seat.takenShiftIds);
   return (
     <UbPressable
       onClick={onPick}
@@ -292,38 +538,51 @@ function SeatTile({
       })}
       data-testid={`seat-${seat.label}`}
       className={cn(
-        'relative flex h-16 w-full flex-col items-center justify-center gap-0.5 rounded-control border px-1',
-        fill,
+        'relative flex min-h-16 w-full items-center justify-between gap-3 rounded-control px-3 py-2 text-text-primary',
         picked && 'ring-2 ring-primary-500'
       )}
     >
-      {fee && (
+      <UbStack direction="row" align="center" gap={3}>
         <UbStack
-          gap={0}
-          aria-hidden
-          className={cn('absolute right-1.5 top-1.5 h-2 w-2 rounded-full', FEE_DOT[fee])}
-        />
-      )}
-      <UbText as="span" variant="body-sm-medium">
-        {seat.label}
-      </UbText>
-      <UbText as="span" variant="caption" className="line-clamp-2 text-center leading-tight">
-        {word}
-      </UbText>
-      {wholeDay && shifts.length > 1 && (
-        <UbStack direction="row" gap={0} aria-hidden className="w-full gap-0.5 px-1">
-          {shifts.map((shift) => (
-            <UbStack
-              key={shift.id}
-              gap={0}
-              className={cn(
-                'h-1 flex-1 rounded-full',
-                taken.has(shift.id) ? 'bg-text-primary' : 'bg-border-default'
-              )}
-            />
-          ))}
+          className={cn(
+            'h-10 w-10 shrink-0 items-center justify-center rounded-control border',
+            fill
+          )}
+        >
+          <UbText as="span" variant="body-sm-medium" tone={wholeDay ? 'inverse' : undefined}>
+            {seat.label}
+          </UbText>
         </UbStack>
-      )}
+        <UbStack gap={0} className="min-w-0">
+          <UbText variant="body-sm-medium">
+            {t('library.seats.detailTitle', { seat: seat.label })}
+          </UbText>
+          {seat.zone && (
+            <UbText variant="caption" tone="tertiary">
+              {seat.zone}
+            </UbText>
+          )}
+        </UbStack>
+      </UbStack>
+      <UbText
+        as="span"
+        variant="caption"
+        className={cn(
+          'rounded-pill px-2 py-1 leading-tight',
+          seat.dayState === 'free'
+            ? 'bg-success-dim text-success'
+            : seat.dayState === 'partial'
+              ? 'bg-warning-dim text-warning'
+              : 'bg-surface-sunken'
+        )}
+      >
+        {wholeDay && seat.dayState === 'partial'
+          ? t('library.seats.occupiedShifts', {
+              count: seat.takenShiftIds.length,
+              total: activeShiftCount,
+            })
+          : word}
+      </UbText>
     </UbPressable>
   );
 }

@@ -10,7 +10,7 @@ from __future__ import annotations
 import datetime as dt
 from typing import Any
 
-from django.db.models import DecimalField, OuterRef, Q, QuerySet, Subquery, Sum, Value
+from django.db.models import Count, DecimalField, OuterRef, Q, QuerySet, Subquery, Sum, Value
 from django.db.models.functions import Coalesce, Lower, Upper
 
 from apps.common.exceptions import ValidationFailed
@@ -131,4 +131,12 @@ def member_by_number(tenant: Any, key: str) -> LibraryMembership | None:
         .filter(tenant=tenant, k=key)
         .select_related("party", "membership_type")
         .first()
+    )
+
+
+def member_status_counts(qs: QuerySet, today: dt.date) -> dict[str, int]:
+    """Count effective states across the filtered set, not just its current page."""
+    return qs.aggregate(
+        active=Count("pk", filter=_status_q("active", today)),
+        expired=Count("pk", filter=_status_q("expired", today)),
     )

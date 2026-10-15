@@ -2,13 +2,15 @@
 
 import { useEffect, useState } from 'react';
 
-import { UbButton, UbCard, UbStack, UbText } from 'src/design-system';
+import { UbButton, UbStack, UbText } from 'src/design-system';
 import { useAppDispatch } from 'src/hooks/useAppStore';
 import type { TranslateFn } from 'src/hooks/useTranslation';
 import { formatTimestamp } from 'src/utils/dates';
 
 import { fetchMessageLog } from '../redux/libraryMessageThunk';
 import { MESSAGE_KINDS } from '../types/message.types';
+
+import { LibraryCard } from './LibraryCard';
 
 import type { MessageLogRow } from '../types/message.types';
 
@@ -55,9 +57,11 @@ export function MemberMessageLog({
       : t('library.messages.log.kind.message');
 
   return (
-    <UbCard padded>
-      <UbStack gap={2} data-testid="library-message-log">
-        <UbText variant="label">{t('library.messages.log.title')}</UbText>
+    <LibraryCard padded={false}>
+      <UbStack gap={3} className="p-3" data-testid="library-message-log">
+        <UbText as="h2" variant="body-medium">
+          {t('library.messages.log.title')}
+        </UbText>
         {failed && (
           <UbText variant="body-sm" tone="warning">
             {t('library.messages.log.error')}
@@ -92,6 +96,6 @@ export function MemberMessageLog({
           </UbButton>
         )}
       </UbStack>
-    </UbCard>
+    </LibraryCard>
   );
 }

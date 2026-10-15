@@ -2,10 +2,12 @@
 
 import { useEffect, useRef, useState } from 'react';
 
-import { UbButton, UbDialog, UbStack, UbText, UbTextInput } from 'src/design-system';
+import { UbButton, UbStack, UbText, UbTextInput } from 'src/design-system';
 import { useTranslation } from 'src/hooks/useTranslation';
 
 // Loaded with dynamic(), so its words come with its own chunk.
+import { LibraryDialog } from './LibraryOverlays';
+
 import 'src/i18n/catalogues/library';
 
 const REASON_MIN = 3;
@@ -51,7 +53,7 @@ export function AttendanceOverrideDialog({
   };
 
   return (
-    <UbDialog
+    <LibraryDialog
       open
       onOpenChange={(next) => !next && onClose()}
       title={t('library.attendance.blocked.title', { name })}
@@ -101,6 +103,6 @@ export function AttendanceOverrideDialog({
           </UbText>
         )}
       </UbStack>
-    </UbDialog>
+    </LibraryDialog>
   );
 }

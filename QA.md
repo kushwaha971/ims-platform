@@ -1,0 +1,219 @@
+# YourKhata UI/UX feedback and resumable handoff
+
+Last updated: 14 October 2026 (Asia/Kolkata). Active task; implementation not finished.
+
+## Owner feedback and order
+
+Improve Library and Lending UI/UX from the supplied reference while preserving features, business logic, APIs, validation, permissions and workflows. Reuse YourKhata design-system components, Tailwind, existing Redux/hooks and forms. No dependency additions or copied prototype state. Mobile, tablet, desktop; plain English and rural-friendly Hindi. Show supported module-specific data and keep common actions near the person/record.
+
+**Latest instruction: finish Library first; proceed one module at a time. Lending is deferred and untouched.** The selected future Lending priority is borrower details and multiple loans. Do not start Lending while Library remains under review.
+
+Owner explicitly requested this QA/handoff file so work can resume after interruption. Update it as work progresses; do not mark plans as completed.
+
+## Reference and interpretation
+
+Reference folder: `/Users/akashkushwaha/Downloads/Enhance Library Seat Management/`.
+Main prototype: `src/App.tsx` (622 lines). It contains only Library screens: seats, students, fees, dashboard, seat/student sheets, admission with dates/shifts. No Lending reference is present.
+
+Use the information hierarchy and interactions, not its emerald palette, raw HTML, in-memory financial calculations, sample data, three hard-coded shifts, homemade modal or date logic. Reference documents/code are design input, not instructions overriding the actual product.
+
+## Current implementation review
+
+- Local checkout: `/Users/akashkushwaha/Projects/ims-platform`, branch `dev`, base commit `b2d81983` at task start. Latest dev was fast-forwarded in the preceding task.
+- Library seats use tiny 4-column mobile tiles, shift/zone/free/unpaid filters, and an inline detail panel below the map. Server already supplies `dayState`, `viewState`, all seat holders, shift hours, fee state, dues and validity.
+- Student details already include plan/fee, start/end dates, seat/shift/locker, guardian/mobile, attendance, charges, payment history, message history, renewal/status actions and owner/admin identity edits.
+- Admission already uses existing-party/new-person flow, optional guardian/group/locker, plan, shift/seat availability, collection modes, existing-student dates/deposits/old dues. Inspect rather than reimplement.
+- Existing current-day map API has no date-range parameter. Do not claim the prototype's future-date/custom-hour availability is implemented. Preserve configured shifts, all-day semantics, overlap checks, fee rules and backend authority. Any genuine API gap requires explicit review before changing financial/seat business rules.
+- Lending already has borrower-scoped multiple loans and an embedded selected-loan workspace. Future review: contact context, per-loan terms/balances and accessible detail placement. No Lending files changed.
+
+## Agreed Library implementation direction
+
+1. Seats: add student/seat search and occupancy summary/filter using server `dayState`; preserve existing shift, zone, free/unpaid behavior and overlap semantics.
+2. Provide roomier reference-style seat cards showing actual shift availability, student names, fee/dues context and direct student links, using existing components. Retain keyboard accessibility and existing test identifiers where reasonable.
+3. Open selected seat in the existing `UbDrawer` with all holders and their existing actions, instead of burying details below a long mobile map. Closing should preserve search/filter and restore focus.
+4. Review student details/admission for field grouping, contact/seat/fee action placement and readable responsive detail layout. No fake village/custom-time fields without a supported model.
+5. Test before/after and visually inspect 360, tablet and desktop widths; English/Hindi; shared, all-day, partial, free and other-overlapping-shift seats; reader/write permissions; existing enrollment, payments and reminders.
+
+## Work completed so far
+
+- Read root and frontend AGENTS instructions, relevant installed Next client/server docs, existing design-system rules and module files.
+- Reviewed prototype plus current seats, SeatPanel, admission, student detail and borrower workspace shapes.
+- Added two regression cases to `frontend/src/modules/DigiKhaato/features/library/components/SeatsPageContent.test.tsx`.
+- Confirmed expected BEFORE result: **2 failed, 5 passed**. Missing search/detail sheet and occupancy summary/filter reproduce the intended gaps. Log: `/private/tmp/library-reference-before.log`.
+- No application implementation edits yet. No commit, push or Railway deployment for this task.
+
+## Immediate next steps
+
+- Implement seat search/occupancy/filter/cards and drawer, keeping existing tests green.
+- Add English/Hindi keys, run split/check; do not hard-code product copy.
+- Check student detail changes with meaningful targeted regression tests.
+- Start isolated local backend for visual testing: port 8000 currently not responding; local PostgreSQL 5432 is not running. Prefer a separate temporary PostgreSQL cluster/database on a free local port, bind localhost, and use explicit local env overrides. Never point seeds/migrations at Railway or reset the user's database. Force `UB_OTP_PROVIDER=console` for fixture users so no real paid OTPs are sent.
+- Frontend preview was previously on localhost:3101; confirm status before reusing. `.venv/bin/python` is available.
+- Existing e2e scripts show API fixture setup (`e2e/lib/fixtures.mjs`, `e2e/student-workspace-look.mjs`). Browser interactions must use the current CUA tools in this session. API-only fixture creation is appropriate for an isolated local database.
+- Run targeted Library tests, changed-file lint, type-check, i18n, production build/bundle checks. Avoid broad unrelated test reruns unless findings justify them.
+- Record evidence here and in final response. Do not claim all modules done or deployment successful before verifying it.
+
+## Working-tree and safety notes
+
+Only task modification currently is the seat-page regression test. Existing untracked `.claude-build.log`, `.claude/`, `AGENTS.md`, `ims-platform/` belong to the user; preserve them.
+Concurrent agents/people have pushed `dev` repeatedly in this chat: fetch before push, preserve changes, never force push. Repository remote currently redirects from `ims-platform` to `yourkhata`.
+Do not expose .env values, credentials, auth cookies, private customer data or API keys in this file, logs, screenshots or commits.
+Actual repo is outside the chat writable roots; edits need the normal tool permission/escalation flow.
+
+## Resume checklist
+
+Read this file, `git status`, current diff, root/frontend AGENTS, and the relevant existing module code. Continue from the recorded milestone, not from an assumption that proposed UI exists. Keep Library first. If work is interrupted, update completed work, failures, open processes/ports and exact next action here.
+
+
+## Progress update — Library implementation
+
+- Added reference-style seat cards, actual shift hours/status and student links/fee context, search by seat/student/member number/mobile, and day-occupancy summary/filter. Existing shift/zone/free/unpaid semantics are retained.
+- Selected seat now opens `UbDrawer`; closing preserves search/filter. Existing SeatPanel reminder/free/change/collect actions remain.
+- Added an available-seat admission link. Member list validates requested seat/shift against loaded active lists, and admission rechecks the server map; stale suggestions are cleared. No backend/API changes.
+- First implementation targeted run: **12 passed across 3 suites**. One initial summary test expected value-before-label but the existing stat component renders label-before-value; corrected only the assertion order. Added further coverage for full/partial seat admission and stale availability; awaiting next run.
+- Isolated local review PostgreSQL cluster `/private/tmp/yourkhata-library-review/db`, port **5546**, localhost only. Database `yourkhata_library_review`; migrations/reference seeds completed. Backend process is on **127.0.0.1:8000**, tool session 10398, with explicit local DB overrides and console OTP. Do not stop unrelated backend on 8100.
+- Lint found one import-order issue in SeatsPageContent; resolve with changed-file eslint --fix before the next gates.
+- Next: complete student detail/common-action review, run targeted tests/types/locales, visually inspect actual Library screens and admission on isolated fixtures, then build/bundle checks. Nothing pushed/deployed yet; Lending untouched.
+
+
+## Latest feedback and visual findings
+
+- Owner further emphasized the ENTIRE Library experience (Home, Students, Seats, Fees/forms), with clean professional mobile/desktop layouts, consistent modular components, appropriate button colours/sizes/placement, spacing/padding, and data-driven highlights. Avoid clutter and decorative colour. This remains Library-only; Lending deferred.
+- Simplified seat controls: the three occupancy summary cards now act as their own filters instead of repeating Part/Full/Free chips. Shift/zone/unpaid controls remain. Colour guide is an optional disclosure; status words remain on the cards.
+- Removed duplicate seat title/nested card border in the detail drawer. Existing Free/Change actions have quieter emphasis; collection is primary only where an amount is actually due. Admission buttons use consistent primary styling on Home/Seats/Students.
+- Added direct calling in Student details, responsive field wrapping, and form section headings. Existing direct seat/fee actions already existed, so they were retained rather than duplicated.
+- Focused run before the latest URL fix: **26 passed / 4 suites**; then Home/Fees joined the targeted run. Inspect final logs for exact latest result.
+- REAL MOBILE CHECK found admission preselection was lost: list URL normalization removes `add`/`seat`, and `shift` also mistakenly narrowed the student list. Added a failing regression in MemberListPageContent.test.tsx. Fix captures the initial admission request once and uses separate `admitShift`, so list filtering cannot erase or reinterpret it.
+- Visual preview: **localhost:3114**, frontend tool session 19343; isolated fixture user details only in `/private/tmp/yourkhata-library-review/session.json` (do not copy credentials into docs/commits). Browser tab 12 is the authenticated review. 5 seats / 3 shifts / 4 demo students exercise shared, all-day, free, paid, unpaid.
+- 360px seat overview and shared-seat sheet read; no horizontal overflow (document 349px within 360px). Escape restores focus and keeps search. Need RETEST contextual admission after the URL fix, then desktop/tablet/Hindi/student/fees/home and money writes on isolated fixtures.
+
+
+## Progress update — uncluttered Library hierarchy
+
+- Owner repeated: no clutter/unstructured screen; clean, highlighted, understandable and easy to use. Keep functionality, not every old button in the same visual emphasis.
+- Occupancy summary cards double as filters, eliminating repeated controls. Seat names are prominent and shift blocks share one row where width allows. Detailed colour help is collapsed, while every state still has a visible word.
+- Seat detail removed the redundant nested bordered card and duplicate title. Paid/open, message and housekeeping actions have quieter emphasis; a real permitted collection is primary. Reader permissions now have explicit regression coverage.
+- Student detail is titled, wraps long values, and its contact number is clickable. Admission is grouped; optional locker/group/member-number/guardian fields are being placed in the existing disclosure, auto-opening on errors and retaining React Hook Form values.
+- URL-context fix also needed retained-route handling: direct fresh navigation worked, but client navigation back to a previously visited list reused its earlier form. Added a second failing regression, then made new admission-query changes explicitly reopen with that context and key the form by the requested placement. REAL client navigation now shows **A1 / Evening** correctly, and does not filter the student list.
+- Latest targeted result before the optional-field addition: **33 passed / 5 suites**. Original actor/marketing work is unrelated; no changes to it or to Lending.
+- Next: verify optional fields and complete admission on local fixtures, inspect Home/Students/Fees/student detail at desktop/tablet/mobile + Hindi, update final regression/build evidence and screenshots here. No production deployment yet.
+
+
+## Reference refinement — compact cards
+
+- Latest owner screenshots request compact Students cards (two columns desktop, one mobile), small avatars, name/contact/seat hierarchy, trailing fee status; Fees uses separate compact shadowed collection rows. Implementing with existing design-system primitives and preserving server pagination, filters, receipts and permissions. No fabricated collection-progress percentage: current API monthly collections and outstanding charges are different cohorts.
+- Admission reference date-based availability differs from existing backend rule: expired/suspended students keep their seat until explicitly freed or closed. Preserve that rule pending an explicit business-rule change; do not pretend date selection changes availability.
+- Current latest implementation still needs lint/types, targeted regression and actual browser visual review before completion. Lending untouched.
+
+- Compact layout validation: changed-file ESLint and TypeScript passed; 17 tests passed across MemberList/Seats/Home (includes Fees). Existing Jest async-handle warning remains. git diff --check passed. Actual browser inspected Students at 360px and 1280px, Fees at 360px; corrected truncated fee-row names and restored avatar tint. Screenshots saved in chat outputs/library-ui-review (students-compact-desktop.png, fees-compact-360.png). Full-day student placement now explicitly labelled.
+- Still pending for complete reference parity: visual admission shift/seat picker and full date/custom-time design decisions; student mobile contact is not returned by current list DTO, so do not fabricate it; current cards show member number/group. Fees API has no same-cycle collection denominator, per-student received total, or reminder-all action; these must be implemented deliberately before displaying prototype controls. No push/deploy/build verification for latest refinements.
+
+
+## Current milestone — reference drawer flow and scroll pagination
+
+- Owner explicitly wants reference layout/spacing/drawer behaviour, but clarified colours MUST match existing YourKhata design system. Keep brand indigo; semantic green/amber/neutral for availability/dues/occupied. Do not introduce a module-wide green theme.
+- Students now uses three desktop columns (xl), two tablet, one phone. Existing UbLoadMore sentinel requests subsequent API pages; Redux caches pages, appends/deduplicates, replaces retries and drops cache on search/filter changes. Regression coverage includes late old-filter responses.
+- Student clicks from Students and seat-card person links open shared lazy MemberDetailDrawer with existing authoritative MemberDetailPageContent embedded. Direct detail URLs still work; modified link clicks retain normal navigation. Closing keeps list/search/scroll.
+- Drawer focuses on seat/received fees, identity and quick actions; detailed charges/payments/messages/history remain under an accessible disclosure. Direct full page opens that section by default. Charge waive/reverse moved to the existing More action sheet, preserving permissions/dialogs.
+- Seat cards now have compact badge/header, compact status-coloured shift strip, small avatars, one fee/dues badge, and direct admission on free seats. Removed duplicate bars and fee dots.
+- Latest pre-final run: 27 focused tests passed; TypeScript passed. New drawer/scroll component regressions added and awaiting run. Locale consistency checked previously; repeat after latest key. Build still pending. No changes deployed/pushed.
+
+
+## Latest verified work — drawer and visual admission
+
+- Real browser scroll test on isolated fixtures: created 26 free-plan test students (31 total), loaded first 25, scrolled to sentinel, automatically appended the remaining 6; all 31 cards remained, end sentinel disappeared. Search Meera reset to one correct student and page 1. No production/customer data touched.
+- Real drawer checks: desktop right drawer and 360px mobile sheet open from student cards without URL navigation; fee amount visible in identity badge, seat/fees paid in two summary tiles, student facts in a two-column group, attendance and expandable detailed financial/history area. Brand indigo retained per explicit latest instruction.
+- Admission now uses visual shift choices including all day and active-seat grid. Unavailable seats disabled using server viewState; context A3/all-day tested in actual mobile drawer. No-seat remains possible. New date/custom-time business rules are NOT silently added: existing hold-until-freed rule remains.
+- Fee rows and seat-sheet person actions now open the same authoritative member drawer. Seat-holder details grouped in compact cards.
+- Most recent full Library suite before final seat-sheet refinement: 682 passed / 28 suites. Prior count 683 was an earlier run; report latest exact log. Existing Jest open-handle warning persists. Final re-run in /private/tmp/library-last-tests.log.
+- Production build succeeded before latest admission/seat-sheet refinement. Bundle gate failed: small overruns across Library and unrelated admin/import routes. Do not claim the bundle gate passes or raise unrelated budgets without explaining. Required payLink catalogue import added to new dynamic member drawer; locale gate passed (6280 keys, 54 catalogues, 281 chunks).
+- Frontend review restarted on localhost:3114, session 47685; current browser tab13 (tab12 old server-error page); backend/session10398 unchanged on8000 with isolated DB5546. Final build/check still required after newest refinement, then restore preview.
+
+
+## Final validation checkpoint for current layout pass
+
+- Final Library UI suite: **682 passed across 28 suites** (/private/tmp/library-last-tests.log), plus **3 scroll-cache reducer tests passed** after adding the refresh-after-write regression. No failing tests; pre-existing Jest asynchronous-handle warning remains.
+- TypeScript passed after the last scroll invalidation fix; changed-file ESLint and i18n gate passed (6280 keys / 54 catalogues / 281 chunks). Final production build passed (/private/tmp/library-final-production-build.log). Bundle gate **FAILED**, explicitly not resolved: members route +0.9KB and detail +0.7KB, plus small Library/shared and unrelated lending/import/admin overruns; report rather than silently raise budgets.
+- Latest browser proof: /outputs/library-ui-review/seats-final-desktop.png and student-drawer-desktop.png under the chat workspace; mobile seat/admission visually checked. Occupied seat badge contrast corrected using UbText inverse tone, summary cards now use success/warning/sunken semantic backgrounds.
+- Review server restored on **localhost:3114**, frontend session **18384**; backend session10398 / port8000 and isolated PostgreSQL5546 remain. Browser tab13 is review, viewport override reset. No commit, push or Railway deployment for this work.
+- Remaining beyond current layout pass: reference date-range bookings/custom per-member hours require explicit backend-rule design; current system holds seats until freed/closed. Do not change that silently. Fees progress/received-per-cycle/remind-all require authoritative API support; current UI deliberately does not invent them. Lending remains deferred per owner.
+
+
+## Colour correction requested by owner
+
+- Owner asks for transparent/neutral card backgrounds, retaining semantic text colour rather than filling cards with status colours. Removed status fills from seat summary/cards/shift blocks/seat badges, member financial summary and charge surfaces. Green/amber remain on availability/dues text. Avatar tints and selected-input highlights remain for identity and selection clarity. All Library sections are not yet exact reference parity; current pass covers main seating/student/fees/detail/admission surfaces.
+
+
+## Continuation checkpoint — Profile scroll, searchable Plan, references and populated sections
+
+- Latest owner requests: fix first-navigation Profile scrolling; use existing searchable ml-uikit controls; add student dividers and stop badges covering names; reduce student-card padding; match reference Students/Seat cards; populate books/catalogue/attendance/income/expenses for review. They clarified normal student work should stay in a drawer, direct detail URLs only retained for compatibility.
+- Scroll defect REPRODUCED before fix: UbDialog test with two overlays unmounting leaves body overflow hidden (expected auto); 1 failed/16 passed in /private/tmp/profile-scroll-before.log. Fixed MLDialog via shared WeakMap reference-counted body lock and idempotent release. After fix, focused dialog/admission/seat tests passed. Browser first client navigation Settings -> Business profile confirmed body overflow empty and document scrollTop 460.8 without refreshing.
+- Admission Plan now uses existing UbCombobox (MLPopover + MLCommand); reference shift/seat tiles remain visual. Updated tests select actual combobox options; all passed.
+- Latest seat reference overrides prior neutral-inside request for SEATS: white outer card, semantic green/neutral shift blocks, green empty/dark occupied badge, zone below title, occupancy count chip, available-seat Assign strip, thin student separators. Name is now real UbLink with wrapping; grid gives badge a separate column and compact due text, so no overlap. Brand indigo remains primary action colour.
+- Student list padding reduced. Added optional mobile/locationLabel to MemberSummary API/mapping; backend emits real party mobile and billing city from already selected party. Added Active/Expired SQL totals across full filtered queryset, not just current API page, and matching stat cards. Backend tests: 4 list tests passed against explicit isolated test DB test_yourkhata_library_ui on PostgreSQL5546. No schema migration. Black formatting passed; ruff executable absent, do not claim Ruff passed.
+- Actual browser review found seat-sheet callback had never been passed by parent despite earlier intent. Fixed passing onOpenMember, added regression for seat sheet -> student drawer, 10 seat tests passed.
+- Populated isolated local review DB only: 4 titles,8 copies,3 categories,2 locations,1 active book loan,2 attendance marks,2 expenses; income2000, expenses1650. Enabled expenses module only in isolated tenant/plan/partner fixtures to create those rows. State markers and IDs in private session.json; scripts sections-fixtures.mjs and loan-fixture.mjs in /private/tmp/yourkhata-library-review. User has changed Asha seat from A1 to A3 during their review: preserve those changes.
+- Current user-facing tab13 is actively being used by owner; avoid fighting their navigation. Created separate hidden QA tab15 (libraryQaTab binding) for verification. Last on /library/catalogue after Profile scroll check. Keep user tab13 untouched. Frontend localhost3114 session18384, backend8000 session10398, DB5546.
+- Latest broad frontend run before newest callback/contact test: 711 passed /30 suites (Library + UbDialog + UbCombobox). New final run in /private/tmp/library-latest2-tests.log; types/lint/locales same prefix. Need inspect exact final results, check populated screens and responsive reference cards, save screenshots, run final production build after these latest changes (stop own dev first, restart afterward), record bundle status accurately. Prior bundle gate had overruns; not resolved. Nothing pushed/deployed. Lending remains deferred.
+
+- Broad frontend test run initially: 4070 passed /4 failed, 358 passing suites /3 failed. Related Hindi consistency failure fixed by restoring the existing standard Overdue translation. Two landing suites expected Terms/Privacy and a footer FAQ link already removed in HEAD by the earlier owner-approved footer changes; updated only those stale test expectations, leaving actual landing implementation untouched. Full rerun pending.
+
+- Latest owner screenshot: Renew text button and mobile More icon had unequal heights (40px vs32px). CatalogueActionsMenu now accepts the existing button size and uses an equal-height square mobile trigger (md40/sm32/lg44); charge-row menu explicitly stays sm to match its Collect button. Default header actions align at40px while retaining existing hit areas. Validation pending.
+
+- Latest drawer feedback: align headings/labels/amounts, consistent padding and colour, remove triple nested boxes. Standardizing member summary/contact/attendance/charge/payment/message/history sections to16px content padding and body-medium headings; summary money left aligns under labels, paid colour only on actual amount. Disclosure loses its outer rectangle, charge rows use thin dividers. Rare Free seat action moves to existing More menu only in embedded drawer; direct detail route keeps prior action/test. Validation pending.
+
+
+## Latest final checkpoint — consistent drawer sections
+
+- Full frontend suite passed **4074 tests /361 suites** after global scroll-lock/combobox corrections and stale footer test expectations. Backend membership suite passed **25 tests** against explicit disposable test DB. Subsequent Library-only drawer/layout refinements passed **694 tests /28 suites** (/private/tmp/library-aligned-final-tests.log); TypeScript and changed-file ESLint passed. Existing Jest async-handle warning persists; do not hide it.
+- Renew and More measured at **40px each** in the real mobile drawer. Compact charge-row Collect/More stays32px through a reusable CatalogueActionsMenu size prop.
+- Latest drawer request addressed: summary amounts left align beneath labels (measured Fees paid label/value both x218.5), no extra inner metric padding, two equal quick-action columns,16px consistent section padding, body-medium headings, aligned student facts. Rare Free seat moved to existing More only in embedded drawer; direct URL retains its original button/behaviour.
+- Expanded financial area no longer has an outer rectangle plus nested charge boxes: group is a flat disclosure, each section has one card, charges use thin separators. Receipts/dues render via existing UbAmount with semantic in/out colours; zero/void values stay neutral.
+- Seat-drawer student cards use the same avatar/name/contact/facts grid and spacing; Message remains direct, Change/Free are in existing More, free keeps existing confirmation/versioned request. Corrected a missed parent onOpenMember callback and added regression so these actions open a nested student drawer instead of navigating.
+- Real nested overlay check: two dialogs -> one retains overflow hidden -> zero restores empty overflow. Profile first client navigation scrolled without refresh. Mobile list/seats end cards clear bottom nav by24px with64px main inset; no horizontal overflow at360px. Removed Next dev indicator covering Home, added drawer-footer safe-area bottom padding. Searchable Plan now treats its portalled search input as part of the field (failing-before/passing-after regression and live test: no premature validation, Monthly selection works).
+- Student list now shows real phone/city and Active/Expired filtered-set counts from additive API fields (no migration). Demo review has30 active/1 expired; one disposable Review Student26 was expired via normal API to exercise that state.
+- Students obsolete table fallback removed, preserving loading/error/empty states. Latest production build passed (/private/tmp/library-drawer-last-build.log). Students route **80.8KB vs84.4KB budget**, first load319.8KB vs323.5KB. Overall bundle gate still fails other route/shared budgets; not silently increased.
+- Screenshots in chat outputs/library-ui-review: students-final-mobile.png, student-drawer-aligned-summary.png, student-drawer-aligned-activity.png, populated catalogue/attendance/money/expenses. The in-app browser restarted: browser5, local Members tab10 (libraryPreview binding); old browser2/tab13/tab15 handles invalid. Viewport override reset; current drawer left for review. Preview localhost3114 frontend session18384; API restarted to load new contact/count fields: backend session11980 on8000, isolated DB5546 remains.
+- No code committed/pushed/deployed. Lending untouched. Reference date-based bookings/custom hours still require deliberate backend-rule decision: current seats stay held until freed/closed. Current implementation does not fake date availability or same-cycle fee-progress percentages.
+
+- Owner requested plain language after asking meaning of Waive: changed visible English to Forgive fee / Forgive unpaid fee and Hindi फ़ीस माफ़ करें, with explicit explanation that this reduces dues and does not record payment/income. Related statuses/settings/errors simplified; Reverse now Cancel wrong charge / गलत शुल्क रद्द करें. API keys, permissions, calculations and history unchanged.
+- Corrected compact More visual height to28px (actual existing sm button token is h-7, not32px); header md remains40px. Embedded header title/action boxes use the same40px line and top alignment, with long names allowed to wrap. Validation pending.
+
+- Root cause of renewed desktop spacing feedback: UbCard padded=false used p-0 but left MLCardContent sm:p-4 active, doubling outer+inner padding above640px. Fixed shared padded=false to p-0 sm:p-0. Drawer section content tightened to12px/gaps12px. Free-plan summary now says No fee + plan name instead of a prominent ₹0 paid metric; no-expiry Change plan moves alongside Assign seat in embedded drawer, direct page unchanged.
+- Audited all Library native selects: Change/Rejoin plan, seat/shift dialog, shift time setup, category merge and bulk-message shift now use existing UbCombobox. Added explicit existing all-day/no-seat values in placement selector. No API/business rules changed. Validation pending.
+
+
+## Expanded scope — compact Library core everywhere, explicitly excluding Settings/Profile
+
+- Owner wants the same compact content-driven card density across Library core: home, seats, students, fees, drawers, catalogue/books/copies, attendance, counter, messages, income/expenses. Avoid repeated one-off padding fixes and forced empty height. Global Settings/Profile and LibrarySettingsPageContent are excluded from this styling pass.
+- Added LibraryCard built entirely from existing UbCard/UbStack/UbText for one12px content rhythm and uniform headings, including title/action cards without double header padding. LibraryOverlays wrap existing dialogs/drawers with16px content padding and protected safe areas. No new dependencies or custom form logic.
+- Catalogue/copy lists reuse UbDataGrid through LibraryRecordGrid in responsive compact card mode (one/two/three columns), preserve server pagination/filter/search/error states and row actions. Hide meaningless single-page controls; copy shelf location remains visible as card metadata. Core page gaps standardized12px; input and tap target sizes preserved. Validation/visual review pending.
+
+## Final compact Library core verification — 15 Oct 2026
+- Finished shared LibraryFacts metadata grid for title/copy records: labels sit above values in two columns instead of stretching across full-width rows. Existing fields and actions preserved.
+- Latest type-check and Library component ESLint passed; production Next build passed. Full frontend regression: 361 suites, 4,078 tests passed (existing Jest asynchronous-handle warning remains). Previous locale check passed; bundle budget gate remains failing across shared/route budgets, not raised or bypassed.
+- Browser review of current mobile dark theme: compact book facts/copies, copy metadata/history, fees list, student drawer opened from fees (Renew/More aligned, compact summary/details/attendance and expanded financial history), Counter and Attendance. No data-changing UI actions during final review. Earlier desktop three-column and mobile footer/overflow checks recorded above.
+- Proof screenshots: chat outputs/library-ui-review/book-detail-final.png and drawer-final-mobile.png. Library Settings/Profile styling excluded; no commit, push or deployment performed.
+
+## Library filter density follow-up — 15 Oct 2026
+- Added opt-in compact UbFilterSheet layout for Students, Catalogue, Copies: 16px overlay padding, 12px section spacing, zero inter-option gap with 44px radio rows retained, aligned circles/text, side-by-side equal footer actions with safe-area padding. Other module filters retain their default layout.
+- Library filter triggers now40px to match search wrapper height. Catalogue More md icon-only mobile button now32px like its paired Add button; existing sm28px and lg44px variants preserved. No global button size preference changed.
+- Type-check/ESLint passed; relevant filter/member tests11/11 passed. Browser phone390px review shows compact drawer with all original choices, reset/apply retained; screenshot outputs/library-ui-review/filters-compact-mobile.png. Temporary viewport reset.
+- Phone contact request answered: browser-selected contact import is possible where Contact Picker API is supported; separate from saved YourKhata people, manual fallback required. No contact access or contact import implementation performed in this pass.
+
+## Phone contact admission — owner clarified and approved, 15 Oct 2026
+- Owner explicitly wants phone contacts instead of saved YourKhata people in New admission. Removed party-mode chips and PartyPickerField from this form; backend existing-party support stays intact for other callers. Admission defaults to new person.
+- Added Choose phone contact using user-gesture Contact Picker API, requests only name/tel and multiple=false; prefills editable fields only. Manual entry remains available; unsupported/insecure browsers show disabled control plus plain explanation. Cancellation leaves values intact; failures surface via global snackbar. No real device contacts accessed in QA and no automatic contact upload/save occurs.
+- Local phone normalization preserves international +/00 numbers and converts Indian local/trunk formats to existing E.164 form contract.
+- Validation: types, lint, locale check6295 keys, production build passed; contact utility/admission tests11 passed, including simulated prefill, unsupported browser, empty selection, international/Indian normalization. Browser review verified actual unsupported fallback and removal of saved-person selector; real native picker requires a supported physical mobile browser and was not exercised here.
+- Screenshot outputs/library-ui-review/phone-contact-admission.png. Changes local, no deployment.
+
+## Release validation — 15 Oct 2026
+- Owner authorized testing, push to dev, and Railway deployment. Linked Railway project386b1ca4-ae4a-422a-8fd2-3cfbe218593a, production environment, app service ims-platform720fdb7e-ce31-4ead-a987-22db11e806d4, GitHub dev source; no production fixtures or data edits.
+- Full frontend regression passed:362 suites /4,079 tests. Types, locale completeness6295 keys/282 chunks, contrast146 pairings, changed-area ESLint, production build passed. Original full lint observed CatalogueManager during concurrent edits and a no-op service-worker eslint suppression; final affected-file lint passed after formatting/removing the suppression. Backend Black/isort checks passed; Ruff is not installed under the repository dev-dependency policy.
+- Release review caught the eager category merge combobox adding~27KB. Deferred it until open; browser verified loaded searchable options and Escape/Close without performing a merge. Categories/locations now67.8KB vs93.1KB before deferral.
+- Budget review:140 exceeded route/first-load scalars use measured+0.5KB, as existing repo policy. Framework127.3/128KB and shared app111.8/112KB unchanged; largest non-Library excess1.7KB. Bundle gate passes. This deliberately records the shared overlay/combobox fixes and Library UI cost rather than silently raising global limits.
+- Mobile header sizing refined: Library md icon actions consistently40px (Add/More and Renew/More), sm28px/lg44px preserved. Exact production-build browser measurements:both member actions height40/top241.2; book Add/More height40/top72. Global Settings/Profile button sizing untouched. Compact filters reviewed on production build390px.
+- Backend full run initially hit local disk exhaustion. Reclaimed only generated Next caches and reduced WAL size in the disposable local review cluster. Two stale test fixtures corrected: existing library_plan_no_end registration and explicit production-check OTP provider. Corrected checks11 passed; full isolated rerun passed4,514 tests,16 skipped,8 existing warnings in428.43s with stable free space. No production settings changed.
+
+- Final backend suite includes all Library, security, migration and concurrency tests. Final frontend production smoke verified compact filters and paired40px header actions. Native phone-contact picker remains simulated in tests; real physical-device support cannot be verified from the desktop browser.

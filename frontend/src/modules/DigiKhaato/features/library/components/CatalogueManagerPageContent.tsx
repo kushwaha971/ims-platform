@@ -2,16 +2,15 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
+import dynamic from 'next/dynamic';
+
 import {
   UbButton,
-  UbCard,
   UbConfirmDialog,
-  UbDialog,
   UbEmptyState,
   UbListItemText,
   UbPageHeader,
   UbPageShell,
-  UbNativeSelect,
   UbStack,
   UbStatusBadge,
   UbTextInput,
@@ -31,6 +30,14 @@ import {
   saveLibraryCategory,
   saveLibraryLocation,
 } from '../redux/libraryCatalogueThunk';
+
+import { LibraryCard } from './LibraryCard';
+import { LibraryDialog } from './LibraryOverlays';
+
+// Category merge is optional; load its searchable picker only when opened.
+const MergeCombobox = dynamic(() => import('src/design-system').then((m) => m.UbCombobox), {
+  ssr: false,
+});
 
 /**
  * F03 (LIB-02 FR-8) — the library's own two lists: categories (one level,
@@ -208,7 +215,7 @@ export function CatalogueManagerPageContent({ kind }: Readonly<{ kind: Kind }>):
           description={t(WORDS[kind].emptyBody)}
         />
       ) : (
-        <UbCard>
+        <LibraryCard>
           <UbStack gap={3} data-testid={`library-${kind}`}>
             {rows.map((row) => (
               <UbStack key={row.id} direction="row" gap={2} align="center" wrap>
@@ -257,11 +264,11 @@ export function CatalogueManagerPageContent({ kind }: Readonly<{ kind: Kind }>):
               </UbStack>
             ))}
           </UbStack>
-        </UbCard>
+        </LibraryCard>
       )}
 
       {editing && (
-        <UbDialog
+        <LibraryDialog
           open
           onOpenChange={(next) => !next && setEditing(null)}
           title={t(editing.id ? 'library.manager.rename' : WORDS[kind].add)}
@@ -302,11 +309,11 @@ export function CatalogueManagerPageContent({ kind }: Readonly<{ kind: Kind }>):
               onChange={(name: string) => setEditing({ ...editing, name })}
             />
           </UbStack>
-        </UbDialog>
+        </LibraryDialog>
       )}
 
       {merging && (
-        <UbDialog
+        <LibraryDialog
           open
           onOpenChange={(next) => !next && setMerging(null)}
           title={t('library.categories.mergeTitle', { name: merging.row.name })}
@@ -334,7 +341,9 @@ export function CatalogueManagerPageContent({ kind }: Readonly<{ kind: Kind }>):
             </>
           }
         >
-          <UbNativeSelect
+          <MergeCombobox
+            searchPlaceholder={t('library.select.search')}
+            emptyLabel={t('library.select.noMatches')}
             aria-label={t('library.categories.mergeInto')}
             placeholder={t('library.categories.mergeInto')}
             value={merging.into}
@@ -343,7 +352,7 @@ export function CatalogueManagerPageContent({ kind }: Readonly<{ kind: Kind }>):
               .map((r) => ({ value: r.id, label: r.label }))}
             onChange={(into: string) => setMerging({ ...merging, into })}
           />
-        </UbDialog>
+        </LibraryDialog>
       )}
 
       <UbConfirmDialog

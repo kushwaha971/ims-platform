@@ -9,7 +9,6 @@ import { useForm } from 'react-hook-form';
 import {
   UbActionLink,
   UbButton,
-  UbDialog,
   UbField,
   UbForm,
   UbStack,
@@ -23,6 +22,8 @@ import { showSnackbar } from 'src/redux/slice/snackbarSlice';
 import { prepareLibraryMessage, recordLibraryMessage } from '../redux/libraryMessageThunk';
 import { CUSTOM_MESSAGE_MAX, PERSONAL_TOKENS } from '../types/message.types';
 import { useMessageSchemas } from '../validation/messageSchemas';
+
+import { LibraryDialog } from './LibraryOverlays';
 
 import type { CustomMessageFormValues, MessageKind, PreparedMessage } from '../types/message.types';
 
@@ -114,7 +115,7 @@ export function MessageDialog({
   };
 
   return (
-    <UbDialog
+    <LibraryDialog
       open
       onOpenChange={(next) => !next && onClose()}
       title={t(`library.messages.kind.${kind}`, { name })}
@@ -203,6 +204,6 @@ export function MessageDialog({
           </>
         )}
       </UbStack>
-    </UbDialog>
+    </LibraryDialog>
   );
 }

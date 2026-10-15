@@ -111,24 +111,20 @@ beforeEach(() => {
   jest.clearAllMocks();
   jest.mocked(service.getMember).mockResolvedValue(ASHA);
   jest.mocked(service.listMembershipTypes).mockResolvedValue([]);
-  jest
-    .mocked(chargeService.listMemberCharges)
-    .mockResolvedValue({
-      rows: [],
-      totals: { amount: '0.00', paid: '0.00', waived: '0.00', due: '0.00' },
-    });
+  jest.mocked(chargeService.listMemberCharges).mockResolvedValue({
+    rows: [],
+    totals: { amount: '0.00', paid: '0.00', waived: '0.00', due: '0.00' },
+  });
 });
 
 describe('MemberDetailPageContent', () => {
   it('shows authoritative total and collected fees in the overview with one charge read', async () => {
     signIn(['library.member.read', 'payments.payment.write'], 'owner', true);
     jest.mocked(service.getMember).mockResolvedValue({ ...ASHA, duesAmount: '700.00' });
-    jest
-      .mocked(chargeService.listMemberCharges)
-      .mockResolvedValue({
-        rows: [],
-        totals: { amount: '900.00', paid: '200.00', waived: '0.00', due: '700.00' },
-      });
+    jest.mocked(chargeService.listMemberCharges).mockResolvedValue({
+      rows: [],
+      totals: { amount: '900.00', paid: '200.00', waived: '0.00', due: '700.00' },
+    });
     renderWithProviders(<MemberDetailPageContent id="m1" />);
     expect(await screen.findByTestId('library-member-fees-total')).toHaveTextContent('₹900.00');
     expect(screen.getByTestId('library-member-fees-paid')).toHaveTextContent('₹200.00');
@@ -241,7 +237,7 @@ describe('MemberDetailPageContent', () => {
     await screen.findByTestId('library-member-number');
     expect(screen.queryByTestId('library-member-renew')).not.toBeInTheDocument();
     await userEvent.click(screen.getByTestId('library-member-change-plan'));
-    expect(await screen.findByRole('combobox', { name: 'New plan' })).toHaveValue('ty2');
+    expect(await screen.findByRole('combobox', { name: 'New plan' })).toHaveTextContent('Monthly');
     await userEvent.type(screen.getByLabelText(/^Reason/), 'Starts paying monthly');
     await userEvent.click(screen.getByTestId('library-member-confirm'));
     await waitFor(() => expect(service.actOnMember).toHaveBeenCalledTimes(1));
@@ -340,4 +336,12 @@ describe('MemberDetailPageContent', () => {
       undefined
     );
   });
+});
+
+it('lets a librarian call the displayed student contact directly', async () => {
+  // Contact details should be actionable without opening an identity-edit form.
+  signIn(['library.member.read']);
+  renderWithProviders(<MemberDetailPageContent id="m1" />);
+  const phone = await screen.findByRole('link', { name: /98765/ });
+  expect(phone).toHaveAttribute('href', 'tel:+919876543210');
 });

@@ -1,6 +1,7 @@
 import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
+import { UbText } from 'src/design-system';
 import { resetAllFeatureState } from 'src/redux/actions';
 import { sessionLoaded } from 'src/redux/slice/sessionSlice';
 import { store } from 'src/redux/store';
@@ -9,6 +10,10 @@ import { renderWithProviders } from 'src/tests/renderWithProviders';
 import * as service from '../api/librarySeatService';
 
 import { SeatsPageContent } from './SeatsPageContent';
+
+jest.mock('./MemberDetailDrawer', () => ({
+  MemberDetailDrawer: ({ id }: { id: string }) => <UbText>Student drawer {id}</UbText>,
+}));
 
 import type { LibraryShift, SeatMap, SeatMapRow, SeatOccupant } from '../types/seat.types';
 
@@ -135,8 +140,8 @@ beforeEach(() => {
       },
       activeTenant: { id: 't1', name: 'Saraswati Library', timezone: 'Asia/Kolkata' },
       tenants: [{ id: 't1', name: 'Saraswati Library', timezone: 'Asia/Kolkata' }],
-      permissions: ['library.member.read', 'library.member.write'],
-      enabledModules: ['library'],
+      permissions: ['library.member.read', 'library.member.write', 'payments.payment.write'],
+      enabledModules: ['library', 'payments'],
       version: 1,
     })
   );
@@ -161,12 +166,12 @@ describe('SeatsPageContent — the whole day (QA F6)', () => {
     expect(await screen.findByTestId('library-seats-screen')).toBeInTheDocument();
     expect(service.getSeatMap).toHaveBeenCalledWith('', expect.anything());
     expect(within(screen.getByTestId('seat-A1')).getByText('Full')).toBeInTheDocument();
-    expect(within(screen.getByTestId('seat-A2')).getByText('Evening')).toBeInTheDocument();
+    expect(within(screen.getByTestId('seat-A2')).getByText('1 of 2 shifts')).toBeInTheDocument();
     expect(within(screen.getByTestId('seat-A3')).getByText('Free')).toBeInTheDocument();
     expect(screen.getByTestId('library-seats-counts')).toHaveTextContent(
       'Morning 1/3 · Evening 2/3'
     );
-    // The fee is a dot with its word in the name, never the tile's colour alone.
+    // Occupancy and fee remain distinct, with the fee also in the accessible name.
     expect(screen.getByTestId('seat-A2')).toHaveAccessibleName('Seat A2, Evening, Unpaid');
   });
 
@@ -176,13 +181,19 @@ describe('SeatsPageContent — the whole day (QA F6)', () => {
     const panel = screen.getByTestId('library-seat-detail');
     expect(within(panel).getByText('Asha')).toBeInTheDocument();
     expect(within(panel).getByText('Imran')).toBeInTheDocument();
-    expect(within(panel).getByText(/Morning 06:00–12:00/)).toBeInTheDocument();
-    expect(within(panel).getByText(/Evening 12:00–18:00/)).toBeInTheDocument();
+    const morningStudent = within(screen.getByTestId('library-seat-holder-1'));
+    expect(morningStudent.getByText('Morning')).toBeInTheDocument();
+    expect(morningStudent.getByText('06:00–12:00')).toBeInTheDocument();
+    const eveningStudent = within(screen.getByTestId('library-seat-holder-2'));
+    expect(eveningStudent.getByText('Evening')).toBeInTheDocument();
+    expect(eveningStudent.getByText('12:00–18:00')).toBeInTheDocument();
     expect(within(panel).getByText('Collect ₹900.00')).toBeInTheDocument();
   });
 
   it('explains every colour in words', async () => {
     renderWithProviders(<SeatsPageContent />);
+    await screen.findByTestId('library-seats-screen');
+    await userEvent.click(screen.getByRole('button', { name: 'What the colours mean' }));
     const legend = await screen.findByTestId('library-seats-legend');
     for (const word of ['Free', 'Part taken', 'Full', 'Paid', 'Due soon', 'Unpaid', 'Overdue']) {
       expect(within(legend).getByText(word)).toBeInTheDocument();
@@ -217,10 +228,91 @@ describe('SeatsPageContent — one shift (QA F6)', () => {
     await userEvent.click(a2);
     const panel = screen.getByTestId('library-seat-detail');
     expect(within(panel).getByText('Asha')).toBeInTheDocument();
-    expect(within(panel).getByText(/Morning 06:00–12:00/)).toBeInTheDocument();
+    const holder = within(screen.getByTestId('library-seat-holder-1'));
+    expect(holder.getByText('Morning')).toBeInTheDocument();
+    expect(holder.getByText('06:00–12:00')).toBeInTheDocument();
     // The legend in a shift's view names the other-shift tile too.
     expect(
       within(screen.getByTestId('library-seats-legend')).getByText('Other shift')
     ).toBeInTheDocument();
   });
+});
+
+describe('reference seat workspace', () => {
+  it('finds a desk by its student and opens details in a dismissible sheet', async () => {
+    // Prevents students being hidden behind desk labels and below a long mobile map.
+    renderWithProviders(<SeatsPageContent />);
+    await screen.findByTestId('library-seats-screen');
+    await userEvent.type(screen.getByRole('searchbox', { name: 'Search seat or student' }), 'Asha');
+    expect(screen.getByTestId('seat-A1')).toBeInTheDocument();
+    expect(screen.queryByTestId('seat-A2')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('seat-A3')).not.toBeInTheDocument();
+    await userEvent.click(screen.getByTestId('seat-A1'));
+    const sheet = await screen.findByRole('dialog', { name: 'Seat A1' });
+    expect(within(sheet).getByText('Imran')).toBeInTheDocument();
+    await userEvent.keyboard('{Escape}');
+    expect(screen.queryByRole('dialog', { name: 'Seat A1' })).not.toBeInTheDocument();
+    expect(screen.getByRole('searchbox')).toHaveValue('Asha');
+  });
+
+  it('shows server occupancy counts and filters part-taken seats without treating them as empty', async () => {
+    // A partly allocated desk has free shifts but is not free for the whole day.
+    renderWithProviders(<SeatsPageContent />);
+    const summary = await screen.findByTestId('library-seat-occupancy');
+    expect(summary).toHaveTextContent('Free1');
+    expect(summary).toHaveTextContent('Part taken1');
+    expect(summary).toHaveTextContent('Full1');
+    await userEvent.click(screen.getByRole('button', { name: 'Part taken' }));
+    expect(screen.getByTestId('seat-A2')).toBeInTheDocument();
+    expect(screen.queryByTestId('seat-A1')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('seat-A3')).not.toBeInTheDocument();
+  });
+});
+
+it('suggests an admission only in a genuinely available shift of the selected desk', async () => {
+  // Full desks must not advertise a preselected admission; partial desks preserve the free shift.
+  renderWithProviders(<SeatsPageContent />);
+  await userEvent.click(await screen.findByTestId('seat-A2'));
+  let sheet = await screen.findByRole('dialog', { name: 'Seat A2' });
+  expect(within(sheet).getByRole('link', { name: 'New admission' })).toHaveAttribute(
+    'href',
+    '/library/members?add=1&seat=A2&admitShift=m'
+  );
+  await userEvent.keyboard('{Escape}');
+  await userEvent.click(screen.getByTestId('seat-A1'));
+  sheet = await screen.findByRole('dialog', { name: 'Seat A1' });
+  expect(within(sheet).queryByRole('link', { name: 'New admission' })).not.toBeInTheDocument();
+});
+
+it('keeps a reader’s seat details useful without advertising write-only actions', async () => {
+  // Read-only users can view a student, but must not be invited to collect money or alter placement.
+  const current = store.getState().session;
+  if (!current.user) throw new Error('Expected the reader fixture user');
+  store.dispatch(
+    sessionLoaded({
+      user: current.user,
+      activeTenant: current.activeTenant,
+      tenants: current.tenants,
+      permissions: ['library.member.read'],
+      enabledModules: ['library'],
+      version: 1,
+    })
+  );
+  renderWithProviders(<SeatsPageContent />);
+  await userEvent.click(await screen.findByTestId('seat-A1'));
+  const sheet = await screen.findByRole('dialog', { name: 'Seat A1' });
+  expect(within(sheet).getAllByRole('link', { name: 'Open student' })).toHaveLength(2);
+  expect(within(sheet).queryByRole('link', { name: /Collect/ })).not.toBeInTheDocument();
+  expect(within(sheet).queryByRole('button', { name: 'Free seat' })).not.toBeInTheDocument();
+  expect(within(sheet).queryByRole('button', { name: 'Message' })).not.toBeInTheDocument();
+});
+
+it('opens student details from the seat sheet without navigating away', async () => {
+  renderWithProviders(<SeatsPageContent />);
+  await screen.findByTestId('library-seats-screen');
+  await userEvent.click(screen.getByTestId('seat-A1'));
+  const holder = await screen.findByTestId('library-seat-holder-2');
+  await userEvent.click(within(holder).getByRole('link', { name: 'Collect ₹900.00' }));
+  expect(await screen.findByText('Student drawer 2')).toBeInTheDocument();
+  expect(screen.getByTestId('library-seats-screen')).toBeInTheDocument();
 });

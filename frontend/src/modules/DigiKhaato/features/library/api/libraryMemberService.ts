@@ -42,6 +42,8 @@ export const toMemberSummary = (row: Wire): MemberSummary => {
     membershipId: str(row.membership_id),
     partyId: str(row.party_id),
     name: str(row.name),
+    mobile: strOrNull(row.mobile),
+    locationLabel: str(row.location_label),
     memberNumber: str(row.member_number),
     type: { id: str(type.id), name: str(type.name), maxCopies: Number(type.max_copies ?? 0) },
     status: str(row.status),
@@ -150,7 +152,13 @@ interface PageApi {
     readonly page_size: number;
     readonly total: number;
     readonly total_pages: number;
-    readonly totals?: { members: number; dues: string; deposits_held: string };
+    readonly totals?: {
+      members: number;
+      dues: string;
+      deposits_held: string;
+      active?: number;
+      expired?: number;
+    };
     readonly has_any?: boolean;
   };
 }
@@ -177,6 +185,8 @@ export const listMembers = async (
     totalPages: meta.total_pages,
     totals: {
       members: meta.totals?.members ?? meta.total,
+      active: meta.totals?.active,
+      expired: meta.totals?.expired,
       dues: meta.totals?.dues ?? '0.00',
       depositsHeld: meta.totals?.deposits_held ?? '0.00',
     },

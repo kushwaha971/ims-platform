@@ -5,15 +5,7 @@ import { useId } from 'react';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useForm, useWatch } from 'react-hook-form';
 
-import {
-  UbButton,
-  UbDateInput,
-  UbDrawer,
-  UbField,
-  UbForm,
-  UbTextArea,
-  UbTextInput,
-} from 'src/design-system';
+import { UbButton, UbDateInput, UbField, UbForm, UbTextArea, UbTextInput } from 'src/design-system';
 import { useAppDispatch } from 'src/hooks/useAppStore';
 import { useTranslation } from 'src/hooks/useTranslation';
 import { showSnackbar } from 'src/redux/slice/snackbarSlice';
@@ -21,6 +13,8 @@ import type { ApiErrorShape } from 'src/types/api.types';
 import { applyServerErrors } from 'src/utils/applyServerErrors';
 
 import { useMemberSchemas } from '../validation/memberSchemas';
+
+import { LibraryDrawer } from './LibraryOverlays';
 
 import type { MemberEditBody } from '../api/libraryMemberService';
 import type { ActOutcome } from '../hooks/useMemberDetail';
@@ -146,7 +140,7 @@ export function MemberEditDrawer({
   };
 
   return (
-    <UbDrawer
+    <LibraryDrawer
       open
       onOpenChange={(next) => !next && onClose()}
       title={t('library.member.edit.title')}
@@ -222,6 +216,6 @@ export function MemberEditDrawer({
           {(field) => <UbTextArea {...field} rows={3} maxLength={2000} disabled={busy} />}
         </UbField>
       </UbForm>
-    </UbDrawer>
+    </LibraryDrawer>
   );
 }

@@ -4,19 +4,14 @@ import { useId, useMemo } from 'react';
 
 import { useForm, useWatch } from 'react-hook-form';
 
-import {
-  UbButton,
-  UbDialog,
-  UbField,
-  UbForm,
-  UbNativeSelect,
-  UbTextInput,
-} from 'src/design-system';
+import { UbButton, UbField, UbForm, UbCombobox, UbTextInput } from 'src/design-system';
 import { useTranslation } from 'src/hooks/useTranslation';
 import type { ApiErrorShape } from 'src/types/api.types';
 
 import { useSeats } from '../hooks/useSeats';
 import { shiftHours } from '../view-model/memberDisplay';
+
+import { LibraryDialog } from './LibraryOverlays';
 
 import type { MemberDetail } from '../types/member.types';
 
@@ -87,7 +82,7 @@ export function SeatDialog({
   };
 
   return (
-    <UbDialog
+    <LibraryDialog
       open
       onOpenChange={(next) => !next && onClose()}
       title={t('library.place.title', { name: member.name })}
@@ -107,7 +102,9 @@ export function SeatDialog({
         {seating.activeShifts.length > 0 && (
           <UbField name="shiftId" label={t('library.enrol.shift')}>
             {(field) => (
-              <UbNativeSelect
+              <UbCombobox
+                searchPlaceholder={t('library.select.search')}
+                emptyLabel={t('library.select.noMatches')}
                 id={field.id}
                 name={field.name}
                 aria-label={t('library.enrol.shift')}
@@ -117,17 +114,22 @@ export function SeatDialog({
                   if (next !== (member.shift?.id ?? '')) form.setValue('seatId', '');
                 }}
                 placeholder={t('library.enrol.shift.placeholder')}
-                options={seating.activeShifts.map((shift) => ({
-                  value: shift.id,
-                  label: `${shift.name} (${shiftHours(shift)})`,
-                }))}
+                options={[
+                  { value: '', label: t('library.seats.day.allDay') },
+                  ...seating.activeShifts.map((shift) => ({
+                    value: shift.id,
+                    label: `${shift.name} (${shiftHours(shift)})`,
+                  })),
+                ]}
               />
             )}
           </UbField>
         )}
         <UbField name="seatId" label={t('library.enrol.seat')}>
           {(field) => (
-            <UbNativeSelect
+            <UbCombobox
+              searchPlaceholder={t('library.select.search')}
+              emptyLabel={t('library.select.noMatches')}
               id={field.id}
               name={field.name}
               aria-label={t('library.enrol.seat')}
@@ -135,7 +137,7 @@ export function SeatDialog({
               onChange={field.onChange}
               invalid={field.invalid}
               placeholder={t('library.place.noSeat')}
-              options={options}
+              options={[{ value: '', label: t('library.place.noSeat') }, ...options]}
             />
           )}
         </UbField>
@@ -148,6 +150,6 @@ export function SeatDialog({
           {(field) => <UbTextInput {...field} maxLength={16} autoComplete="off" />}
         </UbField>
       </UbForm>
-    </UbDialog>
+    </LibraryDialog>
   );
 }

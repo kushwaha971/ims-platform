@@ -9,10 +9,8 @@ import { Archive, ArchiveRestore, Pencil, Plus } from 'lucide-react';
 import {
   UbActionLink,
   UbButton,
-  UbCard,
   UbConfirmDialog,
   UbEmptyState,
-  UbInfoRow,
   UbLink,
   UbPageHeader,
   UbPageShell,
@@ -31,6 +29,7 @@ import { copyPlace, shelfLine } from '../view-model/copyDisplay';
 
 import { CatalogueActionsMenu } from './CatalogueActionsMenu';
 import { CopyStatusBadge } from './CopyStatusBadge';
+import { LibraryCard, LibraryFacts } from './LibraryCard';
 
 const CatalogueDrawersLazy = dynamic(
   () => import('./CatalogueDrawers').then((m) => m.CatalogueDrawers),
@@ -115,6 +114,7 @@ export function TitleDetailPageContent({ id }: Readonly<{ id: string }>): React.
               <UbButton
                 icon={<Plus className="h-4 w-4" aria-hidden />}
                 iconOnly="mobile"
+                className="max-sm:h-10 max-sm:w-10"
                 onClick={detail.addCopies}
                 data-testid="library-add-copies"
               >
@@ -144,7 +144,7 @@ export function TitleDetailPageContent({ id }: Readonly<{ id: string }>): React.
           </UbStack>
         }
       />
-      <UbStack gap={4} data-testid="library-title-screen">
+      <UbStack gap={3} data-testid="library-title-screen">
         <UbStack gap={1}>
           {(title.subtitle || title.authors) && (
             <UbText variant="body" tone="secondary">
@@ -160,16 +160,12 @@ export function TitleDetailPageContent({ id }: Readonly<{ id: string }>): React.
         </UbStack>
 
         {facts.length > 0 && (
-          <UbCard>
-            <UbStack gap={1}>
-              {facts.map(([label, value]) => (
-                <UbInfoRow key={label} label={label} value={value} />
-              ))}
-            </UbStack>
-          </UbCard>
+          <LibraryCard>
+            <LibraryFacts items={facts} />
+          </LibraryCard>
         )}
 
-        <UbCard title={t('library.title.copiesHeading', { count: title.copies.length })}>
+        <LibraryCard title={t('library.title.copiesHeading', { count: title.copies.length })}>
           {title.copies.length === 0 ? (
             <UbText variant="body-sm" tone="tertiary">
               {t('library.title.noCopies')}
@@ -203,12 +199,12 @@ export function TitleDetailPageContent({ id }: Readonly<{ id: string }>): React.
               ))}
             </UbStack>
           )}
-        </UbCard>
+        </LibraryCard>
 
         {title.notes && (
-          <UbCard title={t('library.title.notes')}>
+          <LibraryCard title={t('library.title.notes')}>
             <UbText variant="body-sm">{title.notes}</UbText>
-          </UbCard>
+          </LibraryCard>
         )}
       </UbStack>
 

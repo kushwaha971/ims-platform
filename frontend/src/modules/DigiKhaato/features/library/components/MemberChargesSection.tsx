@@ -4,7 +4,9 @@ import { useState } from 'react';
 
 import dynamic from 'next/dynamic';
 
-import { UbButton, UbCard, UbStack, UbStatusBadge, UbText } from 'src/design-system';
+import { Ban, Undo2 } from 'lucide-react';
+
+import { UbAmount, UbButton, UbStack, UbStatusBadge, UbText } from 'src/design-system';
 import type { UbStatusBadgeTone } from 'src/design-system';
 import { useAppSelector } from 'src/hooks/useAppStore';
 import type { TranslateFn } from 'src/hooks/useTranslation';
@@ -13,6 +15,10 @@ import { formatInr } from 'src/utils/money';
 
 import { useMemberCharges } from '../hooks/useMemberCharges';
 import { selectLibraryMemberDetail } from '../redux/libraryMemberDetailSlice';
+
+import { CatalogueActionsMenu } from './CatalogueActionsMenu';
+import { LibraryCard } from './LibraryCard';
+import { LIBRARY_OVERLAY_CLASSNAME } from './LibraryOverlays';
 
 import type { ChargeRow } from '../types/charge.types';
 import type { MemberDetail } from '../types/member.types';
@@ -83,12 +89,14 @@ export function MemberChargesSection({
   if (rows.length === 0 && !charges.canWrite) return null;
 
   return (
-    <UbCard padded>
-      <UbStack gap={3} data-testid="library-charges">
+    <LibraryCard padded={false}>
+      <UbStack gap={3} className="p-3" data-testid="library-charges">
         <UbStack direction="row" justify="between" align="center" gap={2}>
-          <UbText variant="label">{t('library.charge.title')}</UbText>
+          <UbText as="h2" variant="body-medium">
+            {t('library.charge.title')}
+          </UbText>
           {charges.canWrite && (
-            <UbButton variant="ghost" size="sm" onClick={() => setAdding(true)}>
+            <UbButton variant="outlineNeutral" size="sm" onClick={() => setAdding(true)}>
               {t('library.charge.add')}
             </UbButton>
           )}
@@ -108,14 +116,23 @@ export function MemberChargesSection({
           </UbText>
         )}
         {rows.map((charge) => (
-          <UbStack key={charge.id} gap={1} data-testid="library-charge-row">
+          <UbStack
+            key={charge.id}
+            gap={2}
+            className="border-t border-border-hairline pt-3"
+            data-testid="library-charge-row"
+          >
             <UbStack direction="row" justify="between" align="start" gap={3}>
-              <UbText variant="body-sm" className="line-clamp-2 min-w-0">
+              <UbText variant="body-sm-medium" className="line-clamp-2 min-w-0">
                 {charge.description}
               </UbText>
-              <UbText variant="body-sm-medium" className="shrink-0">
-                {formatInr(owing(charge) ? charge.amountDue : charge.amount)}
-              </UbText>
+              <UbAmount
+                value={owing(charge) ? charge.amountDue : charge.amount}
+                tone={owing(charge) ? 'receivable' : 'neutral'}
+                label={t(owing(charge) ? 'library.member.owes' : 'library.charge.title')}
+                labelHidden
+                className="shrink-0"
+              />
             </UbStack>
             <UbStack direction="row" gap={2} align="center" wrap>
               <UbText variant="caption" tone="tertiary">
@@ -129,20 +146,31 @@ export function MemberChargesSection({
             {owing(charge) && (
               <UbStack direction="row" gap={2} wrap>
                 {charges.canCollect && (
-                  <UbButton size="sm" variant="secondary" onClick={() => setCollecting(charge)}>
+                  <UbButton size="sm" variant="primary" onClick={() => setCollecting(charge)}>
                     {t('library.charge.collect', { amount: formatInr(charge.amountDue) })}
                   </UbButton>
                 )}
-                {charges.canWaive && (
-                  <UbButton size="sm" variant="ghost" onClick={() => setWaiving(charge)}>
-                    {t('library.charge.waiveAction')}
-                  </UbButton>
-                )}
-                {charges.canWrite && Number(charge.amountPaid) === 0 && (
-                  <UbButton size="sm" variant="ghost" onClick={() => setReversing(charge)}>
-                    {t('library.charge.reverse')}
-                  </UbButton>
-                )}
+                <CatalogueActionsMenu
+                  size="sm"
+                  t={t}
+                  items={[
+                    {
+                      key: 'waive',
+                      label: t('library.charge.waiveAction'),
+                      icon: Ban,
+                      action: charges.canWaive ? () => setWaiving(charge) : undefined,
+                    },
+                    {
+                      key: 'reverse',
+                      label: t('library.charge.reverse'),
+                      icon: Undo2,
+                      action:
+                        charges.canWrite && Number(charge.amountPaid) === 0
+                          ? () => setReversing(charge)
+                          : undefined,
+                    },
+                  ]}
+                />
               </UbStack>
             )}
           </UbStack>
@@ -178,6 +206,7 @@ export function MemberChargesSection({
       )}
       {collecting && (
         <PaymentFormDrawerLazy
+          className={LIBRARY_OVERLAY_CLASSNAME}
           onSaved={onPaymentSaved}
           context={{
             direction: 'in',
@@ -194,6 +223,6 @@ export function MemberChargesSection({
           onClose={() => setCollecting(null)}
         />
       )}
-    </UbCard>
+    </LibraryCard>
   );
 }

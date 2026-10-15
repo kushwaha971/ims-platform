@@ -1,5 +1,7 @@
 'use client';
 
+import { useEffect } from 'react';
+
 import { MEMBER_FILTER_DEFAULTS, MEMBER_LIST_URL } from '../constants/memberConstants';
 import {
   memberFiltersChanged,
@@ -27,4 +29,13 @@ export type MemberList = CatalogueList<MemberFilters, MemberSummary> &
   Pick<LibraryMemberListState, 'totals' | 'hasAny' | 'types' | 'enrolling'>;
 
 /** F04 (LIB-04 FR-6) — the members list, its totals and the membership types. */
-export const useMemberList = (): MemberList => useCatalogueList(MEMBERS) as MemberList;
+export const useMemberList = (): MemberList => {
+  const list = useCatalogueList(MEMBERS) as MemberList;
+  const { stale, filters, setPage } = list;
+  // A fee/seat write can affect any accumulated page. Refresh from page one
+  // instead of updating only the last page and retaining stale earlier cards.
+  useEffect(() => {
+    if (stale && filters.page !== '1') setPage(1);
+  }, [stale, filters.page, setPage]);
+  return list;
+};

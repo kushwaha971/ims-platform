@@ -80,3 +80,23 @@ describe('UbCombobox inside an overlay', () => {
     expect(screen.queryByPlaceholderText('Search')).not.toBeInTheDocument();
   });
 });
+
+it('treats searching in the open picker as focus inside the same field', async () => {
+  const user = userEvent.setup();
+  const blur = jest.fn();
+  render(
+    <UbCombobox
+      aria-label="Plan"
+      value=""
+      onChange={jest.fn()}
+      onBlur={blur}
+      options={OPTIONS}
+      searchPlaceholder="Search plans"
+    />
+  );
+  await user.click(screen.getByRole('combobox', { name: 'Plan' }));
+  await screen.findByPlaceholderText('Search plans');
+  expect(blur).not.toHaveBeenCalled();
+  await user.keyboard('{Escape}');
+  expect(blur).toHaveBeenCalledTimes(1);
+});

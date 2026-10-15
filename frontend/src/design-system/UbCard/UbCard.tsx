@@ -43,7 +43,9 @@ function UbCardBase({
           {action}
         </MLCardHeader>
       )}
-      <MLCardContent className={cn(title && 'pt-0', !padded && 'p-0')}>{children}</MLCardContent>
+      <MLCardContent className={cn(title && 'pt-0', !padded && 'p-0 sm:p-0')}>
+        {children}
+      </MLCardContent>
     </MLCard>
   );
 }

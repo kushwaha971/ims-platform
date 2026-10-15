@@ -8,7 +8,6 @@ import { flushSync } from 'react-dom';
 import {
   UbBox,
   UbButton,
-  UbDialog,
   UbQrCode,
   UbSkeleton,
   UbStack,
@@ -20,6 +19,8 @@ import { useTranslation } from 'src/hooks/useTranslation';
 import type { ApiErrorShape } from 'src/types/api.types';
 
 import { fetchCheckInPoster } from '../redux/libraryCheckinThunk';
+
+import { LibraryDialog } from './LibraryOverlays';
 
 import type { CheckInPoster } from '../types/attendance.types';
 
@@ -59,7 +60,7 @@ export function CheckInPosterDialog({
 
   return (
     <>
-      <UbDialog
+      <LibraryDialog
         open={!printing}
         onOpenChange={(next) => !next && !printing && onClose()}
         title={t('library.checkin.title')}
@@ -96,7 +97,7 @@ export function CheckInPosterDialog({
             </UbText>
           </UbStack>
         )}
-      </UbDialog>
+      </LibraryDialog>
       {poster && (
         <UbBox className="ub-print-only ub-print-sheet hidden" data-testid="library-checkin-poster">
           <UbStack gap={6} align="center" className="pt-16 text-center">

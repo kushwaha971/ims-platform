@@ -1,6 +1,6 @@
 'use client';
 
-import { UbButton, UbCard, UbStack, UbStatusBadge, UbText } from 'src/design-system';
+import { UbButton, UbStack, UbStatusBadge, UbText } from 'src/design-system';
 import type { UbStatusBadgeTone } from 'src/design-system';
 import type { TranslateFn } from 'src/hooks/useTranslation';
 import { formatBusinessDate } from 'src/utils/dates';
@@ -8,6 +8,8 @@ import { formatInr } from 'src/utils/money';
 
 import { canUndo, touchedLoans } from '../view-model/counterDisplay';
 import { blockParams } from '../view-model/memberDisplay';
+
+import { LibraryCard } from './LibraryCard';
 
 import type { CounterRow, QueueItem } from '../types/counter.types';
 
@@ -81,14 +83,14 @@ export function CounterSessionList({
     >
       {pending.map((item) => (
         <UbStack as="li" key={`pending-${item.key}`} gap={0}>
-          <UbCard padded>
+          <LibraryCard padded>
             <UbText variant="body-sm" tone="tertiary">
               <UbText as="span" variant="body-sm" className="ds-mono">
                 {item.code}
               </UbText>{' '}
               {t('library.counter.pending')}
             </UbText>
-          </UbCard>
+          </LibraryCard>
         </UbStack>
       ))}
       {rows.map((row) => {
@@ -98,7 +100,7 @@ export function CounterSessionList({
         const failedKey = key && failedKeys.has(key) ? key : '';
         return (
           <UbStack as="li" key={row.id} gap={0} data-testid={`counter-row-${row.kind}`}>
-            <UbCard padded>
+            <LibraryCard padded>
               <UbStack gap={1}>
                 <UbStack direction="row" justify="between" align="start" gap={2}>
                   <UbText variant="body-sm-medium" className="line-clamp-2 min-w-0">
@@ -179,7 +181,7 @@ export function CounterSessionList({
                   </UbStack>
                 )}
               </UbStack>
-            </UbCard>
+            </LibraryCard>
           </UbStack>
         );
       })}

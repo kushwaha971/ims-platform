@@ -5,9 +5,14 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { useRouter, useSearchParams } from 'next/navigation';
 
-import { UserPlus } from 'lucide-react';
+import { ChevronRight, UserPlus } from 'lucide-react';
 
 import {
+  UbLoadMore,
+  UbAvatar,
+  UbPressable,
+  UbStatusBadge,
+  UbStatCard,
   UbButton,
   UbEmptyState,
   UbPageHeader,
@@ -19,11 +24,14 @@ import {
   UbActiveFilters,
   UbFilterSelect,
   UbFilterSheet,
-  useMediaQuery,
   type UbFilterSpec,
   type UbFilterValues,
 } from 'src/design-system';
-import { UbDataGrid, useGridTier, type UbDataGridEmptyStates } from 'src/design-system/UbDataGrid';
+import {
+  UbDataGridEmptyState,
+  useGridTier,
+  type UbDataGridEmptyStates,
+} from 'src/design-system/UbDataGrid';
 import { useAppDispatch, useAppSelector } from 'src/hooks/useAppStore';
 import { useCommittedSearch } from 'src/hooks/useCommittedSearch';
 import { useIdempotencyKey } from 'src/hooks/useIdempotencyKey';
@@ -34,25 +42,30 @@ import { ROUTES } from 'src/routes';
 import { applyServerErrors } from 'src/utils/applyServerErrors';
 import { todayInTenantTz } from 'src/utils/dates';
 import { formatInr } from 'src/utils/money';
+import { formatPhoneForDisplay } from 'src/utils/share';
 
 import { ImportActionLink } from 'modules/DigiKhaato/features/imports/components/ListHeaderActions';
 
 import { MEMBER_SEARCH_DEBOUNCE_MS } from '../constants/memberConstants';
-import { useLibraryGridLabels } from '../hooks/useLibraryGridLabels';
 import { useMemberList } from '../hooks/useMemberList';
 import { useSeats } from '../hooks/useSeats';
 import { enrolLibraryMember, fetchLibraryMembershipTypes } from '../redux/libraryMemberThunk';
 import { MEMBER_STATUSES, type EnrolFormValues, type MemberSummary } from '../types/member.types';
 import { listGridState } from '../view-model/copyDisplay';
-import { toEnrolBody } from '../view-model/memberDisplay';
+import { FEE_TONE, feeLabel, toEnrolBody } from '../view-model/memberDisplay';
 
-import { createMemberColumns } from './MemberColumns';
+import { LibraryCard } from './LibraryCard';
 
 import type { UseFormSetError } from 'react-hook-form';
 
 /** The enrol form loads with the tap that opens it (CLAUDE.md). */
 const EnrolMemberDrawerLazy = dynamic(
   () => import('./EnrolMemberDrawer').then((m) => m.EnrolMemberDrawer),
+  { ssr: false }
+);
+
+const MemberDetailDrawerLazy = dynamic(
+  () => import('./MemberDetailDrawer').then((m) => m.MemberDetailDrawer),
   { ssr: false }
 );
 
@@ -92,20 +105,53 @@ const SERVER_FIELD: Readonly<Record<string, string>> = {
 export function MemberListPageContent(): React.JSX.Element {
   const { t } = useTranslation();
   const router = useRouter();
+  const [selectedMember, setSelectedMember] = useState<string | null>(null);
   const dispatch = useAppDispatch();
   const list = useMemberList();
   const tier = useGridTier();
-  const wideTable = useMediaQuery('(min-width: 1280px)');
-  const tableTier = tier === 'cards' ? 'cards' : wideTable ? 'full' : 'compact';
-  const labels = useLibraryGridLabels();
   const timezone = useAppSelector(selectTenantTimezone);
   const today = todayInTenantTz(timezone ?? undefined);
   const { key, rotate } = useIdempotencyKey();
   // W04 — the home's "New admission" opens the drawer here (`?add=1`).
-  const asksToAdd = useSearchParams().get('add') === '1';
+  const query = useSearchParams();
+  const asksToAdd = query.get('add') === '1';
+  // URL filters clean unrelated parameters after mount. Preserve admission
+  // context before that cleanup, and keep it separate from the list's shift filter.
+  const [admissionRequest, setAdmissionRequest] = useState(() =>
+    asksToAdd
+      ? {
+          seatId: query.get('seat') ?? '',
+          shiftId: query.get('admitShift') ?? '',
+        }
+      : null
+  );
+  const requestedSeatId = admissionRequest?.seatId ?? '';
+  const requestedShiftId = admissionRequest?.shiftId ?? '';
   const [enrolling, setEnrolling] = useState(asksToAdd);
+  const admissionQuery = asksToAdd ? query.toString() : '';
+  const [observedAdmissionQuery, setObservedAdmissionQuery] = useState(admissionQuery);
+  // Next may retain an already visited list. Adjust only when its external
+  // admission request changes; URL cleanup must not discard the active form.
+  if (admissionQuery !== observedAdmissionQuery) {
+    setObservedAdmissionQuery(admissionQuery);
+    if (admissionQuery) {
+      const request = new URLSearchParams(admissionQuery);
+      setAdmissionRequest({
+        seatId: request.get('seat') ?? '',
+        shiftId: request.get('admitShift') ?? '',
+      });
+      setEnrolling(true);
+    }
+  }
   const { filters, setFilters, clearFilters, refetch, error, canRead, canWrite, totals } = list;
-  const { activeShifts } = useSeats();
+  const seating = useSeats();
+  const { activeShifts } = seating;
+  const initialPlacement =
+    requestedSeatId &&
+    seating.seats.some((seat) => seat.id === requestedSeatId && seat.isActive) &&
+    (!requestedShiftId || activeShifts.some((shift) => shift.id === requestedShiftId))
+      ? { seatId: requestedSeatId, shiftId: requestedShiftId }
+      : undefined;
 
   useEffect(() => {
     if (!canRead) return undefined;
@@ -120,10 +166,6 @@ export function MemberListPageContent(): React.JSX.Element {
     MEMBER_SEARCH_DEBOUNCE_MS
   );
 
-  const columns = useMemo(
-    () => createMemberColumns({ t, today, cards: tier === 'cards' }),
-    [t, today, tier]
-  );
   const sheetSpecs = useMemo<UbFilterSpec[]>(
     () => [
       {
@@ -260,12 +302,8 @@ export function MemberListPageContent(): React.JSX.Element {
     [t, canWrite, filters.q, clearFilters, error, refetch]
   );
 
-  const rowId = useCallback((row: MemberSummary) => row.membershipId, []);
   const rowName = useCallback((row: MemberSummary) => `${row.name} ${row.memberNumber}`, []);
-  const openRow = useCallback(
-    (row: MemberSummary) => router.push(`${ROUTES.LIBRARY_MEMBERS}/${row.membershipId}`),
-    [router]
-  );
+  const openRow = useCallback((row: MemberSummary) => setSelectedMember(row.membershipId), []);
 
   if (!canRead) {
     return (
@@ -326,7 +364,7 @@ export function MemberListPageContent(): React.JSX.Element {
           ) : undefined
         }
       />
-      <UbStack gap={4} data-testid="library-members-screen">
+      <UbStack gap={3} data-testid="library-members-screen">
         {emptyBook ? (
           <UbEmptyState
             variant="firstUse"
@@ -336,6 +374,21 @@ export function MemberListPageContent(): React.JSX.Element {
           />
         ) : (
           <>
+            {typeof totals?.active === 'number' && typeof totals.expired === 'number' && (
+              <UbStack className="grid max-w-xl grid-cols-2 gap-3">
+                <UbStatCard
+                  value={String(totals.active)}
+                  label={t('library.members.summary.active')}
+                  tone="success"
+                  className="bg-success-dim"
+                />
+                <UbStatCard
+                  value={String(totals.expired)}
+                  label={t('library.members.summary.expired')}
+                  className="bg-surface-sunken"
+                />
+              </UbStack>
+            )}
             <UbStack
               className="min-h-5 max-sm:min-h-10"
               aria-busy={list.status === 'loading' || list.status === 'idle'}
@@ -371,7 +424,7 @@ export function MemberListPageContent(): React.JSX.Element {
               <UbSearchInput
                 value={search}
                 onChange={setSearch}
-                placeholder={t('library.members.search.placeholder')}
+                placeholder={t('library.members.search.label')}
                 aria-label={t('library.members.search.label')}
                 className="min-w-0 flex-1"
               />
@@ -384,6 +437,8 @@ export function MemberListPageContent(): React.JSX.Element {
                 />
               )}
               <UbFilterSheet
+                compact
+                className="h-10"
                 specs={specs}
                 values={values}
                 onApply={apply}
@@ -404,34 +459,100 @@ export function MemberListPageContent(): React.JSX.Element {
                 clearAll: t('common.filters.clearAll'),
               }}
             />
-            <UbDataGrid
-              tier={tableTier}
-              compactCutoff={1}
-              rows={list.rows}
-              columns={columns}
-              rowId={rowId}
-              rowName={rowName}
-              state={listGridState(list)}
-              labels={labels}
-              emptyStates={emptyStates}
-              caption={t('library.members.caption')}
-              storageId="library.members"
-              page={{
-                page: list.page,
-                pageSize: list.pageSize,
-                total: list.total,
-                totalPages: list.totalPages,
-              }}
-              onPageChange={list.setPage}
-              onRowOpen={openRow}
-              cardAvatar={false}
-            />
+            {list.rows.length > 0 ? (
+              <>
+                <UbStack
+                  className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3"
+                  aria-label={t('library.members.caption')}
+                >
+                  {list.rows.map((row) => (
+                    <LibraryCard key={row.membershipId} padded={false} elevated>
+                      <UbPressable
+                        onClick={() => openRow(row)}
+                        aria-label={rowName(row)}
+                        className="w-full rounded-card px-3 py-2.5 text-left"
+                      >
+                        <UbStack direction="row" align="center" gap={2}>
+                          <UbAvatar name={row.name} className="bg-primary-50 text-text-accent" />
+                          <UbStack gap={0} className="min-w-0 flex-1">
+                            <UbText variant="body-medium" className="break-words">
+                              {row.name}
+                            </UbText>
+                            <UbText variant="caption" tone="tertiary">
+                              {[
+                                formatPhoneForDisplay(row.mobile) || row.memberNumber,
+                                row.locationLabel || row.groupLabel,
+                              ]
+                                .filter(Boolean)
+                                .join(' · ')}
+                            </UbText>
+                            <UbText variant="caption" tone="secondary" className="font-medium">
+                              {row.effectiveStatus === 'expired'
+                                ? t('library.members.membershipExpired')
+                                : row.seat
+                                  ? `${t('library.seats.detailTitle', { seat: row.seat.label })} · ${row.shift?.name || t('library.seats.day.allDay')}`
+                                  : row.shift?.name || t('library.members.noSeat')}
+                            </UbText>
+                          </UbStack>
+                          <UbStack gap={2} align="end" className="max-w-[40%] shrink-0">
+                            <UbStatusBadge
+                              tone={FEE_TONE[row.feeState]}
+                              label={
+                                Number(row.duesAmount) > 0
+                                  ? t('library.fee.amountDue', {
+                                      amount: formatInr(row.duesAmount),
+                                    })
+                                  : feeLabel(t, row.feeState, null)
+                              }
+                            />
+                            <ChevronRight className="h-4 w-4 text-text-tertiary" aria-hidden />
+                          </UbStack>
+                        </UbStack>
+                      </UbPressable>
+                    </LibraryCard>
+                  ))}
+                </UbStack>
+                {list.page < list.totalPages &&
+                  (list.status === 'failed' ? (
+                    <UbButton variant="secondary" onClick={refetch}>
+                      {t('common.action.retry')}
+                    </UbButton>
+                  ) : (
+                    <UbLoadMore
+                      loading={
+                        list.status === 'loading' ||
+                        list.status === 'refreshing' ||
+                        Number(filters.page) > list.page
+                      }
+                      loadingLabel={t('library.list.loading')}
+                      moreLabel={t('library.members.loadMore')}
+                      onLoadMore={() => {
+                        if (list.status === 'succeeded' && Number(filters.page) === list.page)
+                          list.setPage(list.page + 1);
+                      }}
+                    />
+                  ))}
+              </>
+            ) : listGridState(list) === 'loading' ? (
+              <UbSkeleton variant="card" count={3} label={t('library.list.loading')} />
+            ) : (
+              <UbDataGridEmptyState state={listGridState(list)} copy={emptyStates} />
+            )}
           </>
         )}
       </UbStack>
-      {enrolling && canWrite && (
+      {selectedMember && (
+        <MemberDetailDrawerLazy
+          key={selectedMember}
+          id={selectedMember}
+          onClose={() => setSelectedMember(null)}
+        />
+      )}
+      {enrolling && canWrite && (!requestedSeatId || seating.listsStatus === 'succeeded') && (
         <EnrolMemberDrawerLazy
+          key={admissionRequest ? `${admissionRequest.seatId}:${admissionRequest.shiftId}` : 'new'}
           types={list.types}
+          initialPlacement={initialPlacement}
           busy={list.enrolling}
           onClose={() => setEnrolling(false)}
           onSubmit={enrol}

@@ -140,15 +140,18 @@ const UbComboboxInner = forwardRef<HTMLButtonElement, UbComboboxProps>(function 
    * rather than in a dialog and was never affected — which is exactly why this
    * would have gone unnoticed until somebody lost a half-filled form.
    */
-  const handleEscape = useCallback((event: React.KeyboardEvent<HTMLElement>) => {
-    if (event.key !== 'Escape') return;
-    event.preventDefault();
-    event.stopPropagation();
-    // Native too: React's synthetic `stopPropagation` does not stop a listener
-    // attached directly to `document`, which is what the overlay's is.
-    event.nativeEvent.stopImmediatePropagation();
-    setOpen(false);
-  }, [setOpen]);
+  const handleEscape = useCallback(
+    (event: React.KeyboardEvent<HTMLElement>) => {
+      if (event.key !== 'Escape') return;
+      event.preventDefault();
+      event.stopPropagation();
+      // Native too: React's synthetic `stopPropagation` does not stop a listener
+      // attached directly to `document`, which is what the overlay's is.
+      event.nativeEvent.stopImmediatePropagation();
+      setOpen(false);
+    },
+    [setOpen]
+  );
 
   return (
     <MLPopover open={open} onOpenChange={setOpen}>
@@ -176,7 +179,10 @@ const UbComboboxInner = forwardRef<HTMLButtonElement, UbComboboxProps>(function 
         // `aria-controls` are Radix's own and are left to it.
         role="combobox"
         disabled={disabled}
-        onBlur={onBlur}
+        onBlur={() => {
+          // The search input is portalled, but still belongs to this field.
+          if (!open) onBlur?.();
+        }}
         className={cn(
           'ub-hit flex h-10 w-full items-center justify-between gap-2 rounded-control border px-3',
           'ds-body bg-surface-card text-left text-text-primary',
@@ -198,7 +204,10 @@ const UbComboboxInner = forwardRef<HTMLButtonElement, UbComboboxProps>(function 
       <MLPopoverContent
         align="start"
         onKeyDownCapture={handleEscape}
-        onCloseAutoFocus={onCloseAutoFocus}
+        onCloseAutoFocus={(event) => {
+          onBlur?.();
+          onCloseAutoFocus?.(event);
+        }}
         // Matched to the trigger so a long option cannot make the menu wider
         // than the field it belongs to — the same rule `UbSelect` follows.
         className={cn(

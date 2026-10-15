@@ -8,7 +8,6 @@ import { LogIn, LogOut, QrCode } from 'lucide-react';
 
 import {
   UbButton,
-  UbCard,
   UbEmptyState,
   UbListItemText,
   UbPageHeader,
@@ -33,6 +32,8 @@ import {
   fetchLibraryAttendance,
 } from '../redux/libraryAttendanceThunk';
 import { FEE_TONE, owesFee } from '../view-model/memberDisplay';
+
+import { LibraryCard } from './LibraryCard';
 
 import type { AttendanceRow } from '../types/attendance.types';
 
@@ -163,6 +164,7 @@ export function AttendancePageContent(): React.JSX.Element {
             <UbButton
               variant="secondary"
               iconOnly="mobile"
+              className="max-sm:h-10 max-sm:w-10"
               icon={<QrCode className="h-4 w-4" aria-hidden />}
               onClick={() => setPosterOpen(true)}
               data-testid="library-checkin-open"
@@ -200,7 +202,7 @@ export function AttendancePageContent(): React.JSX.Element {
           description={t('library.attendance.empty.body')}
         />
       ) : (
-        <UbStack gap={4} data-testid="library-attendance" className="ub-print-hide">
+        <UbStack gap={3} data-testid="library-attendance" className="ub-print-hide">
           <UbText variant="body-sm" tone="secondary" data-testid="library-attendance-counts">
             {[
               t('library.attendance.came', { present: day.present, students: day.students }),
@@ -213,7 +215,7 @@ export function AttendancePageContent(): React.JSX.Element {
             placeholder={t('library.attendance.search')}
             aria-label={t('library.attendance.search')}
           />
-          <UbCard padded>
+          <LibraryCard padded>
             <UbStack as="ul" gap={0} aria-label={t('library.attendance.title')}>
               {rows.map((row) => {
                 const busy = state.busyId === row.membershipId;
@@ -285,7 +287,7 @@ export function AttendancePageContent(): React.JSX.Element {
                 </UbText>
               )}
             </UbStack>
-          </UbCard>
+          </LibraryCard>
         </UbStack>
       )}
       {posterOpen && <CheckInPosterDialogLazy onClose={() => setPosterOpen(false)} />}

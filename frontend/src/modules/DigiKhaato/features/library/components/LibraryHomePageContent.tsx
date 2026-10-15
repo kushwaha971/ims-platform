@@ -18,7 +18,6 @@ import {
   UbActionLink,
   UbAmount,
   UbButton,
-  UbCard,
   UbEmptyState,
   UbListItemText,
   UbPageHeader,
@@ -47,6 +46,8 @@ import { AppSetupCard } from 'modules/DigiKhaato/features/appSetup/components/Ap
 import { selectLibraryHome } from '../redux/libraryHomeSlice';
 import { fetchLibraryHome } from '../redux/libraryHomeThunk';
 import { FEE_TONE, isNonZero, shiftHours } from '../view-model/memberDisplay';
+
+import { LibraryCard } from './LibraryCard';
 
 /**
  * W04 (owner, 4 Oct 2026) — `/library`: a reading room's day. How full each
@@ -124,6 +125,7 @@ export function LibraryHomePageContent(): React.JSX.Element {
           canAdmit ? (
             <UbActionLink
               href={`${students}?add=1`}
+              variant="primary"
               icon={<UserPlus className="h-4 w-4" aria-hidden />}
             >
               {t('library.members.add')}
@@ -142,12 +144,12 @@ export function LibraryHomePageContent(): React.JSX.Element {
           {t('library.home.firstUse.later')}
         </UbText>
       ) : (
-        <UbStack gap={5} data-testid="library-home">
+        <UbStack gap={3} data-testid="library-home">
           {/* docs/mobile-redesign (phase 7) — on a phone the day reads as the
               Shop's Home does: the two fee figures, the shortcuts, and what
               needs doing. A desktop keeps its tiles. */}
           {isMobileLayer ? (
-            <UbStack gap={4} data-testid="library-home-mobile">
+            <UbStack gap={3} data-testid="library-home-mobile">
               <UbHeroPair
                 figures={[
                   {
@@ -246,17 +248,19 @@ export function LibraryHomePageContent(): React.JSX.Element {
                 icon={<IndianRupee className="h-4 w-4" aria-hidden />}
                 label={t('library.home.unpaid')}
                 value={String(study.fees.unpaid)}
+                tone={study.fees.unpaid > 0 ? 'warning' : undefined}
                 onClick={() => router.push(`${students}?hasDues=true`)}
               />
               <UbStatCard
                 icon={<IndianRupee className="h-4 w-4" aria-hidden />}
                 label={t('library.home.collected')}
                 value={formatInr(study.fees.collectedThisMonth)}
+                tone={isNonZero(study.fees.collectedThisMonth) ? 'success' : undefined}
               />
             </SummaryStatGrid>
           )}
 
-          <UbCard padded>
+          <LibraryCard padded>
             <UbStack gap={3} data-testid="library-home-shifts">
               <UbStack direction="row" justify="between" align="center" gap={2}>
                 <UbText variant="label">{t('library.home.seatsTitle')}</UbText>
@@ -296,9 +300,9 @@ export function LibraryHomePageContent(): React.JSX.Element {
                 ))
               )}
             </UbStack>
-          </UbCard>
+          </LibraryCard>
 
-          <UbCard padded>
+          <LibraryCard padded>
             <UbStack gap={1} data-testid="library-home-to-pay">
               <UbText variant="label">{t('library.home.toPay')}</UbText>
               {study.toPay.length === 0 ? (
@@ -349,7 +353,7 @@ export function LibraryHomePageContent(): React.JSX.Element {
                 </UbStack>
               )}
             </UbStack>
-          </UbCard>
+          </LibraryCard>
         </UbStack>
       )}
     </UbPageShell>

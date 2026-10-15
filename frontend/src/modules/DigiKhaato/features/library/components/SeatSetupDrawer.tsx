@@ -7,11 +7,9 @@ import { useForm } from 'react-hook-form';
 
 import {
   UbButton,
-  UbCard,
-  UbDrawer,
   UbField,
   UbForm,
-  UbNativeSelect,
+  UbCombobox,
   UbStack,
   UbStatusBadge,
   UbSwitch,
@@ -31,6 +29,9 @@ import {
 } from '../redux/librarySeatThunk';
 import { useSeatSchemas } from '../validation/seatSchemas';
 import { shiftHours } from '../view-model/memberDisplay';
+
+import { LibraryCard } from './LibraryCard';
+import { LibraryDrawer } from './LibraryOverlays';
 
 import type { SeatRowFormValues, ShiftFormValues } from '../types/seat.types';
 
@@ -113,7 +114,7 @@ export function SeatSetupDrawer({ onClose }: Readonly<{ onClose: () => void }>):
   };
 
   return (
-    <UbDrawer
+    <LibraryDrawer
       open
       onOpenChange={(next) => !next && onClose()}
       title={t('library.seats.setup')}
@@ -147,7 +148,7 @@ export function SeatSetupDrawer({ onClose }: Readonly<{ onClose: () => void }>):
               )}
             />
           ))}
-          <UbCard padded>
+          <LibraryCard padded>
             <UbForm id={shiftFormId} form={shiftForm} onSubmit={addShift}>
               <UbField
                 name="name"
@@ -166,7 +167,9 @@ export function SeatSetupDrawer({ onClose }: Readonly<{ onClose: () => void }>):
                     className="flex-1"
                   >
                     {(field) => (
-                      <UbNativeSelect
+                      <UbCombobox
+                        searchPlaceholder={t('library.select.search')}
+                        emptyLabel={t('library.select.noMatches')}
                         id={field.id}
                         name={field.name}
                         aria-label={t(`library.seats.shift.${name}`)}
@@ -183,7 +186,7 @@ export function SeatSetupDrawer({ onClose }: Readonly<{ onClose: () => void }>):
                 {t('library.seats.shift.add')}
               </UbButton>
             </UbForm>
-          </UbCard>
+          </LibraryCard>
         </UbStack>
 
         <UbStack gap={3} data-testid="library-setup-seats">
@@ -196,7 +199,7 @@ export function SeatSetupDrawer({ onClose }: Readonly<{ onClose: () => void }>):
               })}
             />
           </UbStack>
-          <UbCard padded>
+          <LibraryCard padded>
             <UbForm id={rowFormId} form={rowForm} onSubmit={addRow}>
               <UbText variant="body-sm" tone="secondary">
                 {t('library.seats.row.hint')}
@@ -235,9 +238,9 @@ export function SeatSetupDrawer({ onClose }: Readonly<{ onClose: () => void }>):
                 {t('library.seats.row.add')}
               </UbButton>
             </UbForm>
-          </UbCard>
+          </LibraryCard>
         </UbStack>
       </UbStack>
-    </UbDrawer>
+    </LibraryDrawer>
   );
 }

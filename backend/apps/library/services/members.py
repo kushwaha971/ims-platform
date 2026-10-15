@@ -57,9 +57,9 @@ from apps.library.models import (
     LibraryMembershipType,
 )
 from apps.library.services import codes, numbering
+from apps.library.services import seats as seating
 from apps.library.services.charges import create_charge
 from apps.library.services.fields import Errors, date, owned, text, uuid_or_none
-from apps.library.services import seats as seating
 
 MEMBER_KIND = "library_member"
 MODULE = "library"
@@ -208,6 +208,8 @@ def member_summary(m: LibraryMembership, today: dt.date) -> dict:
         "membership_id": str(m.id),
         "party_id": str(m.party_id),
         "name": m.party.name,
+        "mobile": m.party.mobile,
+        "location_label": str((m.party.billing_address or {}).get("city") or ""),
         "member_number": m.member_number,
         "type": {
             "id": str(m.membership_type_id),

@@ -2,11 +2,13 @@
 
 import { useEffect, useRef, useState } from 'react';
 
-import { UbActionLink, UbButton, UbDialog, UbStack, UbText, UbTextInput } from 'src/design-system';
+import { UbActionLink, UbButton, UbStack, UbText, UbTextInput } from 'src/design-system';
 import { useTranslation } from 'src/hooks/useTranslation';
 
 import { issueSlip } from '../api/libraryCirculationService';
 import { blockParams } from '../view-model/memberDisplay';
+
+import { LibraryDialog } from './LibraryOverlays';
 
 import type { CounterMember, CounterPrompt } from '../types/counter.types';
 
@@ -49,7 +51,7 @@ export function OverridePrompt({
   };
 
   return (
-    <UbDialog
+    <LibraryDialog
       open
       onOpenChange={(next) => !next && onClose()}
       title={t('library.counter.override.title')}
@@ -100,7 +102,7 @@ export function OverridePrompt({
           </UbText>
         )}
       </UbStack>
-    </UbDialog>
+    </LibraryDialog>
   );
 }
 
@@ -132,7 +134,7 @@ export function FinishDialog({
   }, [member]);
 
   return (
-    <UbDialog
+    <LibraryDialog
       open
       onOpenChange={(next) => !next && onClose()}
       title={t('library.counter.finishWith', { name: member.name })}
@@ -163,6 +165,6 @@ export function FinishDialog({
           </UbText>
         )}
       </UbStack>
-    </UbDialog>
+    </LibraryDialog>
   );
 }
