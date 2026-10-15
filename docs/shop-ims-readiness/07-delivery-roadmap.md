@@ -1,0 +1,47 @@
+# Delivery roadmap and decisions
+
+Status: planned work; no target score has been achieved merely by creating these documents. Work one complete vertical slice at a time: review → implement → run → look → reconcile → report.
+
+## Ordered work packages
+
+| Package | Priority / responsible role | Deliverable and exit criteria |
+|---|---|---|
+| WP-01 Truth and scope | P0, product owner + domain reviewer | Approved definitions for ledgers, dual roles, return valuation and supported business capabilities; reproducible fixtures |
+| WP-02 Financial/recovery hardening | P0, backend + frontend lead | SH-009 valuation/replay resolution, SH-011 draft recovery, atomic/idempotent lifecycle and cross-book/tenant tests |
+| WP-03 Shared ownership audit | P0/P1, engineering lead | Whole-codebase duplication inventory, reuse catalogue, high-risk single-owner fixes and exception register |
+| WP-04 Universal editable communication | P1, product + frontend/backend | Complete outgoing-path inventory; shared composer/adapters; every applicable MSG requirement passes in all apps |
+| WP-05 Counter editor redesign | P1, design + frontend | Reviewed dense bill/purchase designs; width/keyboard/tax behavior; real 1/10/50-line speed/accuracy evidence |
+| WP-06 Shop dashboard | P1, design + reporting/backend | Defined KPI contracts, separate customer/supplier panels, attention priorities and matching drill-downs; all figures reconcile |
+| WP-07 Records and onboarding | P1, frontend + domain | Consistent drawers, role-specific copy, selected phone contacts, mobile selling price and safe archived/duplicate handling |
+| WP-08 Returns/documents | P1, document/backend/frontend | Complete credit/refund/return proof, supported print/share and conversion histories |
+| WP-09 Business capability validation | P1/P2, product + QA | Product business matrix classified; optional variants/units/batches/locations/etc scoped and capability-gated |
+| WP-10 Readiness evidence | P0 release gate, QA + design/domain reviewers | Device/network/security/performance tests, scorecards, staging smoke and explicit release/rollback decision |
+
+WP-03 starts early and accompanies every package. Do not postpone duplication review until after new copies have spread. Financial decisions precede financial code changes; dashboard definitions precede decorative KPI designs. WP-04 covers Library/Lending/Udhaar as well as Shop and must preserve each app's ownership and rules.
+
+## Concrete first backlog
+
+- Resolve SH-009 using the audited ₹640-versus-₹610.26 example and independent stock replay; include remaining-value/zero-stock/void cases.
+- Design persistent logical draft identity/recovery for response loss, changed contents and remounts; confirm no duplicate draft/post and no lost edits.
+- Inventory every default outgoing-text path before migrating to the shared composer. Start with customer due reminder, supplier payment confirmation and receipt share, then bulk/scheduled and other apps.
+- Review full-width desktop bill rows and compact context without regressing minimum field widths or mobile total dock.
+- Define Shop dashboard figures with exact scope/date/tax/return treatment and authoritative endpoints; remove any unsupported metric.
+- Surface mobile selling price/unit; finish Supplier-specific onboarding/bulk labels and hide single-page controls.
+- Add supplier-return document proof with the correct original bill and settlement effect.
+
+## Decision register
+
+| ID | Decision required | Decision owner / evidence |
+|---|---|---|
+| D-01 | Purchase-return valuation: original inbound cost vs average-cost/variance treatment; depleted/negative residual value; void/replay/migration | Product/domain owner; approve numeric scenarios before implementation |
+| D-02 | Supported businesses and capability limits for the release; phased batch/expiry/variants/serial/unit/location support | Product owner with representative merchants; publish capability matrix |
+| D-03 | Explicit dual-role customer/supplier settlement/net-position behavior and dashboard cohort definitions | Product/domain owner; no silent change to existing balance rules |
+| D-04 | Personal user-owned Udhaar and login landing/migration | Separate ownership project; preserve current business entries and member privacy |
+| D-05 | Communication modes: manual handoff, configured providers and schedules; retention, consent, limits and truthful statuses | Product/engineering owner; editable text mandatory regardless of supported mode |
+| D-06 | Physical-device/browser/printer support and production performance envelope | Engineering/QA; freeze devices, workloads and budgets before sign-off |
+
+## Package handoff
+
+Each package supplies: requirement IDs, current/proposed behavior, design/data contract, source owner and reuse plan, intentional exceptions, API/migration impact, acceptance scenarios, screenshots, independent reconciliation where relevant, tests/gates, known limitations and release notes. Assign named people when work is scheduled; role names here do not imply a staffed team or date commitment.
+
+Update [QA.md](../../QA.md) with verified checkpoints and this pack with current acceptance status. Keep the historical audit intact. Ship no fictional figures, unverified competitor claims or claimed delivery status unsupported by evidence.

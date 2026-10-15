@@ -1,6 +1,6 @@
 # YourKhata UI/UX feedback and resumable handoff
 
-Last updated: 14 October 2026 (Asia/Kolkata). Active task; implementation not finished.
+Last updated: 15 October 2026 (Asia/Kolkata). Current task: full Shop/Retail audit. Earlier sections are chronological checkpoints; later verified milestones supersede earlier pending statuses.
 
 ## Owner feedback and order
 
@@ -237,3 +237,43 @@ Read this file, `git status`, current diff, root/frontend AGENTS, and the releva
 - Review screenshots:chat outputs/lending-ui-review/borrower-drawer-final.png and edited-receipt.png. Demo fixtures include26 clearly named Review Borrower future-due loans solely for paging verification. User’s pre-existing untracked files preserved.
 
 - Owner requested pushing the Lending pass on15 Oct2026. Confirmed remote dev matches local baseac312608, reviewed final diff and prior passing test/build evidence; staging only these application files and shared primitives, preserving unrelated untracked work. Railway dev autodeploy is already configured.
+
+## Shop/Retail product and engineering audit — active, 15 Oct 2026
+- Owner requested end-to-end user/UX/product-manager/product-engineer/retailer/shopkeeper/ERP review on mobile and desktop, including edge cases and justified fixes. Interpreting scope as full Shop/Retail; asynchronous scope question sent, proceed with this assumption unless steered. Library/Lending parity is a reference, not a blanket replacement for comparison tables or transaction editors.
+- Priorities: financial/stock correctness and security; real daily task completion; data loss/retry/double-submit/stale response behavior; responsive hierarchy, action placement/tap targets and consistency; operability and performance. Use isolated local Shop tenant, never production transactions/messages. Track reproduced/fixed/passed/untested cases with evidence; do not claim every conceivable edge case is proved.
+- Baseline branchdev at30c591c2; only pre-existing untracked .claude-build.log/.claude/AGENTS.md/ims-platform before this audit. Local frontend3114/API8000/Postgres5546. Private Shop fixture state /private/tmp/yourkhata-shop-audit/session.json, never commit credentials. Old mobile proposal docs are historical context, current running implementation is the test authority.
+- Shop browser audit uses127.0.0.1:3114 rather than localhost so signing into its synthetic account does not replace the user's existing localhost session. Next16 blocks that alias for dev assets by default; read installed allowedDevOrigins docs and allow only127.0.0.1 in development config (no production access expansion, no wildcard). Added this explicit local-only origin so the isolated browser session can hydrate.
+
+
+## Shop/Retail verified findings and owner clarification — 15 Oct 2026
+- Owner confirmed the full Shop/Retail scope and explicitly reiterated separate Udhaar app/book and separate Customers/Suppliers sections. Read all earlier QA checkpoints; the previous Library-only/deferred-Lending wording is historical. Detailed current coverage, product feedback and open findings: docs/review/06-shop-user-audit.md.
+- Fixed locally: Shop dashboard aging wrongly using main/Udhaar balances; Shop Reports aging wrongly entering the Udhaar app (new /reports/aging preserves Shop scope through summary/CSV/statement); supplier-return retries creating duplicate stock/money movements (server replay + stable UI key); sales customer picker admitting supplier-only people; mobile Supplier summary showing To collect instead of To pay, plus role-specific labels; compact Shop filter/form overlays; credit-note list key and neutral aging accessibility wording.
+- Local real UI journey: ₹1,087 GST invoice /₹500 receipt /₹587 due; one-rice return ₹473 /₹114 due; final₹114 receipt settles Shop customer. Supplier purchase₹3,360 /return₹672 /due₹2,688. Expense₹120 gives cash₹494. Rice quantity37; soap47. Independent Udhaar openings₹1,500 /−₹2,000 unchanged. No external messages or production transactions.
+- Broad Shop backend1542 passed; full frontend4088 passed/362 suites after primary fixes. Subsequent supplier headline suite86 passed; final role-copy focused rerun/build/gates pending. Do not add overlapping test counts. Existing Jest async-handle/Django converter warnings retained.
+- Critical unresolved policy mismatch: supplier return from bill cost₹320 posts stock out at moving average₹305.1282 (2 bags remove₹610.26 vs documented original cost₹640). Stock quantity and supplier credit are correct; valuation differs. Documented in SH-009, not silently changed. Needs mixed-cost/zero-stock/void/replay decision and regression.
+- Honest remaining gaps: desktop billing's large item cards at1440 need structural redesign; first draft-create lost-response recovery remains a source-observed risk; mobile item list hides selling price; supplier-return print/share workflow limited; one-page aging pager and jargon remain. Physical phone/scanner/printer, browser offline/slow-network and production-scale performance not certified.
+- Browser screenshots/viewport measurements in chat outputs/shop-product-audit. Reviewed360/390/768/1280 list layouts and1440 bill editor; sampled pages show no positive document overflow. Filter keeps44px rows; mobile nav65px, main inset64px. A shell sweep is not all workflows at all widths.
+- Final test rerun briefly blocked by automatic approval-review account usage limit (not a safety determination); retried through normal approval after reset time passed, then broad runs completed. No bypass. No Shop push/deployment performed.
+
+
+## Shop audit final verification — 15 Oct 2026
+- Full final frontend4096 passed/363 suites after all current fixes. Broad Shop backend1542 passed. TypeScript, locales6309 keys/54 catalogues/284 chunks, contrast146 pairings, final production build and bundle gate passed. Full lint identified only3 import-order errors; corrected them, verified all changed frontend files and separately the new race test/slice. Backend Black/isort (Black profile) passed on all changed Python files. Existing Jest async-handle/Django converter warnings remain; test commands completed successfully.
+- Added final robustness fix: aging originally guarded only date/type/book; older tag/page/order replies and old failures could overwrite a newer report or repopulate reset state. New regression was6 failed/1 passed before; latest request IDs for rows/errors/summary now pass7/7 and report UI31/31. Included in full4096.
+- New Shop aging route gets the equivalent existing ledger aging bundle limits94.7/333.8KB instead of generic56/288KB fallback. Only4 other exceeded scalars on3 existing routes use measured+0.5KB (largest measured excess0.1KB). Shared/framework/global limits unchanged; documented in bundle-budgets.json.
+- Detailed feedback/coverage/open gaps in docs/review/06-shop-user-audit.md, including unresolved mixed-cost purchase-return valuation (SH-009) and desktop billing redesign (SH-010). This is not blanket production or physical-device certification.
+- Final supplier proof outputs/shop-product-audit/suppliers-phone-final.png shows separate Suppliers screen, To pay₹2688, supplier-specific search/list labels. Viewport reset. Preview restored3114 using original host configuration; API8000 session11451 /DB5546 remain. Private fixture credentials stay outside repository. Changes local; no Shop push/deploy.
+
+
+## Shop/IMS improvement specification — 15 Oct 2026
+- Owner requested a proper documentation pack for the entire Shop/IMS from all business viewpoints, targeting design/UX and functionality/business readiness above8.5/10. Also requested every default outgoing reminder/message editable and no avoidable duplicate code across the whole codebase.
+- Created docs/shop-ims-readiness/README.md and eight linked specifications/trackers: product/business coverage, design/dashboard, financial/data rules, engineering/reuse, universal editable messaging, QA/scorecard, ordered delivery roadmap and requirement acceptance tracker. Target is independently at least9/10 on both scorecards, with evidence and hard correctness/privacy gates; no current target score is claimed.
+- Customers/Suppliers remain separate; Udhaar stays separate from Shop. Future personal Udhaar ownership/login migration is a separate decision. Optional industry capabilities are explicitly classified instead of claiming every specialized business is already supported.
+- Messaging requirement covers individual, receipt/document, bulk and scheduled flows across Shop/Library/Lending/Udhaar, with final editable text, context retention, correct recipients, consent, retry protection and truthful manual/provider delivery status. A paid bill must not receive a queued unpaid reminder.
+- Whole-codebase reuse programme defines common owners, duplication inventory, extraction/migration gates and reviewed exceptions for intentional differences (including server authority/client preview and independent tests). This documentation task did not refactor application code or implement the new message flows. Existing audit changes preserved.
+
+
+## Shop audit/docs dev publication request — 15 Oct 2026
+- Owner explicitly authorized pushing the pending Shop audit fixes and readiness documentation to dev and requested a portable prompt for Codex/Claude Code/Cursor. Remote dev was fetched and matched the tested base30c591c2; no remote changes were overwritten.
+- Application/regression changes committed as519d272f. Readiness pack includes AGENT_START_PROMPT.md, using repository-relative paths and explicit business boundaries, universal editable messaging, reuse requirements, phased implementation and honest acceptance evidence. Root AGENTS.md remains an unrelated pre-existing untracked file; the portable prompt treats it as optional and includes the essential project workflow itself.
+- Prior verified results:1542 Shop backend /4096 frontend tests, production build/bundle/types/locales/contrast and affected-file lint; unresolved valuation and other gaps remain documented. Publication does not claim the future readiness programme or universal message migration is complete.
+- Push verification is recorded in the final handoff/Git remote. Railway deployment must be verified separately; the existing dev auto-deploy configuration may run on push.
