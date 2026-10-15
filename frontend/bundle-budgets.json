@@ -1,5 +1,6 @@
 {
   "//": [
+    "2026-10-15 Lending parity: shared compact record UI, lazy borrower/loan drawers, global loan paging/read guards, editable message previews and shared phone-contact prefill. Only 12 exceeded Lending route/first-load scalars use measured + 0.5 KB; global and non-Lending budgets stay unchanged. Largest pre-adjustment overrun: 1.2 KB.",
     "2026-10-15 compact Library core: shared scroll-lock/combobox fixes, dense reusable cards/overlays, student drawers and scroll lists. Deferred category merge picker cuts categories/locations from 93.1 KB to 67.8 KB. Only 140 exceeded route/first-load scalars use measured + 0.5 KB; framework 127.3/128 KB and shared app 111.8/112 KB stay unchanged. Largest non-Library overrun before adjustment: 1.7 KB.",
     "2026-10-14 UX16 borrower workspace: lazy loan selection/inline schedules and UX18 sequenced reads; shared money-input focus preserves replacement selection. Only 19 exceeded scalars use measured + 0.5 KB; shared baseline stays 239.1 KB.",
     "2026-10-14 UX16 student fee overview: authoritative total/paid figures and lazy in-place collection; UX18 read guards prevent old student/fee replies. Only 4 exceeded Library scalars use measured + 0.5 KB.",
@@ -1754,20 +1755,20 @@
       "firstLoad": 308.1
     },
     "/lending/loans/new": {
-      "route": 133.7,
-      "firstLoad": 372.8
+      "route": 135.3,
+      "firstLoad": 374.3
     },
     "/lending": {
-      "route": 67.2,
+      "route": 67.7,
       "firstLoad": 306.3
     },
     "/lending/loans/[loanId]": {
-      "route": 66.0,
-      "firstLoad": 305.1
+      "route": 67.4,
+      "firstLoad": 306.4
     },
     "/lending/loans": {
-      "route": 70.8,
-      "firstLoad": 309.9
+      "route": 71.8,
+      "firstLoad": 310.8
     },
     "/customers": {
       "route": 110,
@@ -1782,16 +1783,16 @@
       "firstLoad": 322.7
     },
     "/lending/messages": {
-      "route": 61.8,
-      "firstLoad": 300.9
+      "route": 62.3,
+      "firstLoad": 301.4
     },
     "/lending/routes": {
       "route": 58.7,
-      "firstLoad": 297.7
+      "firstLoad": 298.2
     },
     "/lending/borrowers": {
-      "route": 72.2,
-      "firstLoad": 311.3
+      "route": 73.9,
+      "firstLoad": 312.9
     },
     "/items/price-lists": {
       "firstLoad": 290.7

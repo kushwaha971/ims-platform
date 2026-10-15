@@ -5,9 +5,9 @@ import { useId, useState, type RefObject } from 'react';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useForm } from 'react-hook-form';
 
+import { CompactDrawer } from 'src/components/records/CompactOverlays';
 import {
   UbButton,
-  UbDrawer,
   UbField,
   UbForm,
   UbPhoneInput,
@@ -106,7 +106,7 @@ export function BorrowerEditDrawer({
   };
 
   return (
-    <UbDrawer
+    <CompactDrawer
       open
       onOpenChange={(next) => !next && onClose()}
       title={t('lending.borrower.edit.title')}
@@ -164,6 +164,6 @@ export function BorrowerEditDrawer({
           {(field) => <UbTextArea {...field} maxLength={500} disabled={busy} />}
         </UbField>
       </UbForm>
-    </UbDrawer>
+    </CompactDrawer>
   );
 }

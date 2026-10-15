@@ -230,11 +230,14 @@ describe('the Borrowers list', () => {
       expect(within(grid).getAllByText('Ramesh Kumar').length).toBeGreaterThan(0)
     );
     expect(within(grid).getAllByText('Blocked').length).toBeGreaterThan(0);
-    expect(list).toHaveBeenLastCalledWith({ q: '', status: 'all' }, expect.anything());
+    expect(list).toHaveBeenLastCalledWith({ q: '', status: 'all', page: '1' }, expect.anything());
     await userEvent.click(screen.getByRole('button', { name: new RegExp(`^Status`) }));
     await userEvent.click(await screen.findByRole('option', { name: 'Blocked' }));
     await waitFor(() =>
-      expect(list).toHaveBeenLastCalledWith({ q: '', status: 'blocked' }, expect.anything())
+      expect(list).toHaveBeenLastCalledWith(
+        { q: '', status: 'blocked', page: '1' },
+        expect.anything()
+      )
     );
   });
 });

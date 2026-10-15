@@ -72,6 +72,11 @@ urlpatterns: list = [
         ms.LoanMessageView.as_view(),
         name="lending-loan-message",
     ),
+    path(
+        "loans/<uuid:loan_id>/message/<str:kind>/preview",
+        ms.LoanMessagePreviewView.as_view(),
+        name="lending-loan-message-preview",
+    ),
     path("routes", co.RouteListView.as_view(), name="lending-routes"),
     path("routes/<uuid:route_id>", co.RouteDetailView.as_view(), name="lending-route"),
     path("routes/<uuid:route_id>/stops", co.RouteStopsView.as_view(), name="lending-route-stops"),

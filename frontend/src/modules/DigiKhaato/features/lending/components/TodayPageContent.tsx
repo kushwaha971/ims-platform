@@ -7,12 +7,12 @@ import { useRouter } from 'next/navigation';
 
 import { MessageCircle, Plus } from 'lucide-react';
 
+import { CompactCard } from 'src/components/records/CompactCard';
 import { SummaryStatGrid } from 'src/components/stats/SummaryStatGrid';
 import {
   UbActionLink,
   UbAmount,
   UbButton,
-  UbCard,
   UbEmptyState,
   UbListItemText,
   UbPageHeader,
@@ -130,6 +130,7 @@ export function TodayPageContent(): React.JSX.Element {
               href={ROUTES.LENDING_NEW_LOAN}
               icon={<Plus className="h-4 w-4" aria-hidden />}
               iconOnly="mobile"
+              className="max-sm:h-10 max-sm:w-10"
             >
               {t('lending.loan.new')}
             </UbActionLink>
@@ -168,7 +169,7 @@ export function TodayPageContent(): React.JSX.Element {
           </UbText>
         </UbStack>
       ) : (
-        <UbStack gap={4} data-testid="lending-today">
+        <UbStack gap={3} data-testid="lending-today">
           <SummaryStatGrid storageKey="lendingToday">
             <UbStatCard
               label={t('lending.today.due')}
@@ -215,7 +216,7 @@ export function TodayPageContent(): React.JSX.Element {
               }
             />
           ) : (
-            <UbCard padded>
+            <CompactCard padded>
               <UbStack as="ul" gap={0} aria-label={t('lending.today.title')}>
                 {round.stops.map((stop) => {
                   const state = stopState(stop);
@@ -335,7 +336,7 @@ export function TodayPageContent(): React.JSX.Element {
                   );
                 })}
               </UbStack>
-            </UbCard>
+            </CompactCard>
           )}
         </UbStack>
       )}

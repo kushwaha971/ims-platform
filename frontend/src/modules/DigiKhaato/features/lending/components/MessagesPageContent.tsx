@@ -7,10 +7,10 @@ import { useRouter } from 'next/navigation';
 
 import { MessageCircle } from 'lucide-react';
 
+import { CompactCard } from 'src/components/records/CompactCard';
 import {
   UbAmount,
   UbButton,
-  UbCard,
   UbEmptyState,
   UbListItemText,
   UbPageHeader,
@@ -95,13 +95,13 @@ export function MessagesPageContent(): React.JSX.Element {
             {t('lending.messages.rule')}
           </UbText>
           {state.rows.length === 0 ? (
-            <UbCard padded>
+            <CompactCard padded>
               <UbText variant="body-sm" tone="tertiary">
                 {t('lending.messages.none')}
               </UbText>
-            </UbCard>
+            </CompactCard>
           ) : (
-            <UbCard padded>
+            <CompactCard padded>
               <UbStack as="ul" gap={0} aria-label={t('lending.messages.pageTitle')}>
                 {state.rows.map((row) => (
                   <UbStack
@@ -161,7 +161,7 @@ export function MessagesPageContent(): React.JSX.Element {
                   </UbStack>
                 ))}
               </UbStack>
-            </UbCard>
+            </CompactCard>
           )}
         </UbStack>
       )}

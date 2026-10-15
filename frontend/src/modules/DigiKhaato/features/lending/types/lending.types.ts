@@ -270,6 +270,9 @@ export interface LendingRoute {
 
 /** `GET /lending/borrowers`: a page of people, and the whole book's left and late. */
 export interface BorrowerPage {
+  readonly page?: number;
+  readonly total?: number;
+  readonly totalPages?: number;
   readonly rows: readonly BorrowerRow[];
   /** Absent from a server that does not send it. */
   readonly totals: { readonly left: string; readonly late: string } | null;

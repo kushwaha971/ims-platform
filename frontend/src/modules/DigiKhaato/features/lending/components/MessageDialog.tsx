@@ -4,13 +4,14 @@ import { useEffect, useState } from 'react';
 
 import { MessageCircle, MessageSquare, Phone } from 'lucide-react';
 
+import { CompactDialog } from 'src/components/records/CompactOverlays';
 import {
   UbActionLink,
   UbButton,
-  UbDialog,
   UbStack,
   UbStatusBadge,
   UbText,
+  UbTextArea,
 } from 'src/design-system';
 import { useAppDispatch, useAppSelector } from 'src/hooks/useAppStore';
 import { useTranslation } from 'src/hooks/useTranslation';
@@ -33,8 +34,8 @@ import 'src/i18n/catalogues/lending';
 const BUCKET_TONE = { overdue: 'error', due_today: 'warning', due_tomorrow: 'info' } as const;
 
 /**
- * L03 (LEN-12) — a borrower's message, handled like a reminder: the fixed text
- * is prepared and shown read-only, and WhatsApp, SMS or Call opens on the
+ * L03 (LEN-12) — a borrower's message, handled like a reminder: the default text
+ * is prepared and can be edited before sharing, and WhatsApp, SMS or Call opens on the
  * lender's own phone with it filled in; that tap is recorded so the office can
  * see who was told and when. The links are ready BEFORE the tap: a window
  * opened after a request returns is a pop-up the browser blocks.
@@ -68,6 +69,8 @@ export function MessageDialog({
   const timezone = useAppSelector(selectTenantTimezone);
   const [message, setMessage] = useState<PreparedLendingMessage | null>(null);
   const [refusal, setRefusal] = useState('');
+  const [draft, setDraft] = useState<string | null>(null);
+  const [preparedDraft, setPreparedDraft] = useState<string | null>(null);
   const [asked, setAsked] = useState(0);
   const askAgain = () => {
     setMessage(null);
@@ -75,15 +78,28 @@ export function MessageDialog({
   };
 
   useEffect(() => {
-    const promise = dispatch(prepareLendingMessage({ loanId, kind, collectionId }));
-    void promise.then((result) => {
-      if (prepareLendingMessage.fulfilled.match(result)) {
-        setMessage(result.payload);
-      } else if (!result.meta.aborted)
-        setRefusal(result.payload?.message ?? t('lending.messages.error.prepare'));
-    });
-    return () => promise.abort();
-  }, [dispatch, loanId, kind, collectionId, t, asked]);
+    let abort: (() => void) | undefined;
+    const prepare = () => {
+      const promise = dispatch(
+        prepareLendingMessage({ loanId, kind, collectionId, text: draft ?? undefined })
+      );
+      abort = () => promise.abort();
+      void promise.then((result) => {
+        if (prepareLendingMessage.fulfilled.match(result)) {
+          setMessage(result.payload);
+          setPreparedDraft(draft);
+          setRefusal('');
+        } else if (!result.meta.aborted)
+          setRefusal(result.payload?.message ?? t('lending.messages.error.prepare'));
+      });
+    };
+    const timer = draft === null ? undefined : window.setTimeout(prepare, 250);
+    if (draft === null) prepare();
+    return () => {
+      window.clearTimeout(timer);
+      abort?.();
+    };
+  }, [dispatch, loanId, kind, collectionId, t, asked, draft]);
 
   // Keyed on the answer itself: two answers can share a number of seconds.
   useEffect(() => {
@@ -102,7 +118,9 @@ export function MessageDialog({
   }, []);
 
   const record = (channel: MessageChannel) => {
-    void dispatch(recordLendingMessage({ loanId, kind, channel, collectionId })).then((result) => {
+    void dispatch(
+      recordLendingMessage({ loanId, kind, channel, collectionId, text: draft ?? undefined })
+    ).then((result) => {
       if (recordLendingMessage.fulfilled.match(result)) {
         dispatch(
           showSnackbar({
@@ -156,10 +174,14 @@ export function MessageDialog({
     return r.message;
   };
 
-  const ready = message?.allowed && message.recipient.hasMobile;
+  const ready =
+    message?.allowed &&
+    message.recipient.hasMobile &&
+    preparedDraft === draft &&
+    (draft === null || draft.trim().length > 0);
 
   return (
-    <UbDialog
+    <CompactDialog
       open
       onOpenChange={(next) => !next && onClose()}
       title={t(`lending.messages.title.${kind}`, { name })}
@@ -209,13 +231,22 @@ export function MessageDialog({
                 />
               )}
             </UbStack>
-            <UbText
-              variant="body-sm"
-              className="whitespace-pre-line rounded-control bg-surface-sunken p-3"
+            <UbTextArea
+              aria-label={t('lending.messages.edit')}
+              value={draft ?? message.text}
+              onChange={setDraft}
+              maxLength={900}
+              rows={5}
               data-testid="lending-message-text"
-            >
-              {message.text}
+            />
+            <UbText variant="caption" tone="secondary">
+              {t('lending.messages.edit.hint')}
             </UbText>
+            {draft !== null && (
+              <UbButton size="sm" variant="ghost" onClick={() => setDraft(null)}>
+                {t('lending.messages.edit.reset')}
+              </UbButton>
+            )}
             {!message.allowed && (
               <UbText variant="body-sm" tone="warning" data-testid="lending-message-guard">
                 {guard(message)}
@@ -257,6 +288,6 @@ export function MessageDialog({
           </>
         )}
       </UbStack>
-    </UbDialog>
+    </CompactDialog>
   );
 }

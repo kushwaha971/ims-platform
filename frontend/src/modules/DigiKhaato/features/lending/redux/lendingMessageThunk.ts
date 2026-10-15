@@ -21,6 +21,7 @@ interface MessageTarget {
   loanId: string;
   kind: LendingMessageKind;
   collectionId?: string;
+  text?: string;
 }
 
 export const fetchLendingReminders = createAsyncThunk<LendingReminderRow[], void, Reject>(
@@ -40,9 +41,12 @@ export const prepareLendingMessage = createAsyncThunk<
   Reject
 >(
   'lendingMessages/prepare',
-  async ({ loanId, kind, collectionId }, { signal, rejectWithValue }) => {
+  async ({ loanId, kind, collectionId, text }, { signal, rejectWithValue }) => {
     try {
-      return await (await service()).prepareMessage(loanId, kind, collectionId, signal);
+      const api = await service();
+      return text === undefined
+        ? await api.prepareMessage(loanId, kind, collectionId, signal)
+        : await api.prepareMessage(loanId, kind, collectionId, signal, text);
     } catch (error) {
       return rejectWithValue(toApiError(error, 'lending.messages.error.prepare'));
     }
@@ -55,9 +59,11 @@ export const recordLendingMessage = createAsyncThunk<
   Reject
 >(
   'lendingMessages/record',
-  async ({ loanId, kind, channel, collectionId }, { rejectWithValue }) => {
+  async ({ loanId, kind, channel, collectionId, text }, { rejectWithValue }) => {
     try {
-      await (await service()).recordMessage(loanId, kind, channel, collectionId);
+      const api = await service();
+      if (text === undefined) await api.recordMessage(loanId, kind, channel, collectionId);
+      else await api.recordMessage(loanId, kind, channel, collectionId, text);
       return true;
     } catch (error) {
       return rejectWithValue(toApiError(error, 'lending.messages.error.record'));

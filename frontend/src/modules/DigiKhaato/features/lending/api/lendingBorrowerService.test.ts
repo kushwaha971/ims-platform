@@ -85,3 +85,12 @@ describe('borrower writes', () => {
     expect(mocked.post).toHaveBeenLastCalledWith('/lending/borrowers/b1/unblock', {});
   });
 });
+
+it('passes borrower page requests and reads total metadata for scroll loading', async () => {
+  mocked.get.mockResolvedValue({
+    data: { data: [WIRE], meta: { page: 2, total: 60, total_pages: 3 } },
+  });
+  const page = await listBorrowers({ page: '2', status: 'active' });
+  expect(mocked.get.mock.calls[0]?.[0]).toContain('page=2');
+  expect(page).toMatchObject({ page: 2, total: 60, totalPages: 3 });
+});

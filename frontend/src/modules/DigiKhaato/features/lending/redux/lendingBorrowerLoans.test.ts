@@ -6,7 +6,6 @@ import { fetchLendingLoans } from './lendingThunk';
 
 import type { LoanRow } from '../types/lending.types';
 
-
 jest.mock('../api/lendingService', () => ({
   ...jest.requireActual('../api/lendingService'),
   listLoans: jest.fn(),

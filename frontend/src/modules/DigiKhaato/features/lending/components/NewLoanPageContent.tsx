@@ -7,16 +7,16 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useForm, useWatch } from 'react-hook-form';
 
+import { CompactCard } from 'src/components/records/CompactCard';
 import {
   UbButton,
-  UbCard,
   UbChoiceChips,
   UbDateInput,
   UbEmptyState,
   UbField,
   UbForm,
   UbMoneyInput,
-  UbNativeSelect,
+  UbCombobox,
   UbPageHeader,
   UbPageShell,
   UbPhoneInput,
@@ -29,6 +29,7 @@ import {
 import { useAppDispatch, useAppSelector } from 'src/hooks/useAppStore';
 import { useIdempotencyKey } from 'src/hooks/useIdempotencyKey';
 import { usePermissions } from 'src/hooks/usePermissions';
+import { usePhoneContactPicker } from 'src/hooks/usePhoneContactPicker';
 import { useTranslation } from 'src/hooks/useTranslation';
 import { selectTenantTimezone } from 'src/redux/slice/sessionSlice';
 import { showSnackbar } from 'src/redux/slice/snackbarSlice';
@@ -167,6 +168,10 @@ export function NewLoanPageContent(): React.JSX.Element {
       collectedAmount: '',
     },
   });
+  const phoneContact = usePhoneContactPicker((contact) => {
+    form.setValue('name', contact.name, { shouldDirty: true, shouldValidate: true });
+    form.setValue('mobile', contact.mobile, { shouldDirty: true, shouldValidate: true });
+  }, t('lending.form.phoneContact.error'));
   const values = useWatch({ control: form.control }) as LoanFormValues;
   const plan = values.planType;
 
@@ -291,9 +296,9 @@ export function NewLoanPageContent(): React.JSX.Element {
   return (
     <UbPageShell>
       <UbPageHeader title={t('lending.loan.new')} />
-      <UbStack gap={4} className="lg:grid lg:grid-cols-[3fr_2fr] lg:items-start lg:gap-6">
+      <UbStack gap={3} className="lg:grid lg:grid-cols-[3fr_2fr] lg:items-start lg:gap-6">
         <UbForm id={formId} form={form} onSubmit={save}>
-          <UbCard padded>
+          <CompactCard padded>
             <UbStack gap={1}>
               <UbText variant="label">{t('lending.form.who')}</UbText>
               <UbField name="borrowerMode" label={t('lending.form.who')} controlOwnsLabel>
@@ -312,6 +317,19 @@ export function NewLoanPageContent(): React.JSX.Element {
               </UbField>
               {values.borrowerMode === 'new' ? (
                 <>
+                  <UbButton
+                    variant="outlineNeutral"
+                    onClick={phoneContact.choose}
+                    disabled={saving || !phoneContact.supported}
+                    busy={phoneContact.busy}
+                  >
+                    {t('lending.form.phoneContact.choose')}
+                  </UbButton>
+                  {!phoneContact.supported && (
+                    <UbText variant="caption" tone="secondary">
+                      {t('lending.form.phoneContact.unsupported')}
+                    </UbText>
+                  )}
                   <UbField
                     name="name"
                     label={t('lending.form.name')}
@@ -353,7 +371,9 @@ export function NewLoanPageContent(): React.JSX.Element {
                         value={search}
                         onChange={setSearch}
                       />
-                      <UbNativeSelect
+                      <UbCombobox
+                        searchPlaceholder={t('lending.select.search')}
+                        emptyLabel={t('lending.select.noMatches')}
                         id={field.id}
                         name={field.name}
                         aria-label={t('lending.form.borrower')}
@@ -377,7 +397,9 @@ export function NewLoanPageContent(): React.JSX.Element {
                   optionalLabel={t('common.field.optional')}
                 >
                   {(field) => (
-                    <UbNativeSelect
+                    <UbCombobox
+                      searchPlaceholder={t('lending.select.search')}
+                      emptyLabel={t('lending.select.noMatches')}
                       id={field.id}
                       name={field.name}
                       aria-label={t('lending.route.label')}
@@ -392,9 +414,9 @@ export function NewLoanPageContent(): React.JSX.Element {
                 </UbField>
               )}
             </UbStack>
-          </UbCard>
+          </CompactCard>
 
-          <UbCard padded>
+          <CompactCard padded>
             <UbStack gap={1}>
               <UbText variant="label">{t('lending.form.plan')}</UbText>
               <UbField name="planType" label={t('lending.form.plan')} controlOwnsLabel>
@@ -458,7 +480,9 @@ export function NewLoanPageContent(): React.JSX.Element {
                   </UbField>
                   <UbField name="rateUnit" label={t('lending.form.rateUnit')} className="flex-1">
                     {(field) => (
-                      <UbNativeSelect
+                      <UbCombobox
+                        searchPlaceholder={t('lending.select.search')}
+                        emptyLabel={t('lending.select.noMatches')}
                         id={field.id}
                         name={field.name}
                         aria-label={t('lending.form.rateUnit')}
@@ -547,15 +571,17 @@ export function NewLoanPageContent(): React.JSX.Element {
                 </UbField>
               )}
             </UbStack>
-          </UbCard>
+          </CompactCard>
 
           {/* LEN-09 FR-1 — a late fee is charged only when the borrower agreed to one
               here; the rule is frozen with the terms. */}
-          <UbCard padded>
+          <CompactCard padded>
             <UbStack gap={3} data-testid="lending-late-fee-terms">
               <UbField name="lateFeeKind" label={t('lending.form.lateFeeKind')}>
                 {(field) => (
-                  <UbNativeSelect
+                  <UbCombobox
+                    searchPlaceholder={t('lending.select.search')}
+                    emptyLabel={t('lending.select.noMatches')}
                     id={field.id}
                     value={String(field.value ?? 'none')}
                     onChange={field.onChange}
@@ -591,9 +617,9 @@ export function NewLoanPageContent(): React.JSX.Element {
                 </UbStack>
               )}
             </UbStack>
-          </UbCard>
+          </CompactCard>
 
-          <UbCard padded>
+          <CompactCard padded>
             <UbStack gap={1}>
               {/* QA F8 — a loan already running in the paper book: what it has
                   collected comes in as history, and nothing moves today's cash. */}
@@ -700,11 +726,11 @@ export function NewLoanPageContent(): React.JSX.Element {
                 {(field) => <UbTextInput {...field} autoComplete="off" disabled={saving} />}
               </UbField>
             </UbStack>
-          </UbCard>
+          </CompactCard>
         </UbForm>
 
         <UbStack gap={3} className="lg:sticky lg:top-4">
-          <UbCard padded>
+          <CompactCard padded>
             <UbStack gap={2} data-testid="lending-loan-preview">
               <UbText variant="label">{t('lending.preview.title')}</UbText>
               {!preview ? (
@@ -776,7 +802,7 @@ export function NewLoanPageContent(): React.JSX.Element {
                 </>
               )}
             </UbStack>
-          </UbCard>
+          </CompactCard>
           <UbButton
             type="submit"
             form={formId}

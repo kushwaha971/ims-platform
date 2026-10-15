@@ -3,18 +3,20 @@
 import { useEffect, useRef, useState } from 'react';
 
 import dynamic from 'next/dynamic';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 
 import { Plus } from 'lucide-react';
 
+import { CompactCard } from 'src/components/records/CompactCard';
+import { CompactDrawer } from 'src/components/records/CompactOverlays';
 import { SummaryStatGrid } from 'src/components/stats/SummaryStatGrid';
 import {
   UbActionLink,
   UbAmount,
   UbButton,
-  UbCard,
   UbEmptyState,
   UbListItemText,
+  UbLoadMore,
   UbPageHeader,
   UbPageShell,
   UbPageSkeleton,
@@ -34,6 +36,7 @@ import { useTranslation } from 'src/hooks/useTranslation';
 import { ROUTES } from 'src/routes';
 import { formatBusinessDate } from 'src/utils/dates';
 import { formatInr } from 'src/utils/money';
+import { formatPhoneForDisplay } from 'src/utils/share';
 
 import { ImportActionLink } from 'modules/DigiKhaato/features/imports/components/ListHeaderActions';
 
@@ -41,6 +44,8 @@ import { selectLendingForm } from '../redux/lendingFormSlice';
 import { selectLendingLoans } from '../redux/lendingLoansSlice';
 import { fetchLendingBorrower, fetchLendingLoans } from '../redux/lendingThunk';
 import { isNonZero, LOAN_STATUS_TONE } from '../view-model/lendingDisplay';
+
+import 'src/i18n/catalogues/exports';
 
 import { BorrowerHeaderMenu } from './BorrowerHeaderMenu';
 
@@ -87,9 +92,12 @@ type StatusFilter = (typeof STATUSES)[number];
  * search and the status filter show only once the business has a loan at all
  * (`hasLoans`, the server's), so day one is one sentence and one button.
  */
-export function LoansPageContent(): React.JSX.Element {
+export function LoansPageContent({
+  borrowerId: selectedBorrowerId,
+  embedded = false,
+}: Readonly<{ borrowerId?: string; embedded?: boolean }> = {}): React.JSX.Element {
+  const Container = embedded ? UbStack : UbPageShell;
   const { t } = useTranslation();
-  const router = useRouter();
   const dispatch = useAppDispatch();
   const state = useAppSelector(selectLendingLoans);
   const { can, hasModule } = usePermissions();
@@ -104,7 +112,8 @@ export function LoansPageContent(): React.JSX.Element {
   const [selectedLoan, setSelectedLoan] = useState<string | null>(null);
   const [act, setAct] = useState<BorrowerAct | null>(null);
   const menuRef = useRef<HTMLButtonElement>(null);
-  const borrowerId = useSearchParams().get('borrower') ?? '';
+  const routeBorrowerId = useSearchParams().get('borrower') ?? '';
+  const borrowerId = selectedBorrowerId ?? routeBorrowerId;
   const matchingList = state.listBorrowerId === borrowerId;
   const rows = matchingList ? state.rows : [];
   const { borrower } = useAppSelector(selectLendingForm);
@@ -113,6 +122,9 @@ export function LoansPageContent(): React.JSX.Element {
   const blocked = person?.status === 'blocked';
   const [status, setStatus] = useState<StatusFilter>(borrowerId ? 'all' : 'active');
   const [q, setQ] = useState('');
+  const queryKey = JSON.stringify([borrowerId, status, q, state.staleSeq]);
+  const [pageChoice, setPageChoice] = useState({ key: queryKey, page: 1 });
+  const page = pageChoice.key === queryKey ? pageChoice.page : 1;
   const [search, setSearch] = useCommittedSearch(q, setQ, 300);
 
   useEffect(() => {
@@ -122,10 +134,11 @@ export function LoansPageContent(): React.JSX.Element {
         status: borrowerId ? 'all' : status,
         q: q || undefined,
         borrower: borrowerId || undefined,
+        page: borrowerId ? undefined : String(page),
       })
     );
     return () => promise.abort();
-  }, [canRead, dispatch, status, q, borrowerId, state.staleSeq]);
+  }, [canRead, dispatch, status, q, borrowerId, page, state.staleSeq]);
   useEffect(() => {
     if (!canRead || !borrowerId) return undefined;
     const promise = dispatch(fetchLendingBorrower(borrowerId));
@@ -134,20 +147,21 @@ export function LoansPageContent(): React.JSX.Element {
 
   if (!canRead) {
     return (
-      <UbPageShell>
+      <Container>
         <UbEmptyState
           variant="firstUse"
           title={t('lending.noAccess.title')}
           description={t('lending.noAccess.body')}
         />
-      </UbPageShell>
+      </Container>
     );
   }
 
   return (
-    <UbPageShell>
+    <Container>
       <UbPageHeader
         className="ub-print-hide"
+        wrapTitle={embedded}
         title={person ? person.name : t('lending.loans.title')}
         actions={
           canLend || (person && canManage) ? (
@@ -166,7 +180,7 @@ export function LoansPageContent(): React.JSX.Element {
                 </UbActionLink>
               ) : null}
               {/* QA F10 — a lender's whole register, in one file, on the book's own list. */}
-              {!person ? <ImportActionLink kind="loans" /> : null}
+              {!borrowerId ? <ImportActionLink kind="loans" /> : null}
               {person && canManage ? (
                 <BorrowerHeaderMenu
                   t={t}
@@ -180,7 +194,18 @@ export function LoansPageContent(): React.JSX.Element {
           ) : undefined
         }
       />
-      <UbStack gap={4} data-testid="lending-loans" className="ub-print-hide">
+      {person && (
+        <UbText variant="caption" tone="secondary">
+          {[
+            person.mobile ? formatPhoneForDisplay(person.mobile) : person.number,
+            person.area,
+            person.route?.name,
+          ]
+            .filter(Boolean)
+            .join(' · ')}
+        </UbText>
+      )}
+      <UbStack gap={3} data-testid="lending-loans" className="ub-print-hide">
         {person && blocked ? (
           /* Everybody who can read the page sees it, not only the owner: the
              collector at the door is who must not promise a new loan. */
@@ -200,27 +225,67 @@ export function LoansPageContent(): React.JSX.Element {
         ) : null}
         {person?.summary ? (
           <UbStack gap={3} data-testid="lending-borrower-summary">
-            <SummaryStatGrid storageKey="lendingBorrower">
-              <UbStatCard label={t('lending.loan.left')} value={formatInr(person.summary.left)} />
-              <UbStatCard
-                label={t('lending.borrowers.given')}
-                value={formatInr(person.summary.given)}
-                subtext={t('lending.borrowers.loans', {
-                  loans: person.summary.loans,
-                  running: person.summary.running,
-                })}
-              />
-              <UbStatCard
-                label={t('lending.borrowers.gotBack')}
-                value={formatInr(person.summary.collected)}
-                tone="success"
-              />
-              <UbStatCard
-                label={t('lending.borrowers.lateAmount')}
-                value={formatInr(person.summary.late)}
-                tone={isNonZero(person.summary.late) ? 'danger' : undefined}
-              />
-            </SummaryStatGrid>
+            {embedded ? (
+              <UbStack className="grid grid-cols-2 gap-3">
+                {[
+                  { label: t('lending.loan.left'), value: person.summary.left },
+                  { label: t('lending.borrowers.given'), value: person.summary.given },
+                  {
+                    label: t('lending.borrowers.gotBack'),
+                    value: person.summary.collected,
+                    paid: true,
+                  },
+                  {
+                    label: t('lending.borrowers.lateAmount'),
+                    value: person.summary.late,
+                    late: true,
+                  },
+                ].map((metric) => (
+                  <CompactCard
+                    key={metric.label}
+                    className={
+                      metric.paid && isNonZero(metric.value) ? 'bg-success-dim' : undefined
+                    }
+                  >
+                    <UbStack gap={1}>
+                      <UbText variant="caption" tone="secondary">
+                        {metric.label}
+                      </UbText>
+                      <UbAmount
+                        value={metric.value}
+                        size="md"
+                        label={metric.label}
+                        labelHidden
+                        tone={metric.late && isNonZero(metric.value) ? 'receivable' : undefined}
+                        className="self-start"
+                      />
+                    </UbStack>
+                  </CompactCard>
+                ))}
+              </UbStack>
+            ) : (
+              <SummaryStatGrid storageKey="lendingBorrower">
+                <UbStatCard label={t('lending.loan.left')} value={formatInr(person.summary.left)} />
+                <UbStatCard
+                  label={t('lending.borrowers.given')}
+                  value={formatInr(person.summary.given)}
+                  subtext={t('lending.borrowers.loans', {
+                    loans: person.summary.loans,
+                    running: person.summary.running,
+                  })}
+                />
+                <UbStatCard
+                  label={t('lending.borrowers.gotBack')}
+                  value={formatInr(person.summary.collected)}
+                  tone="success"
+                />
+                <UbStatCard
+                  label={t('lending.borrowers.lateAmount')}
+                  value={formatInr(person.summary.late)}
+                  tone={isNonZero(person.summary.late) ? 'danger' : undefined}
+                />
+              </SummaryStatGrid>
+            )}
             {canCollect && person.summary.running > 0 && isNonZero(person.summary.left) ? (
               <UbButton
                 fullWidth
@@ -245,6 +310,7 @@ export function LoansPageContent(): React.JSX.Element {
               className="min-w-0 flex-1"
             />
             <UbFilterSelect
+              className="h-10"
               spec={{
                 kind: 'single',
                 key: 'status',
@@ -259,6 +325,28 @@ export function LoansPageContent(): React.JSX.Element {
         )}
         {!matchingList || state.listStatus === 'loading' || state.listStatus === 'idle' ? (
           <UbPageSkeleton variant="card" />
+        ) : state.listStatus === 'failed' && rows.length === 0 ? (
+          <UbEmptyState
+            variant="error"
+            title={t('lending.loans.error')}
+            action={
+              <UbButton
+                variant="outlineNeutral"
+                onClick={() =>
+                  void dispatch(
+                    fetchLendingLoans({
+                      status: borrowerId ? 'all' : status,
+                      borrower: borrowerId || undefined,
+                      q: q || undefined,
+                      page: borrowerId ? undefined : String(page),
+                    })
+                  )
+                }
+              >
+                {t('common.action.retry')}
+              </UbButton>
+            }
+          />
         ) : rows.length === 0 ? (
           <UbEmptyState
             // Nothing matches a search or a filter is a different thing from
@@ -273,88 +361,101 @@ export function LoansPageContent(): React.JSX.Element {
             }
           />
         ) : (
-          <UbCard padded>
-            <UbStack as="ul" gap={0} aria-label={t('lending.loans.title')}>
-              {rows.map((loan) => (
-                <UbStack
-                  as="li"
-                  key={loan.id}
-                  gap={0}
-                  className="border-b border-border-hairline last:border-b-0"
-                >
-                  <UbPressable
-                    className="w-full py-3 text-left"
-                    onClick={() =>
-                      person
-                        ? setSelectedLoan(loan.id)
-                        : router.push(`${ROUTES.LENDING_LOANS}/${loan.id}`)
-                    }
-                  >
-                    <UbStack direction="row" justify="between" align="start" gap={3}>
-                      <UbListItemText
-                        // In one person's list the name is the page's title:
-                        // each row leads with what tells the loans apart.
-                        primary={person ? loan.number : loan.borrower.name}
-                        secondary={[
-                          person
-                            ? t('lending.loans.givenOn', {
-                                amount: formatInr(loan.principal),
-                                date: formatBusinessDate(loan.disbursedOn),
-                              })
-                            : loan.number,
-                          person ? '' : t(`lending.plan.${loan.planType}`),
-                          loan.status === 'active' && loan.nextDueOn
-                            ? t('lending.loans.next', { date: formatBusinessDate(loan.nextDueOn) })
-                            : '',
-                        ]
-                          .filter(Boolean)
-                          .join(' · ')}
+          <UbStack
+            as="ul"
+            gap={3}
+            className={embedded ? undefined : 'grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3'}
+            aria-label={t('lending.loans.title')}
+          >
+            {rows.map((loan) => (
+              <UbStack
+                as="li"
+                key={loan.id}
+                gap={0}
+                className="rounded-card border border-border-hairline bg-surface-card p-3 shadow-1"
+              >
+                <UbPressable className="w-full text-left" onClick={() => setSelectedLoan(loan.id)}>
+                  <UbStack direction="row" justify="between" align="start" gap={3}>
+                    <UbListItemText
+                      // In one person's list the name is the page's title:
+                      // each row leads with what tells the loans apart.
+                      primary={person ? loan.number : loan.borrower.name}
+                      secondary={[
+                        person
+                          ? t('lending.loans.givenOn', {
+                              amount: formatInr(loan.principal),
+                              date: formatBusinessDate(loan.disbursedOn),
+                            })
+                          : loan.number,
+                        person ? '' : t(`lending.plan.${loan.planType}`),
+                        loan.status === 'active' && loan.nextDueOn
+                          ? t('lending.loans.next', { date: formatBusinessDate(loan.nextDueOn) })
+                          : '',
+                      ]
+                        .filter(Boolean)
+                        .join(' · ')}
+                    />
+                    <UbStack gap={1} align="end" className="shrink-0">
+                      <UbAmount
+                        value={loan.remaining}
+                        tone={isNonZero(loan.arrears) ? 'receivable' : undefined}
+                        label={t('lending.loan.left')}
                       />
-                      <UbStack gap={1} align="end" className="shrink-0">
-                        <UbAmount
-                          value={loan.remaining}
-                          tone={isNonZero(loan.arrears) ? 'receivable' : undefined}
-                          label={t('lending.loan.left')}
+                      {isNonZero(loan.arrears) ? (
+                        <UbStatusBadge
+                          tone="error"
+                          label={t('lending.loans.late', { days: loan.daysPastDue })}
                         />
-                        {isNonZero(loan.arrears) ? (
-                          <UbStatusBadge
-                            tone="error"
-                            label={t('lending.loans.late', { days: loan.daysPastDue })}
-                          />
-                        ) : (
-                          <UbStatusBadge
-                            tone={LOAN_STATUS_TONE[loan.status]}
-                            label={t(`lending.status.${loan.status}`)}
-                          />
-                        )}
-                      </UbStack>
+                      ) : (
+                        <UbStatusBadge
+                          tone={LOAN_STATUS_TONE[loan.status]}
+                          label={t(`lending.status.${loan.status}`)}
+                        />
+                      )}
                     </UbStack>
-                  </UbPressable>
-                </UbStack>
-              ))}
-            </UbStack>
-          </UbCard>
-        )}
-        {matchingList && state.total > rows.length && (
-          <UbText variant="caption" tone="tertiary">
-            {t('lending.loans.more', { shown: state.rows.length, total: state.total })}
-          </UbText>
-        )}
-      </UbStack>
-      {person &&
-        selectedLoan &&
-        rows.some((loan) => loan.id === selectedLoan && loan.borrower.id === person.id) && (
-          <UbStack gap={3} data-testid="lending-borrower-loan-workspace">
-            <UbButton
-              variant="ghost"
-              className="ub-print-hide self-start"
-              onClick={() => setSelectedLoan(null)}
-            >
-              {t('common.action.close')}
-            </UbButton>
-            <LoanWorkspaceLazy key={selectedLoan} id={selectedLoan} embedded />
+                  </UbStack>
+                </UbPressable>
+              </UbStack>
+            ))}
           </UbStack>
         )}
+        {matchingList &&
+          !borrowerId &&
+          state.total > rows.length &&
+          (state.listStatus === 'failed' ? (
+            <UbButton
+              variant="outlineNeutral"
+              onClick={() =>
+                void dispatch(fetchLendingLoans({ status, q: q || undefined, page: String(page) }))
+              }
+            >
+              {t('common.action.retry')}
+            </UbButton>
+          ) : (
+            <UbLoadMore
+              loading={state.listStatus === 'refreshing' || state.listStatus === 'loading'}
+              loadingLabel={t('lending.list.loading')}
+              moreLabel={t('lending.loans.loadMore')}
+              onLoadMore={() => {
+                if (state.listStatus === 'succeeded')
+                  setPageChoice({ key: queryKey, page: page + 1 });
+              }}
+            />
+          ))}
+      </UbStack>
+      {selectedLoan && rows.some((loan) => loan.id === selectedLoan) && (
+        <CompactDrawer
+          open
+          title={t('lending.loan.details')}
+          closeLabel={t('common.action.close')}
+          onOpenChange={(open) => !open && setSelectedLoan(null)}
+          className="sm:max-w-2xl"
+        >
+          <UbStack gap={3} data-testid="lending-borrower-loan-workspace">
+            <LoanWorkspaceLazy key={selectedLoan} id={selectedLoan} embedded />
+          </UbStack>
+        </CompactDrawer>
+      )}
       {act === 'edit' && person && (
         <BorrowerEditDrawerLazy
           borrower={person}
@@ -380,6 +481,6 @@ export function LoansPageContent(): React.JSX.Element {
           onClose={() => setCollecting(false)}
         />
       )}
-    </UbPageShell>
+    </Container>
   );
 }

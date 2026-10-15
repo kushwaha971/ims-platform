@@ -60,12 +60,20 @@ export const prepareMessage = async (
   loanId: string,
   kind: LendingMessageKind,
   collectionId?: string,
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  text?: string
 ): Promise<PreparedLendingMessage> => {
-  const response = await api.get<{ data: Wire }>(
-    `${LENDING_PATHS.MESSAGE(loanId, kind)}${query(collectionId)}`,
-    ubConfig({ signal, suppressErrorSnackbar: true })
-  );
+  const response =
+    text === undefined
+      ? await api.get<{ data: Wire }>(
+          `${LENDING_PATHS.MESSAGE(loanId, kind)}${query(collectionId)}`,
+          ubConfig({ signal, suppressErrorSnackbar: true })
+        )
+      : await api.post<{ data: Wire }>(
+          `${LENDING_PATHS.MESSAGE(loanId, kind)}/preview`,
+          { text, ...(collectionId ? { collection: collectionId } : {}) },
+          ubConfig({ signal, suppressErrorSnackbar: true })
+        );
   return toPrepared(response.data.data);
 };
 
@@ -74,11 +82,16 @@ export const recordMessage = async (
   loanId: string,
   kind: LendingMessageKind,
   channel: MessageChannel,
-  collectionId?: string
+  collectionId?: string,
+  text?: string
 ): Promise<void> => {
   await api.post(
     LENDING_PATHS.MESSAGE(loanId, kind),
-    { channel, ...(collectionId ? { collection: collectionId } : {}) },
+    {
+      channel,
+      ...(collectionId ? { collection: collectionId } : {}),
+      ...(text !== undefined ? { text } : {}),
+    },
     ubConfig({ suppressErrorSnackbar: true })
   );
 };

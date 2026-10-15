@@ -2,10 +2,10 @@
 
 import { useEffect, useId, useState } from 'react';
 
+import { CompactDialog } from 'src/components/records/CompactOverlays';
 import {
   UbButton,
   UbChoiceChips,
-  UbDialog,
   UbMoneyInput,
   UbSkeleton,
   UbStack,
@@ -131,7 +131,7 @@ export function AdjustDueDialog({
   };
 
   return (
-    <UbDialog
+    <CompactDialog
       open
       onOpenChange={(next) => !next && onClose()}
       title={t(mode === 'fee' ? 'lending.adjust.fee.title' : 'lending.adjust.waive.title', {
@@ -212,6 +212,6 @@ export function AdjustDueDialog({
         </UbStack>
       )}
       {error && <UbStatusBanner tone="error" title={error.message} />}
-    </UbDialog>
+    </CompactDialog>
   );
 }

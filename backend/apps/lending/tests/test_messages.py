@@ -309,13 +309,50 @@ def test_no_mobile_is_said_before_anything_is_recorded(book: dict) -> None:
     assert Reminder.objects.count() == 0
 
 
-def test_the_body_carries_no_text_and_no_number(book: dict) -> None:
-    """FR-5/FR-6: a typed text or number in the body is ignored — the server
-    renders the fixed text for the borrower's own mobile."""
-    got = _send(book, text="Pay now or else", mobile="9999999999")
+def test_an_edited_message_uses_the_owned_recipient_and_keeps_the_send_cap(book: dict) -> None:
+    from urllib.parse import parse_qs, urlparse
+
+    text = "Thank you & please call tomorrow."
+    got = _send(book, text=text, mobile="9999999999")
     assert got.status_code == 201
-    assert "9999999999" not in got.json()["data"]["deep_link"]
-    assert "or+else" not in got.json()["data"]["deep_link"]
+    link = got.json()["data"]["deep_link"]
+    assert "9999999999" not in link
+    assert parse_qs(urlparse(link).query)["text"] == [text]
+    again = _send(book, text="A different edit")
+    assert again.status_code == 409
+    assert again.json()["error"]["code"] == "reminder_cap_reached"
+
+
+def test_receipt_edit_preview_records_nothing_and_does_not_change_the_default(book: dict) -> None:
+    client = book["client"]
+    collection = client.post(
+        reverse("v1:lending-collections", args=[book["loan"]["id"]]),
+        {"amount": "1000.00", "mode": "cash"},
+        format="json",
+        HTTP_IDEMPOTENCY_KEY="receipt-edit",
+    )
+    assert collection.status_code == 201
+    text = "Thank you for your payment."
+    url = reverse("v1:lending-loan-message-preview", args=[book["loan"]["id"], "receipt"])
+    response = client.post(url, {"text": text}, format="json")
+    assert response.status_code == 200
+    assert response.json()["data"]["text"] == text
+    assert Reminder.objects.count() == 0
+    default = client.get(_msg(book["loan"], "receipt")).json()["data"]
+    assert "received Rs 1,000" in default["text"]
+    assert _send(book, "receipt", text=text).status_code == 201
+
+
+@pytest.mark.parametrize("text", ["", "   ", "x" * 901, {"not": "text"}])
+def test_invalid_message_edits_are_refused_without_recording(book: dict, text: Any) -> None:
+    response = book["client"].post(
+        reverse("v1:lending-loan-message-preview", args=[book["loan"]["id"], "reminder"]),
+        {"text": text},
+        format="json",
+    )
+    assert response.status_code == 400
+    assert "text" in response.json()["error"]["details"]
+    assert Reminder.objects.count() == 0
 
 
 def test_an_accountant_cannot_send(book: dict, api_as: Any) -> None:

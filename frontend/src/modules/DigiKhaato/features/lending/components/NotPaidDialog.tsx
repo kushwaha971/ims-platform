@@ -2,11 +2,11 @@
 
 import { useState } from 'react';
 
+import { CompactDialog } from 'src/components/records/CompactOverlays';
 import {
   UbButton,
   UbChoiceChips,
   UbDateInput,
-  UbDialog,
   UbStack,
   UbText,
   UbTextInput,
@@ -72,7 +72,7 @@ export function NotPaidDialog({
   };
 
   return (
-    <UbDialog
+    <CompactDialog
       open
       onOpenChange={(next) => !next && onClose()}
       title={t('lending.visit.title', { name })}
@@ -124,6 +124,6 @@ export function NotPaidDialog({
           </UbText>
         )}
       </UbStack>
-    </UbDialog>
+    </CompactDialog>
   );
 }

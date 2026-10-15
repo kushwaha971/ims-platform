@@ -24,6 +24,7 @@ export interface LendingLoansState {
   listStatus: RequestStatus;
   listBorrowerId: string | null;
   listRequestId: string | null;
+  listQueryKey?: string;
   loanRequestId: string | null;
   staleSeq: number;
   readSeq: Record<string, number>;
@@ -66,10 +67,17 @@ export const lendingLoansSlice = createSlice({
     builder
       .addCase(fetchLendingLoans.pending, (state, action) => {
         const borrowerId = action.meta.arg.borrower ?? '';
-        if (state.listBorrowerId !== borrowerId) {
+        const queryKey = JSON.stringify({
+          status: action.meta.arg.status ?? '',
+          q: action.meta.arg.q ?? '',
+          route: action.meta.arg.route ?? '',
+          borrower: borrowerId,
+        });
+        if (state.listQueryKey !== queryKey) {
           state.rows = [];
           state.total = 0;
         }
+        state.listQueryKey = queryKey;
         state.listBorrowerId = borrowerId;
         state.listRequestId = action.meta.requestId;
         state.readSeq[action.meta.requestId] = state.staleSeq;
@@ -79,7 +87,11 @@ export const lendingLoansSlice = createSlice({
         const readSeq = takeReadSeq(state.readSeq, action.meta.requestId);
         if (state.listRequestId !== action.meta.requestId || readSeq !== state.staleSeq) return;
         state.listRequestId = null;
-        state.rows = action.payload.rows as Draft<LoanRow>[];
+        const incoming = action.payload.rows as Draft<LoanRow>[];
+        state.rows =
+          Number(action.meta.arg.page ?? '1') > 1
+            ? [...new Map([...state.rows, ...incoming].map((row) => [row.id, row])).values()]
+            : incoming;
         state.total = action.payload.total;
         state.hasLoans = action.payload.hasLoans;
         state.listStatus = 'succeeded';

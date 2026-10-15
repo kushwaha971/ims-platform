@@ -11,7 +11,7 @@ policy:
   night (FR-3). The tenant may narrow it, never widen it.
 * **One message per loan per day**, whoever sends it and on whichever channel
   (FR-4) — the cap is what stops a collection round turning into pressure.
-* **Fixed, polite texts only** (FR-5): no free text, no tone option, and a test
+* **Polite default texts**: the operator may edit one message before sharing; a test
   proves none of them contains a word of `FORBIDDEN_WORDS` (BR-4).
 
 Three reminders, under the source `lending_loan` (one per loan): the next
@@ -404,15 +404,32 @@ def _prepare(loan: LendingLoan, kind: str, collection_id: Any) -> tuple[str, dic
     raise ValidationFailed({"kind": ["Choose reminder or receipt."]})
 
 
-def _compose(loan: LendingLoan, template: str, params: dict) -> Any:
+def _compose(loan: LendingLoan, template: str, params: dict, text: Any = None) -> Any:
     from apps.ledger.services.messaging import compose_source_reminder
 
-    return compose_source_reminder(
+    composed = compose_source_reminder(
         tenant=loan.tenant,
         template_key=template,
         params={**params, "recipient_name": loan.party.name},
         mobile=loan.party.mobile,
     )
+    if text is not None:
+        from apps.notifications.services.whatsapp_text import MAX_SHARE_TEXT, sms_url, wa_url
+
+        if not isinstance(text, str) or not text.strip():
+            raise ValidationFailed({"text": ["Enter a message."]})
+        words = text.strip()
+        if len(words) > MAX_SHARE_TEXT:
+            raise ValidationFailed(
+                {"text": [f"Keep the message under {MAX_SHARE_TEXT} characters."]}
+            )
+        if "\x00" in words:
+            raise ValidationFailed({"text": ["Enter plain text."]})
+        composed.text = words
+        composed.sms_text = words
+        composed.wa_url = wa_url(composed.digits, words)
+        composed.sms_url = sms_url(composed.digits, words)
+    return composed
 
 
 def _last_today(loan: LendingLoan, source_id: Any) -> dict | None:
@@ -498,11 +515,13 @@ def _recipient_json(loan: LendingLoan) -> dict:
     }
 
 
-def preview(*, ctx: Any, loan_id: Any, kind: str, collection_id: Any = None) -> dict:
+def preview(
+    *, ctx: Any, loan_id: Any, kind: str, collection_id: Any = None, text: Any = None
+) -> dict:
     """The text and the links, and whether it may go now; records nothing."""
     loan = _loan(ctx.tenant, loan_id)
     template, params, source = _prepare(loan, kind, collection_id)
-    composed = _compose(loan, template, params)
+    composed = _compose(loan, template, params, text)
     return {
         "kind": kind,
         "bucket": BUCKET.get(template),
@@ -538,7 +557,7 @@ def send(*, ctx: Any, loan_id: Any, kind: str, data: Any) -> dict:
             f"No mobile number for {loan.party.name}.",
             details={"party_id": str(loan.party_id)},
         )
-    composed = _compose(loan, template, params)
+    composed = _compose(loan, template, params, data.get("text"))
     rows = record_source_reminders(
         ctx=ctx,
         party_id=loan.party_id,

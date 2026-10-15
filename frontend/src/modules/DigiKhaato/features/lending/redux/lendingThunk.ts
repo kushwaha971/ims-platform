@@ -99,7 +99,7 @@ export const fetchLendingLoan = createAsyncThunk<
 
 export const fetchLendingBorrowers = createAsyncThunk<
   BorrowerPage,
-  { q?: string; status?: BorrowerStatusFilter },
+  { q?: string; status?: BorrowerStatusFilter; page?: string },
   Reject
 >('lendingForm/fetchBorrowers', async (params, { signal, rejectWithValue }) => {
   try {

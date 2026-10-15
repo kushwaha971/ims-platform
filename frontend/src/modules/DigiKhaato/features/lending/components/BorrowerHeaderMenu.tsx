@@ -4,7 +4,8 @@ import { useCallback, useState, type Ref } from 'react';
 
 import { Ban, CircleCheck, MoreHorizontal, Pencil } from 'lucide-react';
 
-import { UbButton, UbDialog, UbStack } from 'src/design-system';
+import { CompactDialog } from 'src/components/records/CompactOverlays';
+import { UbButton, UbStack } from 'src/design-system';
 import type { TranslateFn } from 'src/hooks/useTranslation';
 
 /**
@@ -66,13 +67,14 @@ export function BorrowerHeaderMenu({
         variant="outlineNeutral"
         icon={<MoreHorizontal className="h-4 w-4" aria-hidden />}
         iconOnly="mobile"
+        className="max-sm:h-10 max-sm:w-10"
         aria-label={t('lending.borrower.menu.moreActions')}
         onClick={() => setOpen(true)}
         data-testid="lending-borrower-menu"
       >
         {t('lending.borrower.menu.more')}
       </UbButton>
-      <UbDialog
+      <CompactDialog
         open={open}
         onOpenChange={setOpen}
         title={t('lending.borrower.menu.moreActions')}
@@ -93,7 +95,7 @@ export function BorrowerHeaderMenu({
             </UbButton>
           ))}
         </UbStack>
-      </UbDialog>
+      </CompactDialog>
     </>
   );
 }

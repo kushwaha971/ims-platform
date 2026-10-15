@@ -27,6 +27,9 @@ export interface LendingFormState {
   borrowers: BorrowerRow[];
   /** The Borrowers list's own load state, so an unloaded list is not "No borrowers yet". */
   borrowersStatus: RequestStatus;
+  borrowersRequestId?: string | null;
+  borrowersQueryKey?: string;
+  borrowersTotal?: number;
   /** The whole book's left and late (the line above the Borrowers table). */
   borrowerTotals: { left: string; late: string } | null;
   /** The borrower whose loans are being listed (`/lending/loans?borrower=`). */
@@ -92,16 +95,31 @@ export const lendingFormSlice = createSlice({
         state.preview = null;
         state.previewError = (action.payload ?? null) as Draft<ApiErrorShape> | null;
       })
-      .addCase(fetchLendingBorrowers.pending, (state) => {
+      .addCase(fetchLendingBorrowers.pending, (state, action) => {
+        const key = JSON.stringify([action.meta.arg.q ?? '', action.meta.arg.status ?? 'all']);
+        if (state.borrowersQueryKey !== key) {
+          state.borrowers = [];
+          state.borrowersTotal = 0;
+        }
+        state.borrowersQueryKey = key;
+        state.borrowersRequestId = action.meta.requestId;
         state.borrowersStatus = state.borrowers.length ? 'refreshing' : 'loading';
       })
       .addCase(fetchLendingBorrowers.fulfilled, (state, action) => {
-        state.borrowers = action.payload.rows as Draft<BorrowerRow>[];
+        if (state.borrowersRequestId !== action.meta.requestId) return;
+        state.borrowersRequestId = null;
+        const incoming = action.payload.rows as Draft<BorrowerRow>[];
+        state.borrowers =
+          Number(action.meta.arg.page ?? '1') > 1
+            ? [...new Map([...state.borrowers, ...incoming].map((row) => [row.id, row])).values()]
+            : incoming;
+        state.borrowersTotal = action.payload.total ?? state.borrowers.length;
         state.borrowerTotals = action.payload.totals;
         state.borrowersStatus = 'succeeded';
       })
       .addCase(fetchLendingBorrowers.rejected, (state, action) => {
-        if (action.meta.aborted) return;
+        if (action.meta.aborted || state.borrowersRequestId !== action.meta.requestId) return;
+        state.borrowersRequestId = null;
         state.borrowersStatus = 'failed';
       })
       // Somebody else's figures are never shown over a new name: cleared while

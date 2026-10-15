@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from 'react';
 
+import { CompactCard } from 'src/components/records/CompactCard';
 import {
   UbButton,
-  UbCard,
   UbEmptyState,
   UbListItemText,
   UbPageHeader,
@@ -76,13 +76,13 @@ export function RoutesPageContent(): React.JSX.Element {
   return (
     <UbPageShell width="measure">
       <UbPageHeader title={t('lending.routes.title')} />
-      <UbStack gap={4} data-testid="lending-routes">
+      <UbStack gap={3} data-testid="lending-routes">
         {routes.length === 0 ? (
           <UbText variant="body-sm" tone="tertiary">
             {t('lending.routes.empty')}
           </UbText>
         ) : (
-          <UbCard padded>
+          <CompactCard padded>
             <UbStack as="ul" gap={0} aria-label={t('lending.routes.title')}>
               {routes.map((r) => (
                 <UbStack
@@ -103,10 +103,10 @@ export function RoutesPageContent(): React.JSX.Element {
                 </UbStack>
               ))}
             </UbStack>
-          </UbCard>
+          </CompactCard>
         )}
         {canManage && (
-          <UbCard padded>
+          <CompactCard padded>
             <UbStack gap={2}>
               <UbTextInput
                 id="lending-route-name"
@@ -130,7 +130,7 @@ export function RoutesPageContent(): React.JSX.Element {
                 {t('lending.routes.add')}
               </UbButton>
             </UbStack>
-          </UbCard>
+          </CompactCard>
         )}
       </UbStack>
     </UbPageShell>

@@ -5,13 +5,13 @@ import { useEffect, useId, useState } from 'react';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useForm, useWatch } from 'react-hook-form';
 
+import { CompactCard } from 'src/components/records/CompactCard';
+import { CompactDialog } from 'src/components/records/CompactOverlays';
 import {
   UbAmount,
   UbButton,
-  UbCard,
   UbChoiceChips,
   UbDateInput,
-  UbDialog,
   UbField,
   UbForm,
   UbListItemText,
@@ -219,7 +219,7 @@ export function CollectFromBorrowerDialog({
   }
 
   return (
-    <UbDialog
+    <CompactDialog
       open
       onOpenChange={(next) => !next && onClose()}
       title={t('lending.collectFrom.title', { name })}
@@ -263,7 +263,7 @@ export function CollectFromBorrowerDialog({
           )}
         </UbField>
         {current && (
-          <UbCard padded>
+          <CompactCard padded>
             <UbStack gap={2} data-testid="lending-collect-from-split">
               <UbText variant="body-sm-medium">{t('lending.collectFrom.split')}</UbText>
               {changed && (
@@ -297,7 +297,7 @@ export function CollectFromBorrowerDialog({
                 {t('lending.collectFrom.leftAfter', { amount: formatInr(current.leftAfter) })}
               </UbText>
             </UbStack>
-          </UbCard>
+          </CompactCard>
         )}
         {refusal && (
           <UbText variant="body-sm" tone="warning">
@@ -349,6 +349,6 @@ export function CollectFromBorrowerDialog({
           {(field) => <UbTextInput {...field} autoComplete="off" disabled={saving} />}
         </UbField>
       </UbForm>
-    </UbDialog>
+    </CompactDialog>
   );
 }

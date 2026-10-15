@@ -2,15 +2,19 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
-import { useRouter } from 'next/navigation';
+import dynamic from 'next/dynamic';
 
 import { Plus } from 'lucide-react';
 
+import { CompactRecordGrid } from 'src/components/records/CompactRecordGrid';
 import { SummaryStatGrid } from 'src/components/stats/SummaryStatGrid';
 import {
   UbActionLink,
   UbAmount,
-  UbDataGrid,
+  UbButton,
+  UbLoadMore,
+  UbAvatar,
+  UbText,
   UbEmptyState,
   UbFilterSelect,
   UbPageHeader,
@@ -33,8 +37,10 @@ import { usePermissions } from 'src/hooks/usePermissions';
 import { useTranslation } from 'src/hooks/useTranslation';
 import { ROUTES } from 'src/routes';
 import { formatInr } from 'src/utils/money';
+import { formatPhoneForDisplay } from 'src/utils/share';
 
 import { selectLendingForm } from '../redux/lendingFormSlice';
+import { selectLendingLoans } from '../redux/lendingLoansSlice';
 import { fetchLendingBorrowers, fetchLendingToday } from '../redux/lendingThunk';
 import { selectLendingToday } from '../redux/lendingTodaySlice';
 import {
@@ -43,6 +49,11 @@ import {
   type BorrowerStatusFilter,
 } from '../types/lending.types';
 import { isNonZero } from '../view-model/lendingDisplay';
+
+const BorrowerDetailDrawerLazy = dynamic(
+  () => import('./BorrowerDetailDrawer').then((m) => m.BorrowerDetailDrawer),
+  { ssr: false }
+);
 
 type T = ReturnType<typeof useTranslation>['t'];
 
@@ -64,13 +75,30 @@ const borrowerColumns = (t: T): UbDataGridColumn<BorrowerRow>[] => [
     priority: 1,
     cardSlot: 'title',
     widthShare: 26,
-    cell: (row) => row.name,
+    cell: (row) => (
+      <UbStack direction="row" align="center" gap={3}>
+        <UbAvatar name={row.name} className="bg-primary-50 text-text-accent" />
+        <UbStack gap={1} className="min-w-0">
+          <UbText variant="body-sm-medium" className="break-words">
+            {row.name}
+          </UbText>
+          <UbText variant="caption" tone="secondary">
+            {[row.mobile ? formatPhoneForDisplay(row.mobile) : row.number, row.area]
+              .filter(Boolean)
+              .join(' · ')}
+          </UbText>
+          <UbText variant="caption" tone="secondary">
+            {loansLine(t, row)}
+          </UbText>
+        </UbStack>
+      </UbStack>
+    ),
   },
   {
     id: 'loans',
     header: t('lending.borrowers.col.loans'),
     priority: 1,
-    cardSlot: 'meta',
+    cardSlot: 'none',
     widthShare: 18,
     // The design's line is the count alone: with the area beside it the phone
     // card cut it to "2 loans · 2 running · …" (QA, 12 Oct 2026).
@@ -173,9 +201,11 @@ const useLendingGridLabels = (t: T): UbDataGridLabels =>
  */
 export function BorrowersPageContent(): React.JSX.Element {
   const { t } = useTranslation();
-  const router = useRouter();
+  const [selectedBorrower, setSelectedBorrower] = useState<string | null>(null);
   const dispatch = useAppDispatch();
-  const { borrowers, borrowersStatus, borrowerTotals } = useAppSelector(selectLendingForm);
+  const { staleSeq: loanRevision } = useAppSelector(selectLendingLoans);
+  const { borrowers, borrowersStatus, borrowerTotals, borrowersTotal } =
+    useAppSelector(selectLendingForm);
   const { round } = useAppSelector(selectLendingToday);
   const { can, hasModule } = usePermissions();
   const canRead = hasModule('lending') && can('lending.borrower.read');
@@ -186,15 +216,18 @@ export function BorrowersPageContent(): React.JSX.Element {
   // Everybody by default: a blocked borrower who still owes is somebody the
   // lender is looking for (owner, 12 Oct 2026).
   const [status, setStatus] = useState<BorrowerStatusFilter>('all');
+  const queryKey = JSON.stringify([q, status, loanRevision]);
+  const [pageChoice, setPageChoice] = useState({ key: queryKey, page: 1 });
+  const currentPage = pageChoice.key === queryKey ? pageChoice.page : 1;
   const [search, setSearch] = useCommittedSearch(q, setQ, 300);
   const columns = useMemo(() => borrowerColumns(t), [t]);
   const labels = useLendingGridLabels(t);
 
   useEffect(() => {
     if (!canRead) return undefined;
-    const promise = dispatch(fetchLendingBorrowers({ q, status }));
+    const promise = dispatch(fetchLendingBorrowers({ q, status, page: String(currentPage) }));
     return () => promise.abort();
-  }, [canRead, dispatch, q, status]);
+  }, [canRead, dispatch, q, status, loanRevision, currentPage]);
   // Today's two figures are for the computer's header row only; a phone
   // never draws them, so it never asks.
   useEffect(() => {
@@ -203,10 +236,7 @@ export function BorrowersPageContent(): React.JSX.Element {
     return () => promise.abort();
   }, [canSeeRound, wide, dispatch]);
 
-  const open = useCallback(
-    (row: BorrowerRow) => router.push(`${ROUTES.LENDING_LOANS}?borrower=${row.id}`),
-    [router]
-  );
+  const open = useCallback((row: BorrowerRow) => setSelectedBorrower(row.id), []);
   const rowId = useCallback((row: BorrowerRow) => row.id, []);
   const rowName = useCallback((row: BorrowerRow) => row.name, []);
   const page = useMemo(
@@ -246,7 +276,7 @@ export function BorrowersPageContent(): React.JSX.Element {
   const none = loaded && borrowers.length === 0 && !q && status === 'all';
   let gridState: UbGridState = 'rows';
   if (borrowersStatus === 'idle' || borrowersStatus === 'loading') gridState = 'loading';
-  else if (borrowersStatus === 'failed') gridState = 'error';
+  else if (borrowersStatus === 'failed' && borrowers.length === 0) gridState = 'error';
   else if (borrowers.length === 0) gridState = 'filtered-empty';
 
   return (
@@ -259,6 +289,7 @@ export function BorrowersPageContent(): React.JSX.Element {
               href={ROUTES.LENDING_NEW_LOAN}
               icon={<Plus className="h-4 w-4" aria-hidden />}
               iconOnly="mobile"
+              className="max-sm:h-10 max-sm:w-10"
             >
               {t('lending.loan.new')}
             </UbActionLink>
@@ -277,7 +308,7 @@ export function BorrowersPageContent(): React.JSX.Element {
           }
         />
       ) : (
-        <UbStack gap={4} data-testid="lending-borrowers">
+        <UbStack gap={3} data-testid="lending-borrowers">
           {wide && borrowerTotals && (
             <SummaryStatGrid storageKey="lendingBorrowers">
               {round && (
@@ -305,7 +336,8 @@ export function BorrowersPageContent(): React.JSX.Element {
               />
             </SummaryStatGrid>
           )}
-          <UbDataGrid
+          <CompactRecordGrid
+            cardAvatar={false}
             rows={borrowers}
             columns={columns}
             rowId={rowId}
@@ -330,6 +362,7 @@ export function BorrowersPageContent(): React.JSX.Element {
             // the loan book's own status control.
             filters={
               <UbFilterSelect
+                className="h-10"
                 spec={{
                   kind: 'single',
                   key: 'status',
@@ -345,7 +378,31 @@ export function BorrowersPageContent(): React.JSX.Element {
               />
             }
           />
+          {(borrowersTotal ?? borrowers.length) > borrowers.length &&
+            (borrowersStatus === 'failed' ? (
+              <UbButton
+                variant="outlineNeutral"
+                onClick={() =>
+                  void dispatch(fetchLendingBorrowers({ q, status, page: String(currentPage) }))
+                }
+              >
+                {t('common.action.retry')}
+              </UbButton>
+            ) : (
+              <UbLoadMore
+                loading={borrowersStatus === 'loading' || borrowersStatus === 'refreshing'}
+                loadingLabel={t('lending.list.loading')}
+                moreLabel={t('lending.borrowers.loadMore')}
+                onLoadMore={() => {
+                  if (borrowersStatus === 'succeeded')
+                    setPageChoice({ key: queryKey, page: currentPage + 1 });
+                }}
+              />
+            ))}
         </UbStack>
+      )}
+      {selectedBorrower && (
+        <BorrowerDetailDrawerLazy id={selectedBorrower} onClose={() => setSelectedBorrower(null)} />
       )}
     </UbPageShell>
   );

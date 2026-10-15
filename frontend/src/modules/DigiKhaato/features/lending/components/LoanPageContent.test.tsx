@@ -144,7 +144,7 @@ describe('LoanPageContent', () => {
     renderWithProviders(<LoanPageContent id="l1" embedded />);
     await screen.findByTestId('lending-loan-schedule');
     expect(screen.queryByRole('heading', { level: 1 })).not.toBeInTheDocument();
-    expect(screen.getByRole('heading', { level: 2, name: 'LN-0001' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 2, name: 'Geeta Devi' })).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Account' })).not.toBeInTheDocument();
     expect(screen.getByTestId('lending-loan-collections')).toBeInTheDocument();
   });
@@ -416,7 +416,7 @@ describe('late fees and waivers', () => {
     signIn([...PERMS, 'lending.waiver.create'] as PermissionCode[]);
     renderWithProviders(<LoanPageContent id="l1" />);
     expect(await screen.findByTestId('lending-due-adjusted')).toHaveTextContent(
-      '+₹30.00 late fee · ₹10.00 waived'
+      '+₹30.00 late fee · ₹10.00 forgiven'
     );
     expect(screen.getByTestId('lending-due-waive')).toBeInTheDocument();
     expect(screen.queryByTestId('lending-due-late-fee')).not.toBeInTheDocument();
@@ -454,7 +454,8 @@ describe('ending a loan', () => {
     const body = await screen.findByTestId('lending-end-body');
     expect(body).toHaveTextContent('₹12,000.00 still owed by Geeta Devi');
     const confirm = screen.getByTestId('lending-end-confirm');
-    await userEvent.selectOptions(screen.getByLabelText('Reason'), 'cannot_trace');
+    await userEvent.click(screen.getByRole('combobox', { name: 'Reason' }));
+    await userEvent.click(await screen.findByRole('option', { name: 'Cannot trace the borrower' }));
     await userEvent.type(screen.getByLabelText('Reason, in a few words'), 'Moved away');
     expect(confirm).toBeDisabled();
     await userEvent.click(screen.getByLabelText('I understand ₹12,000.00 is written off'));

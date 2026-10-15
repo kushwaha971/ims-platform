@@ -1,4 +1,4 @@
-import { act, screen } from '@testing-library/react';
+import { act, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { resetAllFeatureState } from 'src/redux/actions';
@@ -56,9 +56,9 @@ describe('MessageDialog (lending)', () => {
     jest.mocked(service.prepareMessage).mockResolvedValue(prepared());
     jest.mocked(service.recordMessage).mockResolvedValue(undefined);
     open();
-    expect(await screen.findByTestId('lending-message-text')).toHaveTextContent('Rs 2,000');
+    expect(await screen.findByTestId('lending-message-text')).toHaveValue(prepared().text);
     expect(screen.getByText('Overdue')).toBeInTheDocument();
-    expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: 'Message' })).toBeEnabled();
     const send = screen.getByTestId('lending-message-whatsapp');
     expect(send).toHaveAttribute('href', 'https://wa.me/919820011223?text=Namaste');
     send.addEventListener('click', (event) => event.preventDefault());
@@ -190,4 +190,48 @@ describe('MessageDialog (lending)', () => {
     await screen.findByTestId('lending-message-whatsapp');
     expect(service.prepareMessage).toHaveBeenCalledTimes(2);
   });
+});
+
+it('previews and records edited receipt text, and restores the default', async () => {
+  jest
+    .mocked(service.prepareMessage)
+    .mockImplementation(async (_id, _kind, _collection, _signal, text) =>
+      prepared({
+        text: text ?? 'Receipt default',
+        waUrl: 'https://wa.me/919820011223?text=' + encodeURIComponent(text ?? 'Receipt default'),
+      })
+    );
+  jest.mocked(service.recordMessage).mockResolvedValue(undefined);
+  renderWithProviders(
+    <MessageDialog
+      loanId="l1"
+      name="Geeta Devi"
+      kind="receipt"
+      collectionId="c1"
+      onClose={jest.fn()}
+    />
+  );
+  const field = await screen.findByRole('textbox', { name: 'Message' });
+  await userEvent.clear(field);
+  await userEvent.type(field, 'Thank you, payment received.');
+  await waitFor(() =>
+    expect(screen.getByTestId('lending-message-whatsapp')).toHaveAttribute(
+      'href',
+      'https://wa.me/919820011223?text=Thank%20you%2C%20payment%20received.'
+    )
+  );
+  const send = screen.getByTestId('lending-message-whatsapp');
+  send.addEventListener('click', (event) => event.preventDefault());
+  await userEvent.click(send);
+  await waitFor(() =>
+    expect(service.recordMessage).toHaveBeenCalledWith(
+      'l1',
+      'receipt',
+      'whatsapp_manual',
+      'c1',
+      'Thank you, payment received.'
+    )
+  );
+  await userEvent.click(screen.getByRole('button', { name: 'Restore default message' }));
+  await waitFor(() => expect(field).toHaveValue('Receipt default'));
 });

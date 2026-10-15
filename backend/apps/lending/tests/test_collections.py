@@ -244,3 +244,28 @@ def test_the_money_given_cannot_be_voided_while_the_loan_runs(book: dict) -> Non
     )
     assert refused.status_code == 409
     assert refused.json()["error"]["code"] == "loan_disbursal_locked"
+
+
+def test_a_loan_fully_repaid_today_stays_in_collected_total_and_its_route(book: dict) -> None:
+    client = book["client"]
+    paid = client.post(
+        _url("collections", book["loan"]),
+        {"amount": "5000.00", "mode": "cash"},
+        format="json",
+        HTTP_IDEMPOTENCY_KEY="fully-paid-today",
+    )
+    assert paid.status_code == 201, paid.json()
+    assert paid.json()["data"]["loan_status"] == "closed"
+    day = client.get(reverse("v1:lending-today")).json()
+    assert day["meta"]["collected"] == "5000.00"
+    assert day["meta"]["due"] == "0.00"
+    assert day["meta"]["done"] == 1
+    assert day["data"][0]["remaining"] == "0.00"
+    routed = client.get(reverse("v1:lending-today"), {"route": book["route"]["id"]}).json()
+    assert routed["meta"]["collected"] == "5000.00"
+    other = client.post(
+        reverse("v1:lending-routes"), {"name": "Other route"}, format="json"
+    ).json()["data"]
+    unrelated = client.get(reverse("v1:lending-today"), {"route": other["id"]}).json()
+    assert unrelated["meta"]["collected"] == "0.00"
+    assert unrelated["data"] == []

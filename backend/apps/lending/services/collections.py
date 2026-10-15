@@ -21,7 +21,7 @@ from decimal import Decimal, InvalidOperation
 from typing import Any
 
 from django.db import transaction
-from django.db.models import Sum
+from django.db.models import Q, Sum
 
 from apps.common.audit import write_audit
 from apps.common.dates import tenant_today
@@ -397,13 +397,6 @@ def today_round(tenant: Any, route_id: Any = None) -> dict:
     what was collected and any visit note today. Paid stops stay on the list (the
     agent sees the round they walked), counted as done."""
     today = tenant_today(tenant)
-    loans = (
-        LendingLoan.objects.filter(tenant=tenant, status=LoanStatus.ACTIVE)
-        .select_related("party", "borrower", "route")
-        .order_by("route__sort_order", "route__name", "route_seq", "number")
-    )
-    if route_id:
-        loans = loans.filter(route_id=route_id)
     collected = {
         r["loan_id"]: r["t"]
         for r in LendingCollection.objects.filter(
@@ -412,6 +405,14 @@ def today_round(tenant: Any, route_id: Any = None) -> dict:
         .values("loan_id")
         .annotate(t=Sum("amount"))
     }
+    loans = (
+        LendingLoan.objects.filter(tenant=tenant)
+        .filter(Q(status=LoanStatus.ACTIVE) | Q(pk__in=collected))
+        .select_related("party", "borrower", "route")
+        .order_by("route__sort_order", "route__name", "route_seq", "number")
+    )
+    if route_id:
+        loans = loans.filter(route_id=route_id)
     visits = {
         v.loan_id: v
         for v in LendingVisit.objects.filter(tenant=tenant, on_date=today).order_by("created_at")

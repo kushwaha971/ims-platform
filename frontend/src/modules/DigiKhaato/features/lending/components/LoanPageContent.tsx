@@ -15,13 +15,12 @@ import {
   QrCode,
 } from 'lucide-react';
 
+import { CompactCard, CompactFact } from 'src/components/records/CompactCard';
 import {
   UbActionLink,
   UbAmount,
   UbButton,
-  UbCard,
   UbEmptyState,
-  UbInfoRow,
   UbLink,
   UbPageHeader,
   UbPageShell,
@@ -207,6 +206,7 @@ export function LoanPageContent({
         data-testid="lending-loan-collect"
         icon={<HandCoins className="h-4 w-4" aria-hidden />}
         iconOnly="mobile"
+        className="max-sm:h-10 max-sm:w-10"
       >
         {t('lending.collect.button', {
           amount: formatInr(isNonZero(asked) ? asked : loan.instalmentAmount),
@@ -215,9 +215,13 @@ export function LoanPageContent({
     ) : undefined;
 
   return (
-    <Container className={embedded ? 'flex flex-col gap-4' : undefined}>
+    <Container className={embedded ? 'flex flex-col gap-3' : undefined}>
       {embedded ? (
-        <UbSectionHeading title={loan.number} aside={collectionAction} className="ub-print-hide" />
+        <UbSectionHeading
+          title={loan.borrower.name}
+          aside={collectionAction}
+          className="ub-print-hide"
+        />
       ) : (
         <UbPageHeader
           className="ub-print-hide"
@@ -225,7 +229,7 @@ export function LoanPageContent({
           actions={collectionAction}
         />
       )}
-      <UbStack gap={4} data-testid="lending-loan" className="ub-print-hide">
+      <UbStack gap={3} data-testid="lending-loan" className="ub-print-hide">
         {(loan.status === 'written_off' || loan.status === 'cancelled') && (
           <UbStatusBanner
             tone="warning"
@@ -260,9 +264,9 @@ export function LoanPageContent({
           )}
         </UbStack>
 
-        <UbCard padded>
+        <CompactCard padded>
           <UbStack gap={3}>
-            <UbStack direction="row" gap={5} wrap>
+            <UbStack className="grid grid-cols-3 gap-3">
               {[
                 ['lending.loan.dueNow', asked, isNonZero(loan.arrears)],
                 ['lending.loan.left', loan.remaining, false],
@@ -338,7 +342,7 @@ export function LoanPageContent({
               </UbStack>
             )}
           </UbStack>
-        </UbCard>
+        </CompactCard>
 
         {/* Lending P0 — the papers a borrower is handed: the statement any time, and
             the closure letter ("no dues") once the loan is paid off. */}
@@ -391,11 +395,11 @@ export function LoanPageContent({
           )}
         </UbStack>
 
-        <UbCard padded>
-          <UbStack gap={2}>
-            <UbInfoRow label={t('lending.loan.terms')} value={rateLine} />
+        <CompactCard padded>
+          <UbStack className="grid grid-cols-2 gap-x-4 gap-y-3">
+            <CompactFact label={t('lending.loan.terms')} value={rateLine} />
             {loan.lateFee.kind !== 'none' && (
-              <UbInfoRow
+              <CompactFact
                 label={t('lending.loan.lateFeeRule')}
                 value={t(`lending.lateFee.rule.${loan.lateFee.kind}`, {
                   value: formatInr(loan.lateFee.value ?? '0'),
@@ -405,39 +409,46 @@ export function LoanPageContent({
                 })}
               />
             )}
-            <UbInfoRow
+            <CompactFact
               label={t('lending.preview.rate')}
               value={t('lending.preview.rateValue', {
                 rate: Number(loan.effectiveAnnualRate).toFixed(1),
               })}
             />
-            <UbInfoRow label={t('lending.loan.principal')} value={formatInr(loan.principal)} />
-            <UbInfoRow label={t('lending.preview.cash')} value={formatInr(loan.cashHandedOver)} />
-            <UbInfoRow label={t('lending.preview.total')} value={formatInr(loan.totalPayable)} />
+            <CompactFact label={t('lending.loan.principal')} value={formatInr(loan.principal)} />
+            <CompactFact label={t('lending.preview.cash')} value={formatInr(loan.cashHandedOver)} />
+            <CompactFact label={t('lending.preview.total')} value={formatInr(loan.totalPayable)} />
             {loan.deductions.map((d) => (
-              <UbInfoRow key={d.label} label={d.label} value={formatInr(d.amount)} />
+              <CompactFact key={d.label} label={d.label} value={formatInr(d.amount)} />
             ))}
-            <UbInfoRow
+            <CompactFact
               label={t('lending.loan.given')}
               value={formatBusinessDate(loan.disbursedOn)}
             />
-            <UbInfoRow label={t('lending.loan.ends')} value={formatBusinessDate(loan.maturityOn)} />
+            <CompactFact
+              label={t('lending.loan.ends')}
+              value={formatBusinessDate(loan.maturityOn)}
+            />
             {loan.borrower.mobile && (
-              <UbInfoRow
+              <CompactFact
                 label={t('lending.form.mobile')}
                 value={formatPhoneForDisplay(loan.borrower.mobile)}
               />
             )}
-            {loan.route && <UbInfoRow label={t('lending.route.label')} value={loan.route.name} />}
-            {loan.notes && <UbInfoRow label={t('lending.form.notes')} value={loan.notes} />}
+            {loan.route && <CompactFact label={t('lending.route.label')} value={loan.route.name} />}
+            {loan.notes && <CompactFact label={t('lending.form.notes')} value={loan.notes} />}
           </UbStack>
-        </UbCard>
+        </CompactCard>
 
-        <UbCard padded>
+        <CompactCard padded>
           <UbStack gap={1} data-testid="lending-loan-schedule">
             <UbText variant="label">{t('lending.loan.instalments')}</UbText>
             {schedule.map((due) => (
-              <UbStack key={due.id} gap={1} className="border-t border-border-hairline py-2">
+              <UbStack
+                key={due.id}
+                gap={1}
+                className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 border-t border-border-hairline py-2"
+              >
                 <UbStack direction="row" justify="between" align="center" gap={2}>
                   <UbText variant="body-sm">{`${due.seq}. ${formatBusinessDate(due.dueOn)}`}</UbText>
                   <UbStack direction="row" gap={2} align="center">
@@ -455,7 +466,12 @@ export function LoanPageContent({
                   </UbStack>
                 </UbStack>
                 {(isNonZero(due.lateFee) || isNonZero(due.waived)) && (
-                  <UbText variant="caption" tone="tertiary" data-testid="lending-due-adjusted">
+                  <UbText
+                    variant="caption"
+                    tone="tertiary"
+                    className="col-span-2"
+                    data-testid="lending-due-adjusted"
+                  >
                     {[
                       isNonZero(due.lateFee)
                         ? t('lending.due.lateFee', { amount: formatInr(due.lateFee) })
@@ -469,7 +485,7 @@ export function LoanPageContent({
                   </UbText>
                 )}
                 {active && OPEN_DUE.has(due.status) && (canCharge || canWaive) && (
-                  <UbStack direction="row" gap={2}>
+                  <UbStack direction="row" gap={2} className="col-start-2 row-start-1">
                     {canCharge && loan.lateFee.kind !== 'none' && due.status === 'overdue' && (
                       <UbButton
                         size="sm"
@@ -500,9 +516,9 @@ export function LoanPageContent({
                 : t('lending.loan.showAll', { count: loan.schedule.length })}
             </UbButton>
           </UbStack>
-        </UbCard>
+        </CompactCard>
 
-        <UbCard padded>
+        <CompactCard padded>
           <UbStack gap={1} data-testid="lending-loan-collections">
             <UbText variant="label">{t('lending.loan.collections')}</UbText>
             {state.collections.length === 0 && (
@@ -577,10 +593,10 @@ export function LoanPageContent({
               </UbText>
             ))}
           </UbStack>
-        </UbCard>
+        </CompactCard>
 
         {state.messages.length > 0 && (
-          <UbCard padded>
+          <CompactCard padded>
             <UbStack gap={1} data-testid="lending-loan-messages">
               <UbText variant="label">{t('lending.messages.history')}</UbText>
               {state.messages.map((m) => (
@@ -598,7 +614,7 @@ export function LoanPageContent({
                 </UbText>
               ))}
             </UbStack>
-          </UbCard>
+          </CompactCard>
         )}
       </UbStack>
       {ending && <EndLoanDialogLazy loan={loan} mode={ending} onClose={() => setEnding(null)} />}

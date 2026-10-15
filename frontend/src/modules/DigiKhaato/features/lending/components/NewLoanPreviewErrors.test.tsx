@@ -70,3 +70,19 @@ it('names the field and the rule when the preview is refused', async () => {
   );
   expect(screen.queryByText('Please check the highlighted fields.')).not.toBeInTheDocument();
 });
+
+it('prefills a new borrower from one explicitly selected phone contact', async () => {
+  const select = jest.fn().mockResolvedValue([{ name: ['Phone Borrower'], tel: ['98765 43210'] }]);
+  Object.defineProperty(window, 'isSecureContext', { configurable: true, value: true });
+  Object.defineProperty(navigator, 'contacts', { configurable: true, value: { select } });
+  try {
+    renderWithProviders(<NewLoanPageContent />);
+    await userEvent.click(await screen.findByRole('button', { name: 'Choose phone contact' }));
+    await waitFor(() => expect(screen.getByLabelText(/^Name/)).toHaveValue('Phone Borrower'));
+    expect(screen.getByLabelText(/^Mobile/)).toHaveValue('9876543210');
+    expect(select).toHaveBeenCalledWith(['name', 'tel'], { multiple: false });
+  } finally {
+    Reflect.deleteProperty(window, 'isSecureContext');
+    Reflect.deleteProperty(navigator, 'contacts');
+  }
+});

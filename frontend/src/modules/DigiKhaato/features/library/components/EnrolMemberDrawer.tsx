@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useId, useMemo, useState, useSyncExternalStore } from 'react';
+import { useEffect, useId, useMemo, useState } from 'react';
 
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useForm, useWatch, type UseFormReturn } from 'react-hook-form';
@@ -20,11 +20,9 @@ import {
   UbText,
   UbTextInput,
 } from 'src/design-system';
-import { useAppDispatch } from 'src/hooks/useAppStore';
+import { usePhoneContactPicker } from 'src/hooks/usePhoneContactPicker';
 import { useTranslation } from 'src/hooks/useTranslation';
-import { showSnackbar } from 'src/redux/slice/snackbarSlice';
 import { formatInr } from 'src/utils/money';
-import { phoneContactsSupported, pickPhoneContact } from 'src/utils/phoneContacts';
 
 import { PaymentModeEditor } from 'modules/DigiKhaato/features/payments/components/PaymentModeEditor';
 import type { PaymentFormValues } from 'modules/DigiKhaato/features/payments/types/payment.types';
@@ -47,9 +45,6 @@ import 'src/i18n/catalogues/payments';
 import 'src/i18n/catalogues/validation';
 
 /** One empty payment line — the editor's starting row. */
-const subscribeContactSupport = () => () => {};
-const noContactSupport = () => false;
-
 const FIRST_LINE: EnrolFormValues['lines'][number] = {
   mode: 'cash',
   upiApp: '',
@@ -149,31 +144,14 @@ export function EnrolMemberDrawer({
   const hasSeats = seating.seats.length > 0;
   const type = active.find((row) => row.id === typeId);
   const cost = enrolCost(type);
-  const dispatch = useAppDispatch();
-  const contactSupported = useSyncExternalStore(
-    subscribeContactSupport,
-    phoneContactsSupported,
-    noContactSupport
-  );
-  const [pickingContact, setPickingContact] = useState(false);
-  const chooseContact = async () => {
-    setPickingContact(true);
-    try {
-      const contact = await pickPhoneContact();
-      if (contact) {
-        form.setValue('name', contact.name, { shouldDirty: true, shouldValidate: true });
-        form.setValue('mobile', contact.mobile, { shouldDirty: true, shouldValidate: true });
-      }
-    } catch (error) {
-      if (!(error instanceof DOMException && error.name === 'AbortError')) {
-        dispatch(
-          showSnackbar({ severity: 'error', message: t('library.enrol.phoneContact.error') })
-        );
-      }
-    } finally {
-      setPickingContact(false);
-    }
-  };
+  const {
+    supported: contactSupported,
+    busy: pickingContact,
+    choose: chooseContact,
+  } = usePhoneContactPicker((contact) => {
+    form.setValue('name', contact.name, { shouldDirty: true, shouldValidate: true });
+    form.setValue('mobile', contact.mobile, { shouldDirty: true, shouldValidate: true });
+  }, t('library.enrol.phoneContact.error'));
   const asksMoney = isNonZero(cost.fees) || isNonZero(cost.deposit);
   const payWay: PayWay = existingStudent
     ? 'already'

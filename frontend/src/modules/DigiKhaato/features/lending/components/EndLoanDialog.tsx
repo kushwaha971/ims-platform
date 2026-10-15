@@ -2,11 +2,11 @@
 
 import { useId, useState } from 'react';
 
+import { CompactDialog } from 'src/components/records/CompactOverlays';
 import {
   UbButton,
   UbCheckbox,
-  UbDialog,
-  UbNativeSelect,
+  UbCombobox,
   UbStack,
   UbStatusBanner,
   UbText,
@@ -93,7 +93,7 @@ export function EndLoanDialog({
   };
 
   return (
-    <UbDialog
+    <CompactDialog
       open
       onOpenChange={(next) => !next && onClose()}
       title={t(writeOff ? 'lending.end.writeOff.title' : 'lending.end.cancel.title', {
@@ -137,7 +137,9 @@ export function EndLoanDialog({
           <UbStatusBanner tone="error" title={error.message} />
         )}
         {writeOff && (
-          <UbNativeSelect
+          <UbCombobox
+            searchPlaceholder={t('lending.select.search')}
+            emptyLabel={t('lending.select.noMatches')}
             id={`${baseId}-code`}
             aria-label={t('lending.end.writeOff.reasonCode')}
             value={reasonCode}
@@ -166,6 +168,6 @@ export function EndLoanDialog({
           />
         )}
       </UbStack>
-    </UbDialog>
+    </CompactDialog>
   );
 }

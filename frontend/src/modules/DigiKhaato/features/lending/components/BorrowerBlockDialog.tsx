@@ -2,14 +2,8 @@
 
 import { useId, useState, type RefObject } from 'react';
 
-import {
-  UbButton,
-  UbConfirmDialog,
-  UbDialog,
-  UbStack,
-  UbText,
-  UbTextInput,
-} from 'src/design-system';
+import { CompactDialog } from 'src/components/records/CompactOverlays';
+import { UbButton, UbConfirmDialog, UbStack, UbText, UbTextInput } from 'src/design-system';
 import { useAppDispatch } from 'src/hooks/useAppStore';
 import { useTranslation } from 'src/hooks/useTranslation';
 import { showSnackbar } from 'src/redux/slice/snackbarSlice';
@@ -102,7 +96,7 @@ export function BorrowerBlockDialog({
   }
 
   return (
-    <UbDialog
+    <CompactDialog
       open
       onOpenChange={(next) => !next && onClose()}
       title={t('lending.borrower.block.title', { name })}
@@ -147,6 +141,6 @@ export function BorrowerBlockDialog({
           />
         </UbStack>
       </UbStack>
-    </UbDialog>
+    </CompactDialog>
   );
 }

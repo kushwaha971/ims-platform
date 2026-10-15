@@ -434,12 +434,16 @@ export const saveRoute = async (name: string): Promise<void> => {
  * offering them there is offering a refusal.
  */
 export const listBorrowers = async (
-  params: { q?: string; status?: BorrowerStatusFilter },
+  params: { q?: string; status?: BorrowerStatusFilter; page?: string },
   signal?: AbortSignal
 ): Promise<BorrowerPage> => {
-  const response = await api.get<{ data: Wire[]; meta?: { totals?: Wire } }>(
+  const response = await api.get<{
+    data: Wire[];
+    meta?: { totals?: Wire; page?: number; total?: number; total_pages?: number };
+  }>(
     `${LENDING_PATHS.BORROWERS}${toQueryString({
       q: params.q || undefined,
+      page: params.page,
       status: params.status && params.status !== 'all' ? params.status : undefined,
     })}`,
     { signal }
@@ -447,6 +451,9 @@ export const listBorrowers = async (
   const totals = response.data.meta?.totals;
   return {
     rows: response.data.data.map(toBorrower),
+    page: response.data.meta?.page ?? 1,
+    total: response.data.meta?.total ?? response.data.data.length,
+    totalPages: response.data.meta?.total_pages ?? 1,
     totals: totals ? { left: str(totals.left), late: str(totals.late) } : null,
   };
 };

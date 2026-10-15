@@ -44,3 +44,22 @@ class LoanMessageView(_LendingView):
         return StandardResponse.created(
             messages.send(ctx=Ctx.from_request(request), loan_id=loan_id, kind=kind, data=data)
         )
+
+
+class LoanMessagePreviewView(_LendingView):
+    """Preview an edited message through a POST body, without recording a send."""
+
+    read = "lending.reminder.send"
+    write = "lending.reminder.send"
+
+    def post(self, request: Any, loan_id: Any, kind: str) -> Any:
+        data = request.data if isinstance(request.data, dict) else {}
+        return StandardResponse.ok(
+            messages.preview(
+                ctx=Ctx.from_request(request),
+                loan_id=loan_id,
+                kind=kind,
+                collection_id=data.get("collection"),
+                text=data.get("text"),
+            )
+        )
