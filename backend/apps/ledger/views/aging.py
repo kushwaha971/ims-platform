@@ -24,6 +24,7 @@ from apps.common.throttling import ScopedUserRateThrottle
 from apps.common.viewsets import TenantScopeMixin
 from apps.ledger.models import LedgerEntry
 from apps.ledger.selectors.aging import BUCKET_KEYS, aging_rows, aging_totals, ledger_summary
+from apps.ledger.selectors.entry import BOOK_BALANCE_FIELD, book_of
 from apps.ledger.services.statement_csv import neutralise
 from apps.ledger.views.exports import audit_export, authorise_export
 
@@ -39,7 +40,7 @@ DEFAULT_ORDERING = "-90_plus"
 ALLOWED_ORDERING = {"-90_plus", "90_plus", "-total", "total", "name", "-name"}
 
 
-def book_has_any(tenant: Any) -> bool:
+def book_has_any(tenant: Any, book: str | None = None) -> bool:
     """`meta.has_any` (owner, 12 Oct 2026): has this business EVER recorded a
     ledger entry?
 
@@ -50,7 +51,8 @@ def book_has_any(tenant: Any) -> bool:
     who has corrected an entry has a book, and the screen that hides a
     correction behind a toggle still needs the toggle.
     """
-    return LedgerEntry.objects.filter(tenant=tenant).exists()
+    entries = LedgerEntry.objects.filter(tenant=tenant)
+    return (entries.filter(bucket=book) if book else entries).exists()
 
 
 class LedgerSummaryView(TenantScopeMixin, APIView):
@@ -68,11 +70,12 @@ class LedgerSummaryView(TenantScopeMixin, APIView):
         from apps.ledger.selectors.collection import collection_buckets
 
         tenant = self.get_tenant()
-        totals = ledger_summary(tenant=tenant)
+        book = book_of(request.query_params.get("book"))
+        totals = ledger_summary(tenant=tenant, field=BOOK_BALANCE_FIELD[book])
         # LED-05 FR-3 — the three collection buckets ride on the same response,
         # each `{count, amount}`, against the tenant's today (`as_of`).
         today = tenant_today(tenant)
-        buckets = collection_buckets(tenant=tenant, today=today)
+        buckets = collection_buckets(tenant=tenant, today=today, field=BOOK_BALANCE_FIELD[book])
         return StandardResponse.ok(
             {
                 **{key: str(value) for key, value in totals.items()},
@@ -84,7 +87,7 @@ class LedgerSummaryView(TenantScopeMixin, APIView):
             },
             # The reminders screen reads its tab counts from here, so the
             # empty-book decision rides on the same response (`book_has_any`).
-            meta={"has_any": book_has_any(tenant)},
+            meta={"has_any": book_has_any(tenant, book)},
         )
 
 
@@ -164,7 +167,9 @@ class LedgerAgingView(TenantScopeMixin, APIView):
         """The report, named, filtered, ordered — before paging."""
         tenant = self.get_tenant()
         as_of, kind, ordering = self._validate_params(request)
-        raw = aging_rows(tenant=tenant, as_of=as_of, kind=kind)
+        raw = aging_rows(
+            tenant=tenant, as_of=as_of, kind=kind, bucket=book_of(request.query_params.get("book"))
+        )
 
         names = self._party_names(tenant, list(raw), request.query_params.get("tag"))
         rows = [
@@ -258,7 +263,8 @@ class LedgerAgingView(TenantScopeMixin, APIView):
                 # Whole-book, never filtered: a tag or an as-of date that finds
                 # nobody keeps its controls; only a business with no entry at
                 # all is reduced to the empty state (`book_has_any`).
-                "has_any": bool(rows) or book_has_any(self.get_tenant()),
+                "has_any": bool(rows)
+                or book_has_any(self.get_tenant(), book_of(request.query_params.get("book"))),
             },
         )
 

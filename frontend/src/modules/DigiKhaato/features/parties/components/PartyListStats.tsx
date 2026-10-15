@@ -50,6 +50,8 @@ import type { PartyListTotals } from '../view-model/partyDisplay';
  * one that plainly does not invite the tap.
  */
 export interface PartyListStatsProps {
+  /** Suppliers lead with the payable metric when the phone summary is collapsed. */
+  readonly payableFirst?: boolean;
   readonly totals: PartyListTotals;
   /** Every party the current filter matches — not the page's row count. */
   readonly total: number;
@@ -102,6 +104,7 @@ function PartyListStatsBase({
   payableActionLabel,
   loading = false,
   loadingLabel,
+  payableFirst = false,
 }: Readonly<PartyListStatsProps>) {
   const showReceivable = useCallback(() => onBalanceToggle('owes_me'), [onBalanceToggle]);
   const showPayable = useCallback(() => onBalanceToggle('i_owe'), [onBalanceToggle]);
@@ -118,30 +121,38 @@ function PartyListStatsBase({
     );
   }
 
+  const receivable = (
+    <UbStatCard
+      key="receivable"
+      icon={<ArrowDownLeft className="h-3.5 w-3.5" />}
+      label={receivableLabel}
+      value={formatInr(totals.receivable)}
+      subtext={scopeNote}
+      // §23.2.4 — receivable is the ledger debit family, never the
+      // validation red.
+      tone="danger"
+      onClick={showReceivable}
+      pressed={appliedBalance === 'owes_me'}
+      actionLabel={receivableActionLabel}
+    />
+  );
+  const payable = (
+    <UbStatCard
+      key="payable"
+      icon={<ArrowUpRight className="h-3.5 w-3.5" />}
+      label={payableLabel}
+      value={formatInr(totals.payable)}
+      subtext={scopeNote}
+      tone="success"
+      onClick={showPayable}
+      pressed={appliedBalance === 'i_owe'}
+      actionLabel={payableActionLabel}
+    />
+  );
+
   return (
     <SummaryStatGrid storageKey="parties" live label={regionLabel}>
-      <UbStatCard
-        icon={<ArrowDownLeft className="h-3.5 w-3.5" />}
-        label={receivableLabel}
-        value={formatInr(totals.receivable)}
-        subtext={scopeNote}
-        // §23.2.4 — receivable is the ledger debit family, never the
-        // validation red.
-        tone="danger"
-        onClick={showReceivable}
-        pressed={appliedBalance === 'owes_me'}
-        actionLabel={receivableActionLabel}
-      />
-      <UbStatCard
-        icon={<ArrowUpRight className="h-3.5 w-3.5" />}
-        label={payableLabel}
-        value={formatInr(totals.payable)}
-        subtext={scopeNote}
-        tone="success"
-        onClick={showPayable}
-        pressed={appliedBalance === 'i_owe'}
-        actionLabel={payableActionLabel}
-      />
+      {payableFirst ? [payable, receivable] : [receivable, payable]}
       {/* Neutral on purpose. A count is not money and must not wear a ledger
           colour — a green "30" beside a green "₹293.00" reads as a figure the
           merchant is owed. */}

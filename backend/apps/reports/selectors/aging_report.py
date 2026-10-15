@@ -67,6 +67,7 @@ def aging_report(
     min_total: Decimal | None = None,
     bucket: str | None = None,
     ordering: str = "-90_plus",
+    book: str = "main",
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     """Every party with something outstanding on `kind`'s side, filtered and ordered.
 
@@ -78,7 +79,7 @@ def aging_report(
     from apps.parties.filters import PartyFilterSet
     from apps.parties.models import Party
 
-    raw = aging_rows(tenant=tenant, as_of=as_of, kind=kind)
+    raw = aging_rows(tenant=tenant, as_of=as_of, kind=kind, bucket=book)
     if party_id:
         raw = {key: value for key, value in raw.items() if key == str(party_id)}
     parties = Party.objects.filter(tenant=tenant, id__in=list(raw)).prefetch_related("tags")
@@ -97,7 +98,7 @@ def aging_report(
             entry_type__in=payment_types,
             entry_date__lte=as_of,
             # A2 — the last TRADE payment, like the aging it sits beside (`main` only).
-            bucket="main",
+            bucket=book,
         )
         .values("party_id")
         .annotate(last=Max("entry_date"))

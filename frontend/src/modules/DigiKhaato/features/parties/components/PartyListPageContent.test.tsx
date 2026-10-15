@@ -2016,6 +2016,22 @@ describe('one book: Suppliers', () => {
     setTier('cards');
   });
 
+  it('leads the collapsed Suppliers summary with what must be paid', async () => {
+    window.localStorage.removeItem('ub.statSummary.parties');
+    partyService.listParties.mockResolvedValue(
+      loaded([{ ...RAMESH, isCustomer: false, isSupplier: true, balance: '-2688.00' }])
+    );
+    renderWithProviders(<PartyListPageContent kind="supplier" book="shop" />);
+    await screen.findByText('Ramesh Traders');
+    expect(screen.getByRole('textbox', { name: 'Search suppliers' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('list', { name: 'Suppliers, what you owe, and their latest activity' })
+    ).toBeInTheDocument();
+    const summary = screen.getByRole('button', { name: 'Details' });
+    expect(summary.querySelector('dt')).toHaveTextContent('To pay');
+    expect(summary.querySelector('dd')).toHaveTextContent('₹2,688.00');
+  });
+
   it('asks only for suppliers, names the page, and offers no type chip', async () => {
     partyService.listParties.mockResolvedValue(EMPTY);
     renderWithProviders(<PartyListPageContent kind="supplier" />);

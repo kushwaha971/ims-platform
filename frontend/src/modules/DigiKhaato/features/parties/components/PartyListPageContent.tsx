@@ -607,13 +607,18 @@ export function PartyListPageContent({
       <UbStack gap={4}>
         {showStats && (
           <PartyListStats
+            payableFirst={kind === 'supplier'}
             loading={statsLoading}
             loadingLabel={t('parties.list.totals.loading')}
             totals={totals}
             total={meta.total}
             receivableLabel={t('parties.list.totals.receivable')}
             payableLabel={t('parties.list.totals.payable')}
-            countLabel={t('parties.list.stats.customers')}
+            countLabel={
+              kind === 'supplier'
+                ? t('parties.list.supplier.title')
+                : t('parties.list.stats.customers')
+            }
             countValue={n(meta.total)}
             regionLabel={t('parties.list.totals.region')}
             appliedBalance={filters.balance}
@@ -713,7 +718,9 @@ export function PartyListPageContent({
             skeletonRows={8}
             labels={labels}
             emptyStates={emptyStates}
-            caption={t('parties.list.caption')}
+            caption={t(
+              kind === 'supplier' ? 'parties.list.supplier.caption' : 'parties.list.caption'
+            )}
             storageId="parties.list"
             page={meta}
             onPageChange={setPage}
@@ -762,7 +769,11 @@ export function PartyListPageContent({
                   value={searchInput}
                   onChange={setSearchInput}
                   type="text"
-                  aria-label={t('parties.list.search.label')}
+                  aria-label={t(
+                    kind === 'supplier'
+                      ? 'parties.list.supplier.searchLabel'
+                      : 'parties.list.search.label'
+                  )}
                   placeholder={t('parties.list.search.placeholder')}
                 />
               )

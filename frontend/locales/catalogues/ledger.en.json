@@ -2,7 +2,7 @@
   "ledger.aging.asOf": "As of",
   "ledger.aging.asOf.future": "As-of date cannot be in the future",
   "ledger.aging.asOfValue": "As of {date}",
-  "ledger.aging.bar.label": "Age of what {party} owes: {detail}",
+  "ledger.aging.bar.label": "Dues by age for {party}: {detail}",
   "ledger.aging.bucket.0_30": "0–30 days",
   "ledger.aging.bucket.31_60": "31–60 days",
   "ledger.aging.bucket.61_90": "61–90 days",

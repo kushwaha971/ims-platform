@@ -2,7 +2,7 @@
   "ledger.aging.asOf": "तारीख तक",
   "ledger.aging.asOf.future": "तारीख आगे की नहीं हो सकती",
   "ledger.aging.asOfValue": "{date} तक",
-  "ledger.aging.bar.label": "{party} के बाकी की उम्र: {detail}",
+  "ledger.aging.bar.label": "{party} का बकाया कितने दिन पुराना है: {detail}",
   "ledger.aging.bucket.0_30": "0–30 दिन",
   "ledger.aging.bucket.31_60": "31–60 दिन",
   "ledger.aging.bucket.61_90": "61–90 दिन",

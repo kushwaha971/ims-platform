@@ -656,7 +656,7 @@ describe('every figure is a way in (FR-4)', () => {
 
     const bar = await screen.findByRole('img', { name: /Ramesh Traders/ });
     expect(bar).toHaveAccessibleName(
-      'Age of what Ramesh Traders owes: 0–30 days, ₹400.00; 31–60 days, ₹0.00; ' +
+      'Dues by age for Ramesh Traders: 0–30 days, ₹400.00; 31–60 days, ₹0.00; ' +
         '61–90 days, ₹0.00; 90+ days, ₹1,200.00'
     );
     // Only the buckets with money get a segment, and they fill the track.
@@ -690,5 +690,22 @@ describe('every figure is a way in (FR-4)', () => {
         screen.queryByRole('button', { name: 'Open the statement for Ramesh Traders' })
       ).not.toBeInTheDocument();
     }
+  );
+});
+
+it('keeps Shop aging requests, exports and statement links in the Shop book', async () => {
+  signIn([...OWNER_PERMISSIONS, 'reports.basic.read'], ['ledger', 'reports', 'parties']);
+  setTier('full');
+  renderWithProviders(<AgingPageContent book="shop" />);
+  await screen.findByRole('link', { name: 'Ramesh Traders' });
+  expect(lastAsked().book).toBe('shop');
+  expect(agingService.getLedgerSummary).toHaveBeenCalledWith(expect.anything(), 'shop');
+  expect(screen.getByRole('link', { name: 'Ramesh Traders' })).toHaveAttribute(
+    'href',
+    expect.stringContaining('book=shop')
+  );
+  expect(screen.getByRole('link', { name: 'Export CSV' })).toHaveAttribute(
+    'href',
+    expect.stringContaining('book=shop')
   );
 });

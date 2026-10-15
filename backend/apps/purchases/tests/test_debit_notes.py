@@ -169,8 +169,8 @@ def test_void_brings_the_goods_and_the_bill_back_and_a_noted_bill_waits(
 def test_goods_already_sold_cannot_be_sent_back_unless_negative_stock_is_allowed(
     owner: Any, make_supplier: Any, make_item: Any
 ) -> None:
-    from apps.inventory.services.stock import MovementLine, post_movements
     from apps.common.context import Ctx
+    from apps.inventory.services.stock import MovementLine, post_movements
 
     supplier, rice = make_supplier(), make_item("Rice", "100.00", "GST0")
     bill = recorded_bill(owner, party_id=str(supplier.id), lines=[line(rice, "10", "100.00")])
@@ -211,3 +211,30 @@ def test_the_accountant_reads_notes_and_staff_cannot_void_one(
         == 403
     )
     assert owner.get(bill_url(note["id"])).status_code == 404  # never a bill
+
+
+def test_retry_of_a_return_replays_without_moving_stock_or_money_twice(
+    owner: Any, make_supplier: Any, make_item: Any
+) -> None:
+    """A lost response followed by Retry must not send the same bags back twice."""
+    supplier, rice = make_supplier(), make_item("Rice", "100.00", "GST0")
+    bill = recorded_bill(owner, party_id=str(supplier.id), lines=[line(rice, "10", "100.00")])
+    body = {
+        "against_id": bill["id"],
+        "reason": "damaged_goods",
+        "lines": [{"bill_line_no": 1, "qty": "2"}],
+    }
+    first = owner.post(reverse(NOTES), body, format="json", HTTP_IDEMPOTENCY_KEY="return-retry")
+    replay = owner.post(reverse(NOTES), body, format="json", HTTP_IDEMPOTENCY_KEY="return-retry")
+    assert first.status_code == replay.status_code == 201
+    assert replay.json()["data"]["id"] == first.json()["data"]["id"]
+    assert replay["Idempotent-Replayed"] == "true"
+    assert on_hand(rice) == 8
+    supplier.refresh_from_db()
+    assert supplier.shop_balance == Decimal("-800.00")
+    changed = {**body, "reason": "short_supply"}
+    conflict = owner.post(
+        reverse(NOTES), changed, format="json", HTTP_IDEMPOTENCY_KEY="return-retry"
+    )
+    assert conflict.status_code == 409
+    assert on_hand(rice) == 8

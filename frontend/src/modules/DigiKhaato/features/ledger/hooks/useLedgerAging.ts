@@ -74,7 +74,7 @@ export interface UseLedgerAgingResult {
   readonly refetch: () => void;
 }
 
-export const useLedgerAging = (): UseLedgerAgingResult => {
+export const useLedgerAging = (book: 'main' | 'shop' = 'main'): UseLedgerAgingResult => {
   const dispatch = useAppDispatch();
   const router = useRouter();
   const search = useSearchParams();
@@ -110,8 +110,11 @@ export const useLedgerAging = (): UseLedgerAgingResult => {
      have discovered as a page that never settles. */
   const queryString = search?.toString() ?? '';
   const filters = useMemo(
-    () => filtersFromQuery(new URLSearchParams(queryString), today),
-    [queryString, today]
+    () => ({
+      ...filtersFromQuery(new URLSearchParams(queryString), today),
+      ...(book === 'shop' ? { book } : {}),
+    }),
+    [queryString, today, book]
   );
   const problem = useMemo(() => asOfProblem(filters.asOf, today), [filters.asOf, today]);
 
@@ -131,9 +134,9 @@ export const useLedgerAging = (): UseLedgerAgingResult => {
      a merchant switches tabs is a request whose answer cannot have changed. */
   useEffect(() => {
     if (!canRead) return undefined;
-    const promise = dispatch(fetchLedgerSummary());
+    const promise = dispatch(fetchLedgerSummary(book === 'shop' ? book : undefined));
     return () => promise.abort();
-  }, [dispatch, canRead]);
+  }, [dispatch, canRead, book]);
 
   useEffect(() => {
     if (!stale || isImpaired || !canRead || problem) return undefined;

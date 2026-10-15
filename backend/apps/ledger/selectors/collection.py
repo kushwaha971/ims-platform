@@ -38,23 +38,26 @@ def bucket_filters(today: dt.date) -> dict[str, Q]:
     }
 
 
-def collection_buckets(*, tenant: Any, today: dt.date) -> dict[str, dict[str, Any]]:
+def collection_buckets(
+    *, tenant: Any, today: dt.date, field: str = "balance"
+) -> dict[str, dict[str, Any]]:
     from apps.parties.constants import PartyStatus
     from apps.parties.models import Party
 
     empty = {key: {"count": 0, "amount": ZERO} for key in BUCKETS}
     if tenant is None:
         return empty
+    trade = F("shop_balance" if field == "shop_balance" else "balance")
     money = DecimalField(max_digits=14, decimal_places=2)
     aggregates: dict[str, Any] = {}
     for key, predicate in bucket_filters(today).items():
         aggregates[f"{key}__count"] = Count("id", filter=predicate)
         aggregates[f"{key}__amount"] = Coalesce(
-            Sum(TRADE, filter=predicate), Decimal("0.00"), output_field=money
+            Sum(trade, filter=predicate), Decimal("0.00"), output_field=money
         )
     row = (
         Party.objects.for_tenant(tenant)
-        .alias(trade=TRADE)
+        .alias(trade=trade)
         .filter(status=PartyStatus.ACTIVE, trade__gt=ZERO, collection_date__isnull=False)
         .aggregate(**aggregates)
     )

@@ -5,11 +5,11 @@ import { useCallback, useEffect, useId, useMemo } from 'react';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useFieldArray, useForm, useWatch } from 'react-hook-form';
 
+import { CompactDrawer as UbDrawer } from 'src/components/records/CompactOverlays';
 import {
   UbAsyncCombobox,
   UbButton,
   UbDateInput,
-  UbDrawer,
   UbField,
   UbForm,
   UbInfoRow,

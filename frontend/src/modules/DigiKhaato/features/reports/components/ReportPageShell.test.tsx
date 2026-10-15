@@ -162,7 +162,7 @@ describe('ReportsHubPageContent', () => {
     );
     expect(screen.getByRole('link', { name: 'Payables aging' })).toHaveAttribute(
       'href',
-      '/ledger/aging?type=payable'
+      '/reports/aging?type=payable'
     );
     expect(screen.queryByRole('link', { name: 'Stock summary' })).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Cashbook' })).not.toBeInTheDocument();

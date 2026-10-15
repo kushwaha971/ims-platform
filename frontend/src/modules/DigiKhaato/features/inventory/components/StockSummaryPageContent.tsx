@@ -434,6 +434,7 @@ export function StockSummaryPageContent(): React.JSX.Element {
                 <UbStack direction="row" gap={2} wrap align="center">
                   {/* Owner, 6 Oct 2026: category and status behind ONE Filters button. */}
                   <UbFilterSheet
+                    compact
                     specs={sheetSpecs}
                     values={sheetValues}
                     onApply={applySheet}

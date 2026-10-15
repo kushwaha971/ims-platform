@@ -2,10 +2,10 @@
 
 import { useCallback, useRef } from 'react';
 
+import { CompactDrawer as UbDrawer } from 'src/components/records/CompactOverlays';
 import {
   UbAmount,
   UbButton,
-  UbDrawer,
   UbInfoRow,
   UbStack,
   UbStatusBadge,

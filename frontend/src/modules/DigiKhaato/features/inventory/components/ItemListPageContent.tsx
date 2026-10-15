@@ -367,6 +367,7 @@ export function ItemListPageContent(): React.JSX.Element {
            what is on shows beside it as pills. */
         <>
           <UbFilterSheet
+            compact
             specs={sheetSpecs}
             values={sheetValues}
             onApply={applySheet}

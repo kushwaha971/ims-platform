@@ -40,6 +40,7 @@ from typing import Any
 from django.db.models import DateField, DecimalField, ExpressionWrapper, F, Min, Sum
 from django.db.models.functions import Coalesce, TruncDay, TruncMonth, TruncWeek, TruncYear
 
+from apps.common.constants import LedgerBucket
 from apps.common.money import ZERO
 from apps.reports.constants import (
     CREDIT_NOTE_KIND,
@@ -354,7 +355,9 @@ def top_customers(span: _Span) -> list[dict[str, Any]]:
 def receivable_aging(*, tenant: Any, as_of: dt.date) -> list[dict[str, str]]:
     from apps.ledger.selectors.aging import BUCKET_KEYS, aging_rows, aging_totals
 
-    totals = aging_totals(aging_rows(tenant=tenant, as_of=as_of, kind="receivable"))
+    totals = aging_totals(
+        aging_rows(tenant=tenant, as_of=as_of, kind="receivable", bucket=LedgerBucket.SHOP)
+    )
     return [{"key": key, "amount": _money(totals[key])} for key in BUCKET_KEYS]
 
 

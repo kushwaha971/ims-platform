@@ -34,6 +34,8 @@ export interface LedgerAgingState {
   summaryStatus: RequestStatus;
   error: ApiErrorShape | null;
   filters: AgingFilters | null;
+  requestId: string | null;
+  summaryRequestId: string | null;
   stale: boolean;
   staleUrgency: 'now' | 'next-mount' | null;
 }
@@ -52,6 +54,8 @@ const initialState: LedgerAgingState = {
   summaryStatus: 'idle',
   error: null,
   filters: null,
+  requestId: null,
+  summaryRequestId: null,
   stale: false,
   staleUrgency: null,
 };
@@ -70,6 +74,11 @@ const ledgerAgingSlice = createSlice({
      * never true.
      */
     agingFiltersChanged(state, action: PayloadAction<AgingFilters>) {
+      if ((state.filters?.book ?? 'main') !== (action.payload.book ?? 'main')) {
+        state.summary = null;
+        state.summaryRequestId = null;
+      }
+      state.requestId = null;
       state.filters = action.payload as Draft<AgingFilters>;
       state.rows = [];
       state.totals = null;
@@ -82,19 +91,21 @@ const ledgerAgingSlice = createSlice({
     acceptInvalidation<LedgerAgingState>('ledgerAging')(builder);
 
     builder
-      .addCase(fetchLedgerAging.pending, (state) => {
+      .addCase(fetchLedgerAging.pending, (state, action) => {
+        state.requestId = action.meta.requestId;
         state.status = state.rows.length > 0 ? 'refreshing' : 'loading';
         state.error = null;
       })
       .addCase(fetchLedgerAging.fulfilled, (state, action) => {
-        /* The late-response guard, keyed on the AS-OF and the TYPE rather than
-           on a party id: this report has no single subject, and the two things
-           that make one answer wrong for another question are the date it was
-           computed at and which side of the book it is about. A payable page
-           landing under the receivable tab would show a merchant their
-           suppliers under the heading "You will get". */
+        // A previous filter, page or tenant must not repaint this report.
+        if (state.requestId !== action.meta.requestId) return;
         const asked = state.filters;
-        if (asked && (asked.asOf !== action.payload.asOf || asked.kind !== action.payload.kind)) {
+        if (
+          asked &&
+          (asked.asOf !== action.payload.asOf ||
+            asked.kind !== action.payload.kind ||
+            (asked.book ?? 'main') !== (action.meta.arg.book ?? 'main'))
+        ) {
           return;
         }
         state.rows = action.payload.rows as Draft<AgingRow>[];
@@ -111,18 +122,22 @@ const ledgerAgingSlice = createSlice({
         state.staleUrgency = null;
       })
       .addCase(fetchLedgerAging.rejected, (state, action) => {
-        if (action.meta.aborted) return;
+        if (action.meta.aborted || state.requestId !== action.meta.requestId) return;
         state.status = 'failed';
         state.error = (action.payload ?? null) as Draft<ApiErrorShape> | null;
       })
-      .addCase(fetchLedgerSummary.pending, (state) => {
+      .addCase(fetchLedgerSummary.pending, (state, action) => {
+        state.summaryRequestId = action.meta.requestId;
         state.summaryStatus = 'loading';
       })
       .addCase(fetchLedgerSummary.fulfilled, (state, action) => {
+        if (state.summaryRequestId !== action.meta.requestId) return;
+        if ((state.filters?.book ?? 'main') !== (action.meta.arg || 'main')) return;
         state.summary = action.payload as Draft<LedgerSummary>;
         state.summaryStatus = 'succeeded';
       })
-      .addCase(fetchLedgerSummary.rejected, (state) => {
+      .addCase(fetchLedgerSummary.rejected, (state, action) => {
+        if (action.meta.aborted || state.summaryRequestId !== action.meta.requestId) return;
         /* No error state, and that is deliberate: the summary is two figures in
            a header above a report that has its own error strip. Two red panels
            for one failed page is a screen that looks broken twice. */

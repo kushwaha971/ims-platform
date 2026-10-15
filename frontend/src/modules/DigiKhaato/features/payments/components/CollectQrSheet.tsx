@@ -4,10 +4,10 @@ import { useCallback, useState } from 'react';
 
 import { CheckCircle2, QrCode, Smartphone } from 'lucide-react';
 
+import { CompactDrawer as UbDrawer } from 'src/components/records/CompactOverlays';
 import {
   UbActionLink,
   UbButton,
-  UbDrawer,
   UbMoneyInput,
   UbQrCode,
   UbStack,

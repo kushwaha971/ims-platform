@@ -5,15 +5,8 @@ import { useId } from 'react';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useForm } from 'react-hook-form';
 
-import {
-  UbButton,
-  UbDrawer,
-  UbField,
-  UbForm,
-  UbPhoneInput,
-  UbText,
-  UbTextInput,
-} from 'src/design-system';
+import { CompactDrawer as UbDrawer } from 'src/components/records/CompactOverlays';
+import { UbButton, UbField, UbForm, UbPhoneInput, UbText, UbTextInput } from 'src/design-system';
 import { useAppDispatch, useAppSelector } from 'src/hooks/useAppStore';
 import { useDegradedNetwork } from 'src/hooks/useDegradedNetwork';
 import { useIsOwnerOrAdmin } from 'src/hooks/useIsOwnerOrAdmin';

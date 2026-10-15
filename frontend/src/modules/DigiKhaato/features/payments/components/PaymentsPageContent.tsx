@@ -357,6 +357,7 @@ export function PaymentsPageContent(): React.JSX.Element {
             <UbStack direction="row" gap={2} align="center">
               {searchBox}
               <UbFilterSheet
+                compact
                 specs={phoneSpecs}
                 values={phoneValues}
                 onApply={applyPhone}

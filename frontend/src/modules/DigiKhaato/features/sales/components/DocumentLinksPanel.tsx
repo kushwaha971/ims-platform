@@ -34,7 +34,7 @@ export function DocumentLinksPanel({
   const { links } = doc;
   const uses = (rows: readonly SalesCreditUse[], labelId: string) =>
     rows.length > 0 && (
-      <UbStack gap={1}>
+      <UbStack key={labelId} gap={1}>
         <UbText variant="caption" tone="tertiary">
           {t(labelId)}
         </UbText>

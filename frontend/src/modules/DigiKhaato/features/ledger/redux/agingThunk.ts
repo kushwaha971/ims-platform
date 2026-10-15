@@ -32,11 +32,11 @@ export const fetchLedgerAging = createAsyncThunk<
  */
 export const fetchLedgerSummary = createAsyncThunk<
   LedgerSummary,
-  void,
+  'main' | 'shop' | void,
   { rejectValue: ApiErrorShape }
->('ledgerAging/fetchLedgerSummary', async (_arg, { signal, rejectWithValue }) => {
+>('ledgerAging/fetchLedgerSummary', async (book, { signal, rejectWithValue }) => {
   try {
-    return await getLedgerSummary(signal);
+    return await getLedgerSummary(signal, book || 'main');
   } catch (error) {
     return rejectWithValue(toApiError(error, 'ledger.aging.error.title'));
   }

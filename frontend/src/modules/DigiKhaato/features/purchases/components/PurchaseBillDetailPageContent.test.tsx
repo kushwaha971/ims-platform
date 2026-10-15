@@ -367,21 +367,23 @@ describe('debit notes', () => {
     (jest.requireMock('../api/purchaseBillService') as { issueDebitNote: jest.Mock })
       .issueDebitNote;
 
-  it('returns goods from a bill with the quantity and the reason typed', async () => {
+  it('retries a failed return with the same key, quantity and reason', async () => {
     signIn(OWNER);
     service.getPurchaseBill.mockResolvedValue(
       envelope({ ...BILL, links: { ...BILL.links, returned: { '1': '15.000' } } })
     );
-    issueMock().mockResolvedValue(
-      envelope({
-        ...BILL,
-        id: 'dn1',
-        kind: 'debit_note',
-        number: 'DN/26-27/0001',
-        status: 'issued',
-        grandTotal: '241.50',
-      })
-    );
+    issueMock()
+      .mockRejectedValueOnce(new Error('Response lost'))
+      .mockResolvedValue(
+        envelope({
+          ...BILL,
+          id: 'dn1',
+          kind: 'debit_note',
+          number: 'DN/26-27/0001',
+          status: 'issued',
+          grandTotal: '241.50',
+        })
+      );
     renderWithProviders(<PurchaseBillDetailPageContent id="b1" />);
     await userEvent.click(await screen.findByTestId('purchase-return'));
     expect(await screen.findByText(/can return 5 NOS/)).toBeInTheDocument();
@@ -391,8 +393,14 @@ describe('debit notes', () => {
     await userEvent.clear(screen.getByLabelText('Quantity of Rice to return'));
     await userEvent.type(screen.getByLabelText('Quantity of Rice to return'), '5');
     expect(issue).toBeDisabled(); // no reason yet
-    await userEvent.selectOptions(screen.getByLabelText('Reason'), 'damaged_goods');
+    await userEvent.click(screen.getByRole('combobox', { name: 'Reason' }));
+    await userEvent.click(screen.getByRole('option', { name: 'Damaged goods' }));
     await userEvent.click(issue);
+    await waitFor(() => expect(issueMock()).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(issue).toBeEnabled());
+    await userEvent.click(issue);
+    await waitFor(() => expect(issueMock()).toHaveBeenCalledTimes(2));
+    expect(issueMock().mock.calls[1]).toEqual(issueMock().mock.calls[0]);
     await waitFor(() =>
       expect(issueMock()).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -400,7 +408,8 @@ describe('debit notes', () => {
           reason: 'damaged_goods',
           restock: true,
           lines: [{ bill_line_no: 1, qty: '5' }],
-        })
+        }),
+        expect.any(String)
       )
     );
   });

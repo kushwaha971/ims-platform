@@ -62,7 +62,7 @@ export const REPORT_CATALOGUE: readonly ReportCatalogueEntry[] = [
   {
     key: 'receivablesAging',
     group: 'parties',
-    href: ROUTES.LEDGER_AGING,
+    href: ROUTES.REPORT_AGING,
     modules: ['ledger'],
     permissions: ['ledger.entry.read'],
     icon: 'receivable',
@@ -70,7 +70,7 @@ export const REPORT_CATALOGUE: readonly ReportCatalogueEntry[] = [
   {
     key: 'payablesAging',
     group: 'parties',
-    href: `${ROUTES.LEDGER_AGING}?type=payable`,
+    href: `${ROUTES.REPORT_AGING}?type=payable`,
     modules: ['ledger'],
     permissions: ['ledger.entry.read'],
     icon: 'payable',

@@ -97,6 +97,7 @@ def _report(tenant: Any, params: dict) -> tuple[list[dict], dict]:
         party_id=params.get("party_id"),
         min_total=Decimal(params["min_total"]) if params.get("min_total") else None,
         bucket=params.get("bucket"),
+        book=params.get("book", "main"),
         ordering=params.get("ordering") or "-90_plus",
     )
 
@@ -179,6 +180,7 @@ class _AgingReportView(ReportFormatMixin, TenantScopeMixin, APIView):
         return {
             "as_of": as_of.isoformat(),
             "kind": self.kind,
+            "book": "shop" if params.get("book") == "shop" else "main",
             "tag": params.get("tag") or None,
             "party_id": party_id,
             "min_total": min_total,

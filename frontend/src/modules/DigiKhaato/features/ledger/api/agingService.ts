@@ -56,6 +56,7 @@ export const getLedgerAging = async (
 ): Promise<AgingPage> => {
   const response = await api.get<AgingApiResponse>(
     `${API_PATHS.LEDGER_AGING}${toQueryString({
+      book: filters.book === 'shop' ? 'shop' : undefined,
       type: filters.kind,
       as_of: filters.asOf || undefined,
       tag: filters.tag || undefined,
@@ -82,9 +83,12 @@ export const getLedgerAging = async (
   };
 };
 
-export const getLedgerSummary = async (signal?: AbortSignal): Promise<LedgerSummary> => {
+export const getLedgerSummary = async (
+  signal?: AbortSignal,
+  book: 'main' | 'shop' = 'main'
+): Promise<LedgerSummary> => {
   const response = await api.get<{ data: LedgerSummary }>(
-    API_PATHS.LEDGER_SUMMARY,
+    `${API_PATHS.LEDGER_SUMMARY}${book === 'shop' ? '?book=shop' : ''}`,
     ubConfig({ signal })
   );
   return { receivable: response.data.data.receivable, payable: response.data.data.payable };
@@ -99,6 +103,7 @@ export const getLedgerSummary = async (signal?: AbortSignal): Promise<LedgerSumm
  */
 export const agingCsvUrl = (filters: AgingFilters): string => {
   const query = toQueryString({
+    book: filters.book === 'shop' ? 'shop' : undefined,
     type: filters.kind,
     as_of: filters.asOf || undefined,
     tag: filters.tag || undefined,
@@ -119,6 +124,7 @@ export const agingReportCsvUrl = (filters: AgingFilters): string => {
     as_of: filters.asOf || undefined,
     tag: filters.tag || undefined,
     ordering: filters.ordering || undefined,
+    book: filters.book === 'shop' ? 'shop' : undefined,
     format: 'csv',
   });
   const path =

@@ -4,12 +4,12 @@ import { useId, useMemo, useState } from 'react';
 
 import { useRouter } from 'next/navigation';
 
+import { CompactDrawer as UbDrawer } from 'src/components/records/CompactOverlays';
 import {
   UbButton,
   UbDateInput,
   UbDivider,
-  UbDrawer,
-  UbNativeSelect,
+  UbSelect,
   UbQuantityInput,
   UbStack,
   UbStatusBanner,
@@ -19,6 +19,7 @@ import {
   isoToday,
 } from 'src/design-system';
 import { useAppDispatch } from 'src/hooks/useAppStore';
+import { useIdempotencyKey } from 'src/hooks/useIdempotencyKey';
 import { useTranslation } from 'src/hooks/useTranslation';
 import { showSnackbar } from 'src/redux/slice/snackbarSlice';
 import { ROUTES } from 'src/routes';
@@ -60,6 +61,7 @@ export function DebitNoteDrawer({
   const dispatch = useAppDispatch();
   const router = useRouter();
   const baseId = useId();
+  const idempotency = useIdempotencyKey();
   const [qty, setQty] = useState<Record<number, string>>({});
   const [reason, setReason] = useState<DebitNoteReason | ''>('');
   const [note, setNote] = useState('');
@@ -89,6 +91,7 @@ export function DebitNoteDrawer({
     setError(null);
     const result = await dispatch(
       issueDebitNote({
+        idempotencyKey: idempotency.key,
         against_id: bill.id,
         document_date: date,
         reason,
@@ -185,7 +188,7 @@ export function DebitNoteDrawer({
         </UbStack>
         <UbStack gap={1}>
           <UbText variant="body-sm-medium">{t('purchases.debitNote.reasonLabel')}</UbText>
-          <UbNativeSelect
+          <UbSelect
             id={`${baseId}-reason`}
             aria-label={t('purchases.debitNote.reasonLabel')}
             value={reason}

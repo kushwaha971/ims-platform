@@ -20,16 +20,13 @@ from apps.common.constants import ModuleCode
 from apps.common.context import Ctx
 from apps.common.dates import tenant_today
 from apps.common.exceptions import ValidationFailed
+from apps.common.idempotency import idempotent
 from apps.common.money import ZERO
 from apps.common.permissions import ModuleEnabled
 from apps.common.responses import StandardResponse
 from apps.common.throttling import ScopedUserRateThrottle
 from apps.common.viewsets import TenantScopeMixin
-from apps.purchases.constants import (
-    DEBIT_NOTE_KINDS,
-    DEBIT_NOTE_REASONS,
-    DEBIT_NOTE_TAB_STATUSES,
-)
+from apps.purchases.constants import DEBIT_NOTE_KINDS, DEBIT_NOTE_REASONS, DEBIT_NOTE_TAB_STATUSES
 from apps.purchases.filters import PurchaseBillFilterSet
 from apps.purchases.models import PurchaseDocument
 from apps.purchases.permissions import DebitNotePermissions
@@ -130,6 +127,7 @@ class DebitNoteViewSet(
         body = _note_envelope(get_object_or_404(self.get_queryset(), pk=kwargs["pk"]))
         return StandardResponse.ok(body["data"], meta=body["meta"])
 
+    @idempotent("purchase_debit_note_issue")
     def create(self, request: Any, *args: Any, **kwargs: Any) -> Any:
         serializer = DebitNoteWriteSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)

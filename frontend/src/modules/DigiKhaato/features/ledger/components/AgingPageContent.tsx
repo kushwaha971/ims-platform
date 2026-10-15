@@ -85,11 +85,13 @@ const PartyTagFilterLazy = dynamic(
  * question the merchant asked. Only the server can tell the two apart
  * (`meta.has_any`), and until it has said, nothing is hidden.
  */
-export function AgingPageContent(): React.JSX.Element {
+export function AgingPageContent({
+  book = 'main',
+}: Readonly<{ book?: 'main' | 'shop' }> = {}): React.JSX.Element {
   const { t } = useTranslation();
   const router = useRouter();
   const tier = useGridTier();
-  const aging = useLedgerAging();
+  const aging = useLedgerAging(book);
   const { tags } = usePartyTags();
   /* RPT-05 FR-9 — with Reports on, Export is the REPORT's file (FR-5's
      collection-sheet columns and a TOTAL row); without it, LED-09's own. */
@@ -97,8 +99,8 @@ export function AgingPageContent(): React.JSX.Element {
   const reportFile = hasModule('reports') && can('reports.basic.read');
 
   const columns = useMemo(
-    () => createAgingColumns({ t, kind: aging.filters.kind, asOf: aging.filters.asOf, tier }),
-    [t, aging.filters.kind, aging.filters.asOf, tier]
+    () => createAgingColumns({ t, kind: aging.filters.kind, asOf: aging.filters.asOf, tier, book }),
+    [t, aging.filters.kind, aging.filters.asOf, tier, book]
   );
 
   const labels = useMemo<UbDataGridLabels>(
@@ -182,8 +184,8 @@ export function AgingPageContent(): React.JSX.Element {
     [setOrdering]
   );
   const handleOpen = useCallback(
-    (row: AgingRow) => router.push(rowStatementHref(row.partyId, filters.asOf)),
-    [router, filters.asOf]
+    (row: AgingRow) => router.push(rowStatementHref(row.partyId, filters.asOf, book)),
+    [router, filters.asOf, book]
   );
   const handleTag = useCallback((next: string) => setTag(next || null), [setTag]);
   const rowId = useCallback((row: AgingRow) => row.partyId, []);

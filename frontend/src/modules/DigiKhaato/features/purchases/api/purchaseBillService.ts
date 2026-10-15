@@ -394,13 +394,16 @@ export interface DebitNoteWireBody {
 }
 
 /** PUR-07 — written and issued in one call; `insufficient_stock` is shown in the drawer. */
-export const issueDebitNote = async (body: DebitNoteWireBody): Promise<PurchaseBillEnvelope> =>
+export const issueDebitNote = async (
+  body: DebitNoteWireBody,
+  idempotencyKey: string
+): Promise<PurchaseBillEnvelope> =>
   toEnvelope(
     (
       await api.post<EnvelopeWire>(
         API_PATHS.DEBIT_NOTES,
         body,
-        ubConfig({ suppressErrorSnackbar: true })
+        ubConfig({ suppressErrorSnackbar: true, headers: { 'Idempotency-Key': idempotencyKey } })
       )
     ).data
   );

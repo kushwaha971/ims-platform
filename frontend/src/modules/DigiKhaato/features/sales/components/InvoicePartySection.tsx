@@ -105,6 +105,8 @@ export function InvoicePartySection({
         >
           {(field) => (
             <ExpensePartyField
+              type="customer"
+              disabled={disabled}
               field={{ ...field, value: field.value ?? '' }}
               partyName={partyName}
               t={t}

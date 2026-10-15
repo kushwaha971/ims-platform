@@ -57,6 +57,7 @@ export interface LedgerSummary {
 }
 
 export interface AgingFilters {
+  readonly book?: 'main' | 'shop';
   readonly kind: AgingKind;
   /** ISO `YYYY-MM-DD`. Defaults to the TENANT's today, never the device's. */
   readonly asOf: string;

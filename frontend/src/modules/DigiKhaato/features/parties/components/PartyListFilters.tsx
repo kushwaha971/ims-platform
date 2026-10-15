@@ -330,6 +330,7 @@ function PartyListFiltersBase({
         />
       )}
       <UbFilterSheet
+        compact
         specs={[...compactSpecs, ...specs]}
         values={values}
         onApply={apply}

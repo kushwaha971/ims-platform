@@ -10,6 +10,8 @@ const PUBLIC_ASSET_CACHE = 'public, max-age=86400, stale-while-revalidate=604800
 
 const nextConfig = {
   reactStrictMode: true,
+  // Permit an isolated loopback test session without sharing localhost cookies.
+  allowedDevOrigins: ['127.0.0.1'],
   // Keep the local development badge from covering Home on the mobile tab bar.
   devIndicators: false,
   poweredByHeader: false,

@@ -3,11 +3,13 @@
   "parties.list.customer.subtitle": "Everyone who buys from you.",
   "parties.list.customer.title": "Customers",
   "parties.list.supplier.add": "Add supplier",
+  "parties.list.supplier.caption": "Suppliers, what you owe, and their latest activity",
   "parties.list.supplier.column.name": "Supplier",
   "parties.list.supplier.empty.body": "Add the first supplier you buy stock from, and their khata starts here.",
   "parties.list.supplier.empty.chipsTitle": "No suppliers match these filters",
   "parties.list.supplier.empty.searchTitle": "No suppliers match “{q}”",
   "parties.list.supplier.empty.title": "No suppliers yet",
+  "parties.list.supplier.searchLabel": "Search suppliers",
   "parties.list.supplier.subtitle": "Everyone you buy from.",
   "parties.list.supplier.title": "Suppliers"
 }

@@ -303,3 +303,17 @@ it('B38 explains the sale date and later opening stock date on the refusal', asy
     await screen.findByText('QA Rice: no stock on 15/03/2026. Opening stock starts 01/04/2026.')
   ).toBeInTheDocument();
 });
+
+it('asks only for customers when choosing who a sales bill is for', async () => {
+  signIn(['sales.invoice.read', 'sales.invoice.write', 'parties.party.read']);
+  renderWithProviders(<InvoiceEditorPageContent documentId={null} />);
+  await userEvent.click(await screen.findByRole('radio', { name: 'Party' }));
+  await userEvent.click(screen.getByRole('combobox', { name: 'Party' }));
+  const parties = jest.requireMock('../../parties/api/partyService') as { listParties: jest.Mock };
+  await waitFor(() =>
+    expect(parties.listParties).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'customer' }),
+      expect.anything()
+    )
+  );
+});

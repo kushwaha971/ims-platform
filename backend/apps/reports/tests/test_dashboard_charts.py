@@ -275,3 +275,30 @@ def test_the_endpoint_checks_every_parameter_and_the_permission(tenant: Any, api
     member.permissions_override = {"deny": ["reports.basic.read"]}
     member.save(update_fields=["permissions_override"])
     assert staff.get(reverse(CHARTS)).status_code == 403
+
+
+def test_shop_dashboard_aging_excludes_other_books_and_matches_its_headline(tenant: Any) -> None:
+    from apps.ledger.models import LedgerEntry
+    from apps.reports.selectors.dashboard import party_tiles
+
+    person = b.party(tenant, balance=Decimal("1000.00"), shop_balance=Decimal("100.00"))
+    for bucket, direction, amount in [
+        ("main", "debit", "1000.00"),
+        ("loan", "debit", "300.00"),
+        ("library", "debit", "200.00"),
+        ("shop", "debit", "150.00"),
+        ("shop", "credit", "50.00"),
+    ]:
+        LedgerEntry.objects.create(
+            tenant=tenant,
+            party=person,
+            bucket=bucket,
+            direction=direction,
+            amount=Decimal(amount),
+            entry_date=TODAY,
+            entry_type="manual_got" if direction == "credit" else "manual_gave",
+            source_type="manual",
+        )
+    chart_total = sum(Decimal(row["amount"]) for row in _charts(tenant)["receivable_aging"])
+    assert chart_total == Decimal("100.00")
+    assert chart_total == Decimal(party_tiles(tenant=tenant, today=TODAY)["to_collect"]["amount"])

@@ -94,18 +94,28 @@ export const BUCKET_EDGES: Readonly<Record<AgingBucket, readonly [number, number
 const shift = (asOf: string, days: number): string =>
   new Date(Date.parse(`${asOf}T00:00:00Z`) - days * 86_400_000).toISOString().slice(0, 10);
 
-export const bucketStatementHref = (partyId: string, bucket: AgingBucket, asOf: string): string => {
+export const bucketStatementHref = (
+  partyId: string,
+  bucket: AgingBucket,
+  asOf: string,
+  book: 'main' | 'shop' = 'main'
+): string => {
   const [lower, upper] = BUCKET_EDGES[bucket];
   const to = shift(asOf, lower);
   const from = upper === null ? null : shift(asOf, upper);
   const query = new URLSearchParams({ preset: 'custom', to });
   if (from) query.set('from', from);
+  if (book === 'shop') query.set('book', book);
   return `${partyStatementPath(partyId)}?${query.toString()}`;
 };
 
 /** A row click opens the whole statement as of the report's date (FR-4). */
-export const rowStatementHref = (partyId: string, asOf: string): string =>
-  `${partyStatementPath(partyId)}?${new URLSearchParams({ preset: 'custom', to: asOf }).toString()}`;
+export const rowStatementHref = (
+  partyId: string,
+  asOf: string,
+  book: 'main' | 'shop' = 'main'
+): string =>
+  `${partyStatementPath(partyId)}?${new URLSearchParams({ preset: 'custom', to: asOf, ...(book === 'shop' ? { book } : {}) }).toString()}`;
 
 /** Is there anything in this bucket worth linking to? */
 export const hasAmount = (value: string): boolean => !/^-?0*\.?0*$/.test(value.trim());

@@ -1,5 +1,10 @@
 {
   "//": [
+    "15 Oct 2026, Shop audit: /reports/aging reuses the exact ledger aging screen,",
+    "measured 94.4 KB route /333.5 KB first load; assign the existing /ledger/aging",
+    "94.7/333.8 limits instead of the generic 56/288 fallback. Three existing routes",
+    "exceed by at most 0.1 KB after scoped book logic and role-specific supplier copy;",
+    "only their four exceeded scalars use measured +0.5 KB. Global/shared limits unchanged.",
     "2026-10-15 Lending parity: shared compact record UI, lazy borrower/loan drawers, global loan paging/read guards, editable message previews and shared phone-contact prefill. Only 12 exceeded Lending route/first-load scalars use measured + 0.5 KB; global and non-Lending budgets stay unchanged. Largest pre-adjustment overrun: 1.2 KB.",
     "2026-10-15 compact Library core: shared scroll-lock/combobox fixes, dense reusable cards/overlays, student drawers and scroll lists. Deferred category merge picker cuts categories/locations from 93.1 KB to 67.8 KB. Only 140 exceeded route/first-load scalars use measured + 0.5 KB; framework 127.3/128 KB and shared app 111.8/112 KB stay unchanged. Largest non-Library overrun before adjustment: 1.7 KB.",
     "2026-10-14 UX16 borrower workspace: lazy loan selection/inline schedules and UX18 sequenced reads; shared money-input focus preserves replacement selection. Only 19 exceeded scalars use measured + 0.5 KB; shared baseline stays 239.1 KB.",
@@ -1379,7 +1384,7 @@
       "firstLoad": 317.0
     },
     "/sales/challans": {
-      "route": 80.5,
+      "route": 81.0,
       "firstLoad": 319.6
     },
     "/sales/challans/new": {
@@ -1411,7 +1416,7 @@
       "firstLoad": 317.0
     },
     "/sales/orders": {
-      "route": 80.5,
+      "route": 81.0,
       "firstLoad": 319.6
     },
     "/sales/orders/new": {
@@ -1631,8 +1636,8 @@
       "firstLoad": 347.6
     },
     "/reports/profit": {
-      "route": 103.2,
-      "firstLoad": 342.2
+      "route": 103.8,
+      "firstLoad": 342.8
     },
     "/reports/purchase-register": {
       "route": 108.9,
@@ -1808,6 +1813,10 @@
     "/more": {
       "route": 56,
       "firstLoad": 288.9
+    },
+    "/reports/aging": {
+      "route": 94.7,
+      "firstLoad": 333.8
     }
   },
   "//ignoreRoutes": [
@@ -1816,5 +1825,7 @@
     "would drag the sharedApp intersection down to whatever those two files happen",
     "to share and quietly weaken every other line in this file."
   ],
-  "ignoreRoutes": ["/_global-error"]
+  "ignoreRoutes": [
+    "/_global-error"
+  ]
 }

@@ -44,6 +44,7 @@ export interface AgingColumnDeps {
   readonly kind: AgingKind;
   readonly asOf: string;
   readonly tier: UbGridTier;
+  readonly book?: 'main' | 'shop';
 }
 
 const BUCKET_WIDTH = 11;
@@ -53,6 +54,7 @@ export const createAgingColumns = ({
   kind,
   asOf,
   tier,
+  book = 'main',
 }: AgingColumnDeps): readonly UbDataGridColumn<AgingRow>[] => {
   const isCards = tier === 'cards';
   const bucketLabel = (bucket: AgingBucket) => t(bucketLabelId(bucket));
@@ -82,7 +84,7 @@ export const createAgingColumns = ({
       }
       return (
         <UbLink
-          href={bucketStatementHref(row.partyId, bucket, asOf)}
+          href={bucketStatementHref(row.partyId, bucket, asOf, book)}
           variant="body-sm"
           className="ds-num"
           aria-label={t('ledger.aging.cell.label', {
@@ -109,7 +111,7 @@ export const createAgingColumns = ({
         isCards ? (
           row.partyName
         ) : (
-          <UbLink href={rowStatementHref(row.partyId, asOf)} variant="body-sm-medium">
+          <UbLink href={rowStatementHref(row.partyId, asOf, book)} variant="body-sm-medium">
             {row.partyName}
           </UbLink>
         ),

@@ -22,6 +22,9 @@ export interface ExpensePartyFieldProps {
   readonly partyName: string;
   readonly onPick: (id: string, name: string) => void;
   readonly t: TranslateFn;
+  /** Restrict a reused picker to the transaction’s party role. Expenses keep both. */
+  readonly type?: 'customer' | 'supplier';
+  readonly disabled?: boolean;
 }
 
 export function ExpensePartyField({
@@ -29,6 +32,8 @@ export function ExpensePartyField({
   partyName,
   onPick,
   t,
+  type,
+  disabled,
 }: Readonly<ExpensePartyFieldProps>): React.JSX.Element {
   const labels = useMemo(
     () => ({
@@ -40,6 +45,14 @@ export function ExpensePartyField({
     [t]
   );
   return (
-    <PartyPickerField field={field} pickedName={partyName} onPick={onPick} labels={labels} t={t} />
+    <PartyPickerField
+      field={field}
+      pickedName={partyName}
+      onPick={onPick}
+      labels={labels}
+      t={t}
+      type={type}
+      disabled={disabled}
+    />
   );
 }

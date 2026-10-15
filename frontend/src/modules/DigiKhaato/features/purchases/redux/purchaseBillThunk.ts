@@ -165,16 +165,17 @@ export const movePurchaseOrder = createAsyncThunk<
  * MUTATION. Shop P0 (PUR-07) — goods back to the supplier: written and issued at once,
  * stock out, the supplier's khata and the bill's due both less.
  */
-export const issueDebitNote = createAsyncThunk<PurchaseBillEnvelope, DebitNoteWireBody, Reject>(
-  'purchaseBill/issueDebitNote',
-  async (body, { rejectWithValue }) => {
-    try {
-      return await (await service()).issueDebitNote(body);
-    } catch (error) {
-      return rejectWithValue(toApiError(error, 'purchases.debitNote.error'));
-    }
+export const issueDebitNote = createAsyncThunk<
+  PurchaseBillEnvelope,
+  DebitNoteWireBody & { readonly idempotencyKey: string },
+  Reject
+>('purchaseBill/issueDebitNote', async ({ idempotencyKey, ...body }, { rejectWithValue }) => {
+  try {
+    return await (await service()).issueDebitNote(body, idempotencyKey);
+  } catch (error) {
+    return rejectWithValue(toApiError(error, 'purchases.debitNote.error'));
   }
-);
+});
 
 /** MUTATION. Shop P0 — the goods came back to the shelf, the bill owes again. */
 export const voidDebitNote = createAsyncThunk<
