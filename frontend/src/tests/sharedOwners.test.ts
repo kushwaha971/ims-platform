@@ -147,6 +147,19 @@ describe('a ⋯ sheet of actions is UbMoreActions / UbActionSheet (WP-03 D-04a)'
   });
 });
 
+describe('a bordered list of rows is UbPanel as="ul" (WP-03 D-04d)', () => {
+  it('is not hand-built from divide-y and a card border in feature code', () => {
+    // The three "which bills does this money go to" lists each wrote the same
+    // bordered, divided ul and the same row; a fourth would drift in padding
+    // and in how a long bill number wraps.
+    const handBuilt = /divide-y\b[^"]*\brounded-card\b[^"]*\bborder\b/;
+    const found = FILES.filter(
+      (file) => !file.path.startsWith('design-system/') && handBuilt.test(file.text)
+    ).map((file) => file.path);
+    expect(found).toEqual([]);
+  });
+});
+
 describe('client previews of server rules match the server', () => {
   it('names the same override roles as apps/parties/services/credit.py', () => {
     const python = readFileSync(

@@ -10,6 +10,7 @@ import {
   UbField,
   UbFieldError,
   UbMoneyInput,
+  UbPanel,
   UbSkeleton,
   UbStack,
   UbSwitch,
@@ -21,6 +22,8 @@ import { formatBusinessDate } from 'src/utils/dates';
 import { compareMoney, formatAmount, subtractMoney } from 'src/utils/money';
 
 import { fifoPreview, fillFor, linesTotal, manualTotals } from '../view-model/paymentDisplay';
+
+import { BillPickRow } from './BillPickRow';
 
 import type { OpenDocument, PaymentFormValues } from '../types/payment.types';
 
@@ -86,31 +89,16 @@ export function PaymentAllocationPicker({
         description={t('payments.alloc.autoHint')}
         disabled={disabled}
       />
-      <UbStack
-        as="ul"
-        gap={0}
-        className="divide-y divide-border-hairline rounded-card border border-border-hairline"
-      >
+      <UbPanel as="ul">
         {documents.map((doc, index) => (
-          <UbStack
-            as="li"
+          <BillPickRow
             key={doc.documentId}
-            direction="row"
-            justify="between"
-            align="center"
-            className="gap-3 px-3 py-2"
+            number={doc.number}
+            caption={t('payments.alloc.rowMeta', {
+              date: formatBusinessDate(doc.documentDate),
+              amount: formatAmount(doc.amountDue),
+            })}
           >
-            <UbStack gap={0} className="min-w-0">
-              <UbText variant="body-sm" className="ds-mono truncate">
-                {doc.number}
-              </UbText>
-              <UbText variant="caption" tone="tertiary">
-                {t('payments.alloc.rowMeta', {
-                  date: formatBusinessDate(doc.documentDate),
-                  amount: formatAmount(doc.amountDue),
-                })}
-              </UbText>
-            </UbStack>
             {auto ? (
               <UbAmount value={preview.allocations[doc.documentId] ?? '0.00'} size="sm" />
             ) : (
@@ -124,9 +112,9 @@ export function PaymentAllocationPicker({
                 onEdit={onEdit}
               />
             )}
-          </UbStack>
+          </BillPickRow>
         ))}
-      </UbStack>
+      </UbPanel>
       {listError && <UbFieldError id="alloc-error">{listError}</UbFieldError>}
       <UbStack direction="row" justify="between" className="flex-wrap gap-2">
         <UbText variant="caption" tone="secondary">

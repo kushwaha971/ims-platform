@@ -12,6 +12,7 @@ import {
   UbFieldError,
   UbForm,
   UbMoneyInput,
+  UbPanel,
   UbSkeleton,
   UbStack,
   UbText,
@@ -23,6 +24,8 @@ import { formatAmount } from 'src/utils/money';
 
 import { usePaymentSchemas } from '../validation/paymentSchemas';
 import { applyPrefill, applyTotals } from '../view-model/applyAdvance';
+
+import { BillPickRow } from './BillPickRow';
 
 import type { ApplyFormValues, OpenDocument, Payment } from '../types/payment.types';
 
@@ -142,31 +145,16 @@ export function ApplyAdvanceDialog({
         )}
         {status === 'succeeded' && documents.length > 0 && (
           <UbStack gap={3} data-testid="apply-rows">
-            <UbStack
-              as="ul"
-              gap={0}
-              className="divide-y divide-border-hairline rounded-card border border-border-hairline"
-            >
+            <UbPanel as="ul">
               {documents.map((doc, index) => (
-                <UbStack
-                  as="li"
+                <BillPickRow
                   key={doc.documentId}
-                  direction="row"
-                  justify="between"
-                  align="center"
-                  className="gap-3 px-3 py-2"
+                  number={doc.number}
+                  caption={t('payments.alloc.rowMeta', {
+                    date: formatBusinessDate(doc.documentDate),
+                    amount: formatAmount(doc.amountDue),
+                  })}
                 >
-                  <UbStack gap={0} className="min-w-0">
-                    <UbText variant="body-sm" className="ds-mono truncate">
-                      {doc.number}
-                    </UbText>
-                    <UbText variant="caption" tone="tertiary">
-                      {t('payments.alloc.rowMeta', {
-                        date: formatBusinessDate(doc.documentDate),
-                        amount: formatAmount(doc.amountDue),
-                      })}
-                    </UbText>
-                  </UbStack>
                   <UbField
                     name={`rows.${index}.amount`}
                     label={t('payments.alloc.rowLabel', { number: doc.number })}
@@ -185,9 +173,9 @@ export function ApplyAdvanceDialog({
                       />
                     )}
                   </UbField>
-                </UbStack>
+                </BillPickRow>
               ))}
-            </UbStack>
+            </UbPanel>
             {listError && <UbFieldError id="apply-error">{listError}</UbFieldError>}
             <UbText variant="caption" tone="secondary" data-testid="apply-footer">
               {t('payments.apply.footer', {

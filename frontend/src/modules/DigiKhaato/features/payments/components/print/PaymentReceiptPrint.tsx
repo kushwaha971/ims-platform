@@ -126,7 +126,7 @@ export function PaymentReceiptPrint({
           <p className="font-semibold">
             {t(isIn ? 'payments.receipt.title' : 'payments.voucher.title')}
           </p>
-          <p className="font-mono">{payment.number}</p>
+          <p className="whitespace-nowrap font-mono">{payment.number}</p>
           <p>{formatBusinessDate(payment.paymentDate)}</p>
         </section>
       </header>

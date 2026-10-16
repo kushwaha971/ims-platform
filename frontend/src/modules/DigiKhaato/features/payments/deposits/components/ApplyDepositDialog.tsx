@@ -12,6 +12,7 @@ import {
   UbFieldError,
   UbForm,
   UbMoneyInput,
+  UbPanel,
   UbStack,
   UbText,
   UbTextInput,
@@ -19,6 +20,7 @@ import {
 import { useTranslation } from 'src/hooks/useTranslation';
 import { formatAmount, isNegativeAmount } from 'src/utils/money';
 
+import { BillPickRow } from '../../components/BillPickRow';
 import { useDepositSchemas } from '../validation/depositSchemas';
 import { applyTotal, initialApplyRows, toReturn } from '../view-model/depositDisplay';
 
@@ -116,28 +118,13 @@ export function ApplyDepositDialog({
           </UbText>
         ) : (
           <UbStack gap={3} data-testid="deposit-apply-rows">
-            <UbStack
-              as="ul"
-              gap={0}
-              className="divide-y divide-border-hairline rounded-card border border-border-hairline"
-            >
+            <UbPanel as="ul">
               {charges.map((charge, index) => (
-                <UbStack
-                  as="li"
+                <BillPickRow
                   key={charge.documentId}
-                  direction="row"
-                  justify="between"
-                  align="center"
-                  className="gap-3 px-3 py-2"
+                  number={charge.number}
+                  caption={t('payments.deposit.apply.due', { amount: formatAmount(charge.due) })}
                 >
-                  <UbStack gap={0} className="min-w-0">
-                    <UbText variant="body-sm" className="ds-mono truncate">
-                      {charge.number}
-                    </UbText>
-                    <UbText variant="caption" tone="tertiary">
-                      {t('payments.deposit.apply.due', { amount: formatAmount(charge.due) })}
-                    </UbText>
-                  </UbStack>
                   <UbField
                     name={`rows.${index}.amount`}
                     label={t('payments.alloc.rowLabel', { number: charge.number })}
@@ -155,9 +142,9 @@ export function ApplyDepositDialog({
                       />
                     )}
                   </UbField>
-                </UbStack>
+                </BillPickRow>
               ))}
-            </UbStack>
+            </UbPanel>
             {listError && <UbFieldError id="deposit-apply-error">{listError}</UbFieldError>}
             <UbText variant="caption" tone="secondary" data-testid="deposit-apply-footer">
               {t('payments.deposit.apply.footer', {

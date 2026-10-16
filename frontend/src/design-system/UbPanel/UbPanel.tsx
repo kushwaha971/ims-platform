@@ -20,20 +20,43 @@ import { cn } from 'src/utils/cn';
  */
 export interface UbPanelProps {
   readonly children: ReactNode;
-  /** `aside` for a right column; `section` for a list in the main column. */
-  readonly as?: 'aside' | 'section' | 'div';
+  /**
+   * `aside` for a right column; `section` for a list in the main column; `ul`
+   * when the sections are items of one list (the bills a payment settles),
+   * where each becomes an `li` and the hairline is its top border, because a
+   * `ul` may hold nothing but list items.
+   */
+  readonly as?: 'aside' | 'section' | 'div' | 'ul';
   readonly className?: string;
+  /** Names the list, or the region, for a screen reader. */
+  readonly 'aria-label'?: string;
+  readonly 'data-testid'?: string;
 }
 
-function UbPanelBase({ children, as: Element = 'div', className }: Readonly<UbPanelProps>) {
+const PANEL_CLASSNAME =
+  'flex w-full flex-col self-start overflow-hidden rounded-card border border-border-hairline bg-surface-card';
+
+function UbPanelBase({
+  children,
+  as: Element = 'div',
+  className,
+  'aria-label': ariaLabel,
+  'data-testid': testId,
+}: Readonly<UbPanelProps>) {
   const sections = Children.toArray(children).filter(Boolean);
+  if (Element === 'ul') {
+    return (
+      <ul className={cn(PANEL_CLASSNAME, className)} aria-label={ariaLabel} data-testid={testId}>
+        {sections.map((section, index) => (
+          <li key={index} className={cn(index > 0 && 'border-t border-border-hairline')}>
+            {section}
+          </li>
+        ))}
+      </ul>
+    );
+  }
   return (
-    <Element
-      className={cn(
-        'flex w-full flex-col self-start overflow-hidden rounded-card border border-border-hairline bg-surface-card',
-        className
-      )}
-    >
+    <Element className={cn(PANEL_CLASSNAME, className)} aria-label={ariaLabel} data-testid={testId}>
       {sections.map((section, index) => (
         <Fragment key={index}>
           {index > 0 && <div aria-hidden className="h-px w-full bg-border-hairline" />}
