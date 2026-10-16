@@ -27,7 +27,7 @@ These are the sales invoice figures, and the purchase bill is within a few per c
 | Invoice | about 756 px |
 | Purchase bill | about 824 px |
 
-**Finding 3: a defect, found by measuring.** On the purchase bill at 1536 px, a loose-unit quantity is shown as the server stores it ("6.000") and does not fit its box. Every KGS line was cut, 8 of the first 50. The sales editor trims it. The purchase editor's `formQty` trims only whole units. This gets fixed whichever layout is chosen.
+**Finding 3: a defect, found by measuring.** On the purchase bill at 1536 px, a loose-unit quantity is shown as the server stores it ("6.000") and does not fit its box. Every KGS line was cut, 8 of the first 50. The sales editor trims it. The purchase editor's `formQty` trims only whole units. Fixed on 16 October: `formQty` now trims a weighed quantity as well ("6.000" → "6", "1.250" → "1.25"), and the re-run measures no cut text at any width.
 
 **Finding 4: the purchase bill's total is below the fold on a 1024×768 laptop.** The supplier block (supplier, invoice number and date, bill date, due date, reverse charge) is about 410 px tall before the first line.
 

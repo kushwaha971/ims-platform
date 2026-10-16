@@ -468,3 +468,9 @@ Read this file, `git status`, current diff, root/frontend AGENTS, and the releva
 - Gates: Jest 4179 passed across 372 suites; `tsc` and ESLint `--max-warnings=0` clean; build passed; locales in step. Bundle: `/d/[token]` route 39.5 -> 39.7, because the shared print uses the helpers (note in `bundle-budgets.json`); every other route is unchanged.
 - Browser (live stack, synthetic shop, nothing issued from the browser): new `e2e/quantity-return-look.mjs`, 17/17 at 360 and 1280 px. The line says "Up to 0.2", 0.2 is accepted, and 0.25 says "Only 0.2 can be returned".
 - Next: WP-05 begins with a design review for the owner. Railway deployment and 9/10 readiness are NOT claimed.
+
+### 16 October 2026 — WP-05: the counter editors measured, and a clipped quantity fixed (cloud session)
+
+- Review: new `e2e/counter-editor-review.mjs` opened drafts of 1, 10 and 50 lines in the sales invoice and purchase bill editors at 360, 390, 768, 1024, 1280, 1440, 1536 and 1920 px. The findings and three layout options are in `docs/shop-ims-readiness/12-counter-editor-design-review.md`. Laptops below 1536 px get a phone card about 290 px tall per line, so a 50-line bill is about 15,000 px; at 1536 px the same bill is 3,600 px. The owner was asked to choose a layout, and nothing about the layout is built yet.
+- Defect found by measuring: the purchase bill showed a weighed quantity as "6.000", and at 1536 px it did not fit its box (8 KGS lines cut out of 50). `formQty` now trims weighed quantities too. The `invoiceViewModel` case failed before. The re-run measures no cut text at any width.
+- Gates: Jest 4179 passed; `tsc` and ESLint clean; build passed; the bundle gate passed with no budget change.

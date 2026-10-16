@@ -74,7 +74,9 @@ export const trimQuantity = (qty: string): string =>
  * whole unit's quantity comes back as "3".
  */
 export const formQty = (qty: string, allowDecimal: boolean): string => {
-  if (allowDecimal) return qty;
+  // A weighed quantity is trimmed as a person writes it: "6.000" did not fit
+  // the purchase bill's Qty box and was cut on every KGS line (WP-05 review).
+  if (allowDecimal) return /^\d+\.\d+$/.test(qty.trim()) ? trimQuantity(qty.trim()) : qty;
   const whole = /^(\d+)\.0*$/.exec(qty.trim());
   return whole ? (whole[1] ?? qty) : qty;
 };

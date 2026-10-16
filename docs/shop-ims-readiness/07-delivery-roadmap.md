@@ -106,5 +106,5 @@ What remains:
 - M-03/M-04 (receipt and invoice share text not recorded), a WP-08 decision;
 - physical-device handoff evidence.
 
-WP-03 D-05 (quantity arithmetic) was done on 16 October as R-08. The next step is WP-05, which begins with a design review for the owner before any build, with the D-04 UI-composition audit alongside it.
+WP-03 D-05 (quantity arithmetic) was done on 16 October as R-08. The next step is WP-05, which begins with a design review for the owner before any build, with the D-04 UI-composition audit alongside it. The review is in [12-counter-editor-design-review](12-counter-editor-design-review.md). It found that 1280 and 1440 laptops get a 290 px phone card per line, and the layout for 1024–1535 px is waiting on the owner's choice.
 

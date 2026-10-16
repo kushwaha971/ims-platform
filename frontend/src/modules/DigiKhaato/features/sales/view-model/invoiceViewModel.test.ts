@@ -163,7 +163,11 @@ it('reopens a whole-number line as "3", which the editor accepts, and keeps deci
   expect(formQty('3.000', false)).toBe('3');
   expect(formQty('12.0', false)).toBe('12');
   expect(formQty('1.500', false)).toBe('1.500'); // a real fraction stays, for the rule to refuse
-  expect(formQty('1.250', true)).toBe('1.250');
+  // WP-05 review: a weighed quantity is trimmed too. "6.000" did not fit the
+  // purchase bill's Qty box at 1536 px and was cut on every KGS line.
+  expect(formQty('1.250', true)).toBe('1.25');
+  expect(formQty('6.000', true)).toBe('6');
+  expect(formQty('0.500', true)).toBe('0.5');
   const doc = makeDocument({ lines: [wireLine({ qty: '3.000', unit_code: 'NOS' })] });
   expect(fromDocument(doc).lines[0]?.qty).toBe('3');
 });
