@@ -625,3 +625,10 @@ Read this file, `git status`, current diff, root/frontend AGENTS, and the releva
 - Not changed: the stock report's potential sale value for GST-inclusive prices. RPT-06 BR-10 defines it as quantity × selling price, so it needs a Part 43 change request first.
 - Gates: backend inventory, sales, reports, purchases and architecture tests pass; Jest 4264/4264; `tsc` clean; ESLint clean; i18n in step; build and bundle gate passed (the bill and order editors and the price list editor raised by measured + 0.5 for the picker's price line, noted). Railway deployment and 9/10 readiness are NOT claimed.
 
+### 17 October 2026 — WP-07: a new party from one phone contact (cloud session)
+
+- Built test-first (bd44f6d): "Choose from phone contacts" on the party form that Customers, Suppliers and the Udhaar book share. One chosen contact fills Name and Mobile; nothing is saved until Save, so the server's duplicate check still decides. Shown only when adding a party and only where the browser can pick contacts (PTY-07 FR-10, FR-14). Cancelling the picker leaves what was typed. Names lose stray and doubled spaces. Fail-before: three party form tests and one phoneContacts test.
+- Library admission and the new loan now use the same shared `PhoneContactButton`, and still say "not supported in this browser" with a disabled button.
+- Looked: `e2e/party-contact-review.mjs` at 360/768/1280/1920 on /customers, /suppliers and /khata. No real contacts were read: desktop Chromium has no picker (the button is absent), and the phone pass uses a fake picker with one made-up contact. Name "Asha Devi" and mobile 9876543210 are filled, nothing is cut, the page fits, and no party was created (0 → 0).
+- Gates: Jest 4268/4268; `tsc` clean; ESLint clean (the full run took 22 minutes in this sandbox); i18n in step; build and bundle gate passed (sixteen routes raised by measured + 0.5 for the parties catalogue's two strings, noted). Railway deployment and 9/10 readiness are NOT claimed.
+

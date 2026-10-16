@@ -200,8 +200,14 @@ the server-prepared reference.
    UbActionSheet closes in the bubble phase (capture lost the row's click on
    a real tap), and UbAsyncCombobox options take a wrapping `detail` line.
    The potential sale value of inclusive items waits on a Part 43 CR.
-   Next in WP-07: selected phone contacts for Customers, Suppliers and
-   Udhaar (never access phone contacts in QA), then the rest of its row.
+   Selected phone contacts for Customers, Suppliers and Udhaar are in
+   (bd44f6d): the party form's "Choose from phone contacts", create only and
+   absent where the browser has no picker. Library, Lending and the party
+   form share src/components/contacts/PhoneContactButton.tsx.
+   `e2e/party-contact-review.mjs` is the look and uses a fake picker; never
+   access real phone contacts in QA. Next in WP-07: the rest of its row
+   (consistent drawers, role-specific copy, mobile price visibility, safe
+   archived/duplicate handling), each checked against the code first.
 4. Still owed to WP-02, needing the owner or a device: a physical
    network-interruption check on a phone, and the owner's SH-011 release
    review in the tracker. Do not wait on these.
