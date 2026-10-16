@@ -23,7 +23,7 @@ Status values: Not started, In progress, Needs acceptance review, Pass, Fail, Bl
 | UX-01 | [design-and-dashboard-specification](02-design-and-dashboard-specification.md) | Design/frontend | Needs acceptance review | — | — |
 | UX-02 | [design-and-dashboard-specification](02-design-and-dashboard-specification.md) | Design/frontend | Needs acceptance review | — | — |
 | UX-03 | [design-and-dashboard-specification](02-design-and-dashboard-specification.md) | Design/frontend | Needs acceptance review | — | — |
-| UX-04 | [design-and-dashboard-specification](02-design-and-dashboard-specification.md) | Design/frontend | Needs acceptance review | — | — |
+| UX-04 | [design-and-dashboard-specification](02-design-and-dashboard-specification.md) | Design/frontend | Needs acceptance review | WP-05 (16 Oct, 9ed67e2, ff1a45b): bill editors draw the line table whenever its columns fit (1024–1440 laptops included) with totals docked below under 1536 px; measured by `e2e/counter-editor-review.mjs` at 8 widths, no overflow or cut text | Owner's acceptance review of the laptop layout |
 | DASH-01 | [design-and-dashboard-specification](02-design-and-dashboard-specification.md) | Product/reporting | Needs acceptance review | — | — |
 | DASH-02 | [design-and-dashboard-specification](02-design-and-dashboard-specification.md) | Product/reporting | Needs acceptance review | — | — |
 | DASH-03 | [design-and-dashboard-specification](02-design-and-dashboard-specification.md) | Product/reporting | Needs acceptance review | — | — |
@@ -31,7 +31,7 @@ Status values: Not started, In progress, Needs acceptance review, Pass, Fail, Bl
 | UX-05 | [design-and-dashboard-specification](02-design-and-dashboard-specification.md) | Design/frontend | Needs acceptance review | — | — |
 | UX-06 | [design-and-dashboard-specification](02-design-and-dashboard-specification.md) | Design/frontend | Needs acceptance review | — | — |
 | UX-07 | [design-and-dashboard-specification](02-design-and-dashboard-specification.md) | Design/frontend | Needs acceptance review | — | — |
-| UX-08 | [design-and-dashboard-specification](02-design-and-dashboard-specification.md) | Design/frontend | Needs acceptance review | — | — |
+| UX-08 | [design-and-dashboard-specification](02-design-and-dashboard-specification.md) | Design/frontend | Needs acceptance review | WP-05 timed entry (16 Oct, 1e35b8b): `e2e/counter-entry-timing.mjs` keys 1/10/50-line walk-in invoices by keyboard alone at 1280 and 1536 and issues them; every line and total matches the server, about 9 keys a line. Fixed on the way: caret returned to Item after a pick; an Enter before the search answered billed the previous answer's top row; Enter with no highlighted row did nothing | Purchase bill not timed; a person at a real counter not timed |
 | UX-09 | [design-and-dashboard-specification](02-design-and-dashboard-specification.md) | Design/frontend | Needs acceptance review | — | — |
 | UX-10 | [design-and-dashboard-specification](02-design-and-dashboard-specification.md) | Design/frontend | Needs acceptance review | — | — |
 | DATA-01 | [business-rules-and-data-integrity](03-business-rules-and-data-integrity.md) | Domain/security | Needs acceptance review | — | — |

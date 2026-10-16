@@ -151,15 +151,16 @@ the server-prepared reference.
    `UbMessageBox` for a server-prepared message outside a sheet.
 2. WP-04 M-03/M-04: decide (with WP-08) whether receipt/invoice share text is
    recorded; today only the share link is.
-3. WP-05 (counter editor): the design review is written
-   (12-counter-editor-design-review.md, measured by
-   `e2e/counter-editor-review.mjs`) and the owner was asked to choose
-   layout A, B or C for 1024–1535 px. The owner chose A on 16 Oct
-   and it is built (`tableWhen="fits"`, `useDocksEditorTotals`). The
-   compact context fold is built too. Still owed: timed 1/10/50-line
-   entry evidence; the UI-composition audit (WP-03 D-04) goes alongside it. D-05 is
-   done (R-08): quantity arithmetic lives in `utils/quantity.ts`, and the
-   source-scan guard fails on `Number(qty)` arithmetic anywhere else.
+3. WP-05 (counter editor) is built and evidenced, awaiting the owner's
+   acceptance review: layout A (`tableWhen="fits"`, `useDocksEditorTotals`),
+   the compact context fold, and timed 1/10/50-line entry
+   (`e2e/counter-entry-timing.mjs`, exact at 1280 and 1536; see
+   12-counter-editor-design-review.md). Item pickers pass `pending` and
+   `afterPick`; never let an Enter take a row that does not answer what was
+   typed. Next: the WP-03 D-04 UI-composition consolidation (D-04a
+   UbActionSheet close order and the five hand-made menus, D-04c the
+   reason-taking void/cancel dialogs, D-04d), test-first, inventory in
+   10-reuse-inventory.md. D-05 is done (R-08).
 4. Still owed to WP-02, needing the owner or a device: a physical
    network-interruption check on a phone, and the owner's SH-011 release
    review in the tracker. Do not wait on these.

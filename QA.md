@@ -510,3 +510,15 @@ Read this file, `git status`, current diff, root/frontend AGENTS, and the releva
 - Defect found by measuring, not by the tests: on every reopened purchase draft the fold opened itself. The page rendered one frame of an empty bill before the draft was reset into the form. `usePurchaseBillEditor` now reports `seeded`, and the page keeps its skeleton until then. The 10th line at 1280 is at 1,076 px (was 1,290).
 - Environment: a session restart wiped the sandbox's PostgreSQL cluster. The local synthetic dev database was recreated (default dev role, `migrate`, `seed_all`). No real data was involved.
 - Gates: Jest 4189 passed; `tsc` and ESLint clean; build passed; the bundle gate passed (sales editor routes 152.5, noted); locales in step.
+
+### 16 October 2026 — WP-05: timed keyboard entry, and three counter defects fixed (cloud session)
+
+- `e2e/counter-entry-timing.mjs`: walk-in invoices of 1, 10 and 50 lines keyed by keyboard alone at 1280 and 1536 and issued. Every line, the shown total and the server's grand total match (₹13, ₹535, ₹9,222), about 9 keys a line, 50 lines keyed and issued in under a minute. The table of figures is in `docs/shop-ims-readiness/12-counter-editor-design-review.md`.
+- Defects found by the run, each fixed with a test that fails first:
+  - the caret returned to Item after a pick, so the typed quantity reopened the search (`UbAsyncCombobox.test.tsx`);
+  - an Enter before the search answered billed the previous answer's top row: K001 on lines keyed K003 and K008, ₹470 for ₹535 (`usePagedSearch.test.ts`, `UbAsyncCombobox.test.tsx`);
+  - Enter with no highlighted row did nothing (line 31 of the 50-line bill).
+- Reuse: the sales and purchase item cells, identical but for copy keys, are one `ItemLineCell`. Stock adjustment and price-list pinning pass `pending` too.
+- Lint: the R-09 commit had left `src/utils/reason` imports out of order in eleven files, which `npm run lint` refuses; fixed (11a16c9, and the rest in 1e35b8b).
+- Gates: Jest 4193 passed; `tsc` clean; ESLint clean on every file changed today (a whole-tree run exceeds the sandbox's time limit); build passed; the bundle gate passed after a measured raise noted in `bundle-budgets.json` (sales editor routes 153, purchase 152.4, two purchase first loads 390.8).
+- Not claimed: the purchase bill was not timed, and no person at a real counter was timed. Railway deployment and 9/10 readiness are NOT claimed.

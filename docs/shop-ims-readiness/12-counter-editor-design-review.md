@@ -1,6 +1,6 @@
 # WP-05 counter editor: design review
 
-Status: the owner chose option A on 16 October 2026, and it is built (see "Built" at the end). The spec (02, "Bill editor") asks for compact context, optional fields disclosed, a container-fit line grid, and totals that stay reachable, measured before any layout is chosen.
+Status: the owner chose option A on 16 October 2026, and it is built (see "Built"), with the timed entry evidence at the end. It awaits the owner's acceptance review. The spec (02, "Bill editor") asks for compact context, optional fields disclosed, a container-fit line grid, and totals that stay reachable, measured before any layout is chosen.
 
 Evidence: `e2e/counter-editor-review.mjs` on a live stack, with a synthetic shop and drafts of 1, 10 and 50 lines for both the sales invoice and the purchase bill, at eight widths. The numbers are in `/tmp/e2e-shots/counter-review/measurements.json` when it is re-run. The screenshots were taken from the same run.
 
@@ -82,4 +82,26 @@ Which layout should the counter editor use from 1024 to 1535 px: A (recommended)
   - An error inside the fold, or a duplicate-invoice warning, forces it open. Phones did not do this before.
   - Measuring caught the fold opening on every reopened draft, because the page drew one frame before the draft was reset into the form. The purchase editor now holds its skeleton until the form is seeded.
   - The 10th line of a purchase bill at 1280 now sits at 1,076 px (it was 1,290 px with layout A alone).
-- Not yet done: timed 1/10/50-line entry evidence (keystrokes and time to Issue), which WP-05's exit criteria still ask for.
+
+## Timed entry (16 October 2026)
+
+`e2e/counter-entry-timing.mjs` keys walk-in invoices of 1, 10 and 50 lines with the keyboard alone (Alt+N, Enter, the item code, Enter, the quantity, then Ctrl+Enter and the payment confirm), at a 1280 laptop and a 1536 desktop. For each bill it checks every line's item and quantity, the total the editor showed, and the server's grand total.
+
+| Width | Lines | Keys | Keys a line | Seconds to key | Seconds to issued | Total (server) |
+|---|---|---|---|---|---|---|
+| 1280 | 1 | 10 | 10 | 1.1 | 2.8 | ₹13.00 |
+| 1280 | 10 | 91 | 9.1 | 9.8 | 11.0 | ₹535.00 |
+| 1280 | 50 | 451 | 9.0 | 51.3 | 53.2 | ₹9,222.00 |
+| 1536 | 1 | 10 | 10 | 1.1 | 2.8 | ₹13.00 |
+| 1536 | 10 | 91 | 9.1 | 10.7 | 11.9 | ₹535.00 |
+| 1536 | 50 | 451 | 9.0 | 49.9 | 51.7 | ₹9,222.00 |
+
+The seconds are the machine's, including the 250 ms search wait on every line, not a person's typing speed. Every line, every shown total and every server total matched.
+
+The first runs found three defects, all fixed test-first in 1e35b8b:
+
+1. **After a pick, the caret went back to the Item field**, so the quantity typed next reopened the item search with that digit in it. It now moves on to Qty (`UbAsyncCombobox.afterPick`, with the editor's `focusNext`). The sales and purchase editors now share one item cell, `ItemLineCell`.
+2. **An Enter pressed before the search answered billed the previous answer's top row.** A 10-line bill got K001 on the lines keyed K003 and K008, and came to ₹470 instead of ₹535. `usePagedSearch` now reports `pending`, and the combobox holds that Enter until the answer for what was typed arrives. This applies to every item picker.
+3. **Enter did nothing when the list had been replaced and no row was highlighted** (line 31 of a 50-line bill). Enter now takes the first row.
+
+Not timed: the purchase bill, and a person at a real counter.
