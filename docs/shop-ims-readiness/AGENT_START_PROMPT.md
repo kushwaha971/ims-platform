@@ -151,8 +151,10 @@ the server-prepared reference.
    `UbMessageBox` for a server-prepared message outside a sheet.
 2. WP-04 M-03/M-04: decide (with WP-08) whether receipt/invoice share text is
    recorded; today only the share link is.
-3. The UI-composition audit (WP-03 D-04) goes alongside WP-05. D-05
-   (quantities) is optional.
+3. WP-05 (counter editor) starts with a design review for the owner, not a
+   build; the UI-composition audit (WP-03 D-04) goes alongside it. D-05 is
+   done (R-08): quantity arithmetic lives in `utils/quantity.ts`, and the
+   source-scan guard fails on `Number(qty)` arithmetic anywhere else.
 4. Still owed to WP-02, needing the owner or a device: a physical
    network-interruption check on a phone, and the owner's SH-011 release
    review in the tracker. Do not wait on these.

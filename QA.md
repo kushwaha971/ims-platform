@@ -459,3 +459,12 @@ Read this file, `git status`, current diff, root/frontend AGENTS, and the releva
 - Browser (live stack, synthetic library, nothing sent): `e2e/library-slip-look.mjs` now also opens the member's "Send fee reminder", edits it, and confirms that the link carries the edit to the member and that the tap posts `final_text`. All checks pass at 360 and 1280 px, and the phone screenshot was looked at.
 - Not done: no physical-device handoff. Railway deployment and 9/10 readiness are NOT claimed.
 
+### 16 October 2026 — WP-03 D-05: quantities are worked out in decimals, in one place (cloud session)
+
+- Defect: a return cap was a float subtraction. With 0.1 KG of a 0.3 KG line already returned, the credit note refused "0.2" and said "Only 0.19999999999999998 can be returned". The purchase side's returnable quantity had the same subtraction.
+- Fix (R-08): `utils/quantity.ts` owns quantity arithmetic: `remainingQuantity`, `subtractQuantity`, `exceedsQuantity` (half-typed text is never "over" and never throws), `stepQuantity`, `sumQuantities`, `trimQuantity`. Four `trimQty` copies are gone, and the cap travels as a string.
+- Guard: `sharedOwners.test.ts` forbids `Number(qty)` arithmetic and comparisons outside `utils/quantity.ts`, allowing only sign tests. On its first run it found six more sites (debit note over-cap, invoice stock-short note, stock count step, and others), all moved.
+- Fail-before: the credit note schema case, the purchase returnable case and the new `quantity.test.ts` cases.
+- Gates: Jest 4179 passed across 372 suites; `tsc` and ESLint `--max-warnings=0` clean; build passed; locales in step. Bundle: `/d/[token]` route 39.5 -> 39.7, because the shared print uses the helpers (note in `bundle-budgets.json`); every other route is unchanged.
+- Browser (live stack, synthetic shop, nothing issued from the browser): new `e2e/quantity-return-look.mjs`, 17/17 at 360 and 1280 px. The line says "Up to 0.2", 0.2 is accepted, and 0.25 says "Only 0.2 can be returned".
+- Next: WP-05 begins with a design review for the owner. Railway deployment and 9/10 readiness are NOT claimed.

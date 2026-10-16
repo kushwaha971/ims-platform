@@ -106,5 +106,5 @@ What remains:
 - M-03/M-04 (receipt and invoice share text not recorded), a WP-08 decision;
 - physical-device handoff evidence.
 
-The next order is WP-03 D-05 (quantity arithmetic), then WP-05, which begins with a design review for the owner before any build.
+WP-03 D-05 (quantity arithmetic) was done on 16 October as R-08. The next step is WP-05, which begins with a design review for the owner before any build, with the D-04 UI-composition audit alongside it.
 
