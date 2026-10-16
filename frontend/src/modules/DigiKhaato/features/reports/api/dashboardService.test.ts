@@ -77,3 +77,19 @@ it('carries the day the drawer is counted from', async () => {
   const data = await getDashboard();
   expect(data.tiles.cashInHand).toEqual({ amount: '-110.00', since: '2026-09-03' });
 });
+
+it('carries the orders waiting on someone, each only when sent', async () => {
+  jest.mocked(api.get).mockResolvedValue(
+    body({
+      open_orders: {
+        challans: { count: 1, amount: '250.00', oldest_days: 4, oldest_date: '2026-10-12' },
+        purchase_orders: { count: 0, amount: '0.00' },
+      },
+    })
+  );
+  const data = await getDashboard();
+  expect(data.tiles.openOrders).toEqual({
+    challans: { count: 1, amount: '250.00', oldestDays: 4, firstBillDate: '2026-10-12' },
+    purchaseOrders: { count: 0, amount: '0.00' },
+  });
+});

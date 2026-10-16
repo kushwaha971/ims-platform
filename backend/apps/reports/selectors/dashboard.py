@@ -31,10 +31,11 @@ from __future__ import annotations
 
 import datetime as dt
 import logging
+from collections.abc import Callable
+from contextlib import AbstractContextManager, nullcontext
 from decimal import Decimal
 from typing import Any
 
-from django.db import transaction
 from django.db.models import Count, DecimalField, Min, Q, Sum
 from django.db.models.functions import Coalesce
 
@@ -146,6 +147,34 @@ def document_tiles(*, tenant: Any, today: dt.date) -> dict[str, Any]:
             # WP-06 — Needs attention says how old: the oldest bill's days past due.
             **_age(row["overdue_since"], today, row["overdue_first"]),
         },
+    }
+
+
+def open_orders(*, tenant: Any, today: dt.date) -> dict[str, Any]:
+    """WP-06 spec order 4 — orders waiting on someone, for Needs attention.
+
+    A customer's confirmed order not yet billed (`open`), goods sent on a
+    challan and not yet billed (`issued`), and a purchase order the supplier
+    has not yet billed (`sent`): each list's own tab. The oldest's date lets the
+    row say how old and lets its link open the list over a range holding it.
+    """
+    from apps.purchases.models import PurchaseDocument
+    from apps.sales.models import SalesDocument
+
+    def waiting(model: Any, kind: str, status: str) -> dict[str, Any]:
+        row = model.objects.filter(tenant=tenant, kind=kind, status=status).aggregate(
+            count=Count("id"), amount=_sum("grand_total", Q()), first=Min("document_date")
+        )
+        first = row["first"]
+        waited = {"count": row["count"], "amount": _money(row["amount"])}
+        if first:
+            waited |= {"oldest_days": (today - first).days, "oldest_date": first.isoformat()}
+        return waited
+
+    return {
+        "sales_orders": waiting(SalesDocument, "sales_order", "open"),
+        "challans": waiting(SalesDocument, "delivery_challan", "issued"),
+        "purchase_orders": waiting(PurchaseDocument, "purchase_order", "sent"),
     }
 
 
@@ -584,14 +613,26 @@ def first_use(*, tenant: Any) -> dict[str, bool]:
 # ── The whole payload, and the reader's cut of it ──────────────────────────
 
 
-def _part(name: str, failed: list[str], compute: Any, default: Any = None) -> Any:
+#: What a part is computed inside. The view passes a savepoint, so a
+#: failed query rolls back to a savepoint instead of poisoning the transaction
+#: the next part reads in; a selector opens no transaction itself (rule D8).
+PartScope = Callable[[], AbstractContextManager[Any]]
+
+
+def _part(
+    name: str,
+    failed: list[str],
+    compute: Any,
+    default: Any = None,
+    *,
+    scope: PartScope = nullcontext,
+) -> Any:
     """One part of the dashboard, computed alone (WP-06 Finding 7, DASH-04).
 
-    Inside a savepoint, so a failed query does not poison the transaction the
-    other parts read in; logged, and named in `failed`, so the reader is told
-    which panel could not load instead of being shown a false zero."""
+    Inside `scope`, logged, and named in `failed`, so the reader is told which
+    panel could not load instead of being shown a false zero."""
     try:
-        with transaction.atomic():
+        with scope():
             return compute()
     except Exception:
         logger.exception("dashboard.part_failed", extra={"part": name})
@@ -599,16 +640,22 @@ def _part(name: str, failed: list[str], compute: Any, default: Any = None) -> An
         return default
 
 
-def build_dashboard(*, tenant: Any, today: dt.date) -> dict[str, Any]:
+def build_dashboard(
+    *, tenant: Any, today: dt.date, scope: PartScope = nullcontext
+) -> dict[str, Any]:
     """Every figure for the business, unfiltered and JSON-safe — what is cached.
 
     Each part fails alone: a part that raised is left out (a tile) or empty (a
     list) and named in `unavailable`, which is absent when nothing failed. The
     view does not cache a payload that names one."""
     failed: list[str] = []
-    documents = _part("documents", failed, lambda: document_tiles(tenant=tenant, today=today))
-    stock = _part("low_stock", failed, lambda: low_stock(tenant=tenant))
-    parties = _part("party_tiles", failed, lambda: party_tiles(tenant=tenant, today=today), {})
+
+    def part(name: str, failed_: list[str], compute: Any, default: Any = None) -> Any:
+        return _part(name, failed_, compute, default, scope=scope)
+
+    documents = part("documents", failed, lambda: document_tiles(tenant=tenant, today=today))
+    stock = part("low_stock", failed, lambda: low_stock(tenant=tenant))
+    parties = part("party_tiles", failed, lambda: party_tiles(tenant=tenant, today=today), {})
     tiles: dict[str, Any] = {**parties}
     if documents is not None:
         tiles["today_sales"] = documents["today_sales"]
@@ -616,21 +663,22 @@ def build_dashboard(*, tenant: Any, today: dt.date) -> dict[str, Any]:
     # The figure this key has always sent, every book's cash, kept as it was:
     # `main_bucket_reads.json` pins it for an Udhaar-only business, and that
     # file is never regenerated. The Shop's home reads `shop_cash_in_hand`.
-    every_book = _part(
+    every_book = part(
         "cash_in_hand", failed, lambda: cash_in_hand(tenant=tenant, today=today, bucket=None)
     )
     if every_book is not None:
         tiles["cash_in_hand"] = {"amount": _money(every_book)}
     # WP-06 Finding 4 / DEC-019 — the Shop's own drawer: what the day book and
     # the cashbook close on, and what the Shop's Today row shows.
-    shop_cash = _part("shop_cash_in_hand", failed, lambda: shop_drawer(tenant=tenant, today=today))
+    shop_cash = part("shop_cash_in_hand", failed, lambda: shop_drawer(tenant=tenant, today=today))
     if shop_cash is not None:
         tiles["shop_cash_in_hand"] = shop_cash
     for key, compute in (
         ("today_received", lambda: money_received_today(tenant=tenant, today=today)),
         ("supplier_bills", lambda: supplier_bills(tenant=tenant, today=today)),
+        ("open_orders", lambda: open_orders(tenant=tenant, today=today)),
     ):
-        value = _part(key, failed, compute)
+        value = part(key, failed, compute)
         if value is not None:
             tiles[key] = value
     if stock is not None:
@@ -638,14 +686,14 @@ def build_dashboard(*, tenant: Any, today: dt.date) -> dict[str, Any]:
     payload: dict[str, Any] = {
         "as_of": today.isoformat(),
         "tiles": tiles,
-        "recent_activity": _part(
+        "recent_activity": part(
             "recent_activity", failed, lambda: recent_activity(tenant=tenant), []
         ),
-        "top_debtors": _part("top_debtors", failed, lambda: top_debtors(tenant=tenant), []),
-        "top_creditors": _part("top_creditors", failed, lambda: top_creditors(tenant=tenant), []),
+        "top_debtors": part("top_debtors", failed, lambda: top_debtors(tenant=tenant), []),
+        "top_creditors": part("top_creditors", failed, lambda: top_creditors(tenant=tenant), []),
         "low_stock_items": stock["items"] if stock is not None else [],
         # A failure here must not greet an established shop as on its first day.
-        "first_use": _part(
+        "first_use": part(
             "first_use",
             failed,
             lambda: first_use(tenant=tenant),
@@ -663,6 +711,14 @@ def build_dashboard(*, tenant: Any, today: dt.date) -> dict[str, Any]:
 _PARTY_TILES = ("to_collect", "to_pay")
 
 
+#: Each open-orders row travels with the permission that reads its own list.
+_ORDER_READS = {
+    "sales_orders": "sales.estimate.read",
+    "challans": "sales.invoice.read",
+    "purchase_orders": "purchases.bill.read",
+}
+
+
 def _project_tiles(
     source: dict[str, Any], *, granted: frozenset[str], modules: frozenset[str]
 ) -> dict[str, Any]:
@@ -671,7 +727,7 @@ def _project_tiles(
     tiles: dict[str, Any] = {}
     sales = "sales.invoice.read" in granted
     if "parties.party.read" in granted:
-        tiles.update({key: dict(source[key]) for key in _PARTY_TILES if key in source})
+        tiles |= {key: dict(source[key]) for key in _PARTY_TILES if key in source}
         if sales and "overdue_invoices" in source:
             # BR-6 — the Shop's overdue is its overdue bills (DEC-019: the party
             # promise dates are the Udhaar book's), so the tile is the bills alone.
@@ -685,7 +741,14 @@ def _project_tiles(
         "shop_cash_in_hand": cash,
         "low_stock": "inventory.stock.read" in granted,
     }
-    tiles.update({key: dict(source[key]) for key, ok in allowed.items() if ok and key in source})
+    tiles |= {key: dict(source[key]) for key, ok in allowed.items() if ok and key in source}
+    orders = {
+        key: dict(value)
+        for key, value in source.get("open_orders", {}).items()
+        if _ORDER_READS[key] in granted
+    }
+    if orders:
+        tiles["open_orders"] = orders
     if "purchases.bill.read" in granted and "supplier_bills" in source:
         tiles["supplier_bills"] = {
             key: dict(value) for key, value in source["supplier_bills"].items()

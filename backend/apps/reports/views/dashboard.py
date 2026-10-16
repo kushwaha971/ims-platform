@@ -119,7 +119,7 @@ class DashboardView(TenantScopeMixin, APIView):
         snapshot = None if refresh else read_fresh(**key, max_age_seconds=DASHBOARD_MAX_AGE_SECONDS)
         cached = snapshot is not None
         if snapshot is None:
-            payload = build_dashboard(tenant=tenant, today=today)
+            payload = build_dashboard(tenant=tenant, today=today, scope=transaction.atomic)
             # DASH-04 — a payload with a failed part is answered, never stored:
             # the next reader, or the panel's Retry, computes it afresh.
             snapshot = (

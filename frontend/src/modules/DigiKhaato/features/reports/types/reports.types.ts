@@ -49,6 +49,17 @@ export interface DashboardTiles {
     readonly dueWeek: CountAmount;
   };
   readonly lowStock?: { readonly count: number; readonly outCount: number };
+  /**
+   * WP-06 — orders waiting on someone: customer orders not yet billed, goods out
+   * on a challan not yet billed, purchase orders not yet billed by the supplier.
+   * `oldestDays` is the oldest one's age and `firstBillDate` its date. Each is
+   * present only for a reader who may open its list.
+   */
+  readonly openOrders?: {
+    readonly salesOrders?: AgedCountAmount;
+    readonly challans?: AgedCountAmount;
+    readonly purchaseOrders?: AgedCountAmount;
+  };
 }
 
 /** A count and amount with the oldest one's days past due, when any has a due date. */

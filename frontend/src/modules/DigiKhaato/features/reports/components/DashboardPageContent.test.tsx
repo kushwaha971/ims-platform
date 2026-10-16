@@ -224,6 +224,35 @@ it('never shows the drawer as a till holding minus money (WP-06 Finding 4)', asy
   expect(within(today).queryByText('Cash in hand')).not.toBeInTheDocument();
 });
 
+it('lists the orders waiting on someone in Needs attention, each opening its list', async () => {
+  // Spec order 4 named pending orders and deliveries; Needs attention had only
+  // overdue bills and stock. An order from last year must stay in the list it
+  // opens, so each link carries the range from the oldest one's date.
+  const data = DATA();
+  service.getDashboard.mockResolvedValue({
+    ...data,
+    tiles: {
+      ...data.tiles,
+      openOrders: {
+        salesOrders: { count: 2, amount: '1000.00', oldestDays: 12, firstBillDate: '2026-09-06' },
+        challans: { count: 0, amount: '0.00' },
+        purchaseOrders: { count: 1, amount: '3000.00', oldestDays: 6, firstBillDate: '2026-09-12' },
+      },
+    },
+  });
+  signIn(OWNER);
+  renderWithProviders(<DashboardPageContent />);
+  const panel = await screen.findByRole('region', { name: 'Needs attention' });
+  expect(
+    within(panel).getByRole('link', { name: /2 customer orders to deliver and bill · ₹1,000\.00/ })
+  ).toHaveAttribute('href', '/sales/orders?tab=open&from=2026-09-06&to=2026-09-18');
+  expect(within(panel).getByText('Oldest is 12 days old')).toBeInTheDocument();
+  expect(
+    within(panel).getByRole('link', { name: /1 purchase order waiting for goods · ₹3,000\.00/ })
+  ).toHaveAttribute('href', '/purchases/orders?tab=sent&from=2026-09-12&to=2026-09-18');
+  expect(within(panel).queryByText(/challan/)).not.toBeInTheDocument();
+});
+
 it('gives customers and suppliers a panel each, every figure opening its own list', async () => {
   service.getDashboard.mockResolvedValue(DATA());
   signIn(OWNER);

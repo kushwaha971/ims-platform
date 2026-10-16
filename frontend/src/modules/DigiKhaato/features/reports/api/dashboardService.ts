@@ -24,6 +24,11 @@ interface AgedWire extends CountAmountWire {
   readonly oldest_bill_date?: string;
 }
 
+interface WaitingWire extends CountAmountWire {
+  readonly oldest_days?: number;
+  readonly oldest_date?: string;
+}
+
 interface DashboardWire {
   readonly data: {
     readonly as_of: string;
@@ -44,6 +49,12 @@ interface DashboardWire {
       readonly shop_cash_in_hand?: { readonly amount: string; readonly since?: string | null };
       readonly today_received?: CountAmountWire;
       readonly supplier_bills?: { readonly overdue: AgedWire; readonly due_week: CountAmountWire };
+      /** WP-06 — orders waiting on someone, each only for a reader of its list. */
+      readonly open_orders?: {
+        readonly sales_orders?: WaitingWire;
+        readonly challans?: WaitingWire;
+        readonly purchase_orders?: WaitingWire;
+      };
       readonly low_stock?: { readonly count: number; readonly out_count: number };
     };
     readonly recent_activity: readonly {
@@ -114,6 +125,18 @@ const aged = (wire: AgedWire): AgedCountAmount => ({
   ...(wire.oldest_bill_date ? { firstBillDate: wire.oldest_bill_date } : {}),
 });
 
+const waiting = (wire: WaitingWire): AgedCountAmount => ({
+  ...countAmount(wire),
+  ...(wire.oldest_days === undefined ? {} : { oldestDays: wire.oldest_days }),
+  ...(wire.oldest_date ? { firstBillDate: wire.oldest_date } : {}),
+});
+
+const openOrders = (wire: NonNullable<DashboardWire['data']['tiles']['open_orders']>) => ({
+  ...(wire.sales_orders ? { salesOrders: waiting(wire.sales_orders) } : {}),
+  ...(wire.challans ? { challans: waiting(wire.challans) } : {}),
+  ...(wire.purchase_orders ? { purchaseOrders: waiting(wire.purchase_orders) } : {}),
+});
+
 const dues = (wire: { readonly amount: string; readonly advances?: string }) => ({
   amount: wire.amount,
   ...(wire.advances ? { advances: wire.advances } : {}),
@@ -167,6 +190,7 @@ const toTiles = (wire: DashboardWire['data']['tiles']): DashboardTiles => ({
         },
       }
     : {}),
+  ...(wire.open_orders ? { openOrders: openOrders(wire.open_orders) } : {}),
   ...(wire.low_stock
     ? { lowStock: { count: wire.low_stock.count, outCount: wire.low_stock.out_count } }
     : {}),

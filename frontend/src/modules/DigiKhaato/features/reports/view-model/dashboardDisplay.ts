@@ -103,10 +103,18 @@ export const tileHref = (key: TileKey, _tiles: DashboardTiles): string => TILE_H
  * from the oldest overdue bill's date to today. Without that date (an older
  * server, or nothing overdue) it is the tab alone.
  */
+/**
+ * A list's tab over a range holding every document a figure counted: the lists
+ * default to this financial year, and last year's bill or order is exactly the
+ * one that must not drop out of the list its figure opens.
+ */
+export const tabHref = (list: string, tab: string, docs: AgedCountAmount, today: string): string =>
+  docs.firstBillDate
+    ? `${list}?tab=${tab}&from=${docs.firstBillDate}&to=${today}`
+    : `${list}?tab=${tab}`;
+
 export const overdueHref = (list: string, bills: AgedCountAmount, today: string): string =>
-  bills.firstBillDate
-    ? `${list}?tab=overdue&from=${bills.firstBillDate}&to=${today}`
-    : `${list}?tab=overdue`;
+  tabHref(list, 'overdue', bills, today);
 
 export const advancesLine = (
   key: 'toCollect' | 'toPay',

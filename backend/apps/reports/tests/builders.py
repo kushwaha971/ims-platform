@@ -83,14 +83,22 @@ def credit_note(tenant: Any, on: dt.date, total: Any, *, party: Any, status: str
     return sale(tenant, on, total, party=party, kind="credit_note", status=status, due=0)
 
 
-def purchase(tenant: Any, on: dt.date, total: Any, *, party: Any, status: str = "recorded") -> Any:
+def purchase(
+    tenant: Any,
+    on: dt.date,
+    total: Any,
+    *,
+    party: Any,
+    status: str = "recorded",
+    kind: str = "purchase_bill",
+) -> Any:
     from django.utils import timezone
 
     from apps.purchases.models import PurchaseDocument
 
     return PurchaseDocument.objects.create(
         tenant=tenant,
-        kind="purchase_bill",
+        kind=kind,
         number=None if status == "draft" else _n("PUR"),
         fy_label=fy_label_for(tenant, on),
         status=status,

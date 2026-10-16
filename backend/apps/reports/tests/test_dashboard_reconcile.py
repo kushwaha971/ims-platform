@@ -285,6 +285,7 @@ def test_project_omits_what_a_reader_may_not_see(tenant: Any) -> None:
         "shop_cash_in_hand",
         "today_received",
         "supplier_bills",
+        "open_orders",
         "low_stock",
     }
     assert full["tiles"]["overdue"]["invoices"] == {"count": 0, "amount": "0.00"}
@@ -636,3 +637,77 @@ def test_cash_in_hand_says_from_which_day_it_counts(tenant: Any) -> None:
         "amount": "-110.00",
         "since": (TODAY - dt.timedelta(days=15)).isoformat(),
     }
+
+
+def test_open_orders_are_rows_in_needs_attention(tenant: Any) -> None:
+    """WP-06 spec order 4 — Needs attention listed overdue bills and stock but
+    not the orders a shop has promised or is waiting on: a customer's confirmed
+    order not yet billed, goods sent on a challan and not billed, and a
+    purchase order the supplier has not yet billed. Each comes with its count,
+    amount and the date of the oldest, so the row says how old and its link
+    opens a list holding every one. Drafts, converted and cancelled ones are
+    not waiting on anybody."""
+    ramesh = b.party(tenant)
+    gupta = b.party(tenant, "Gupta", is_supplier=True, is_customer=False)
+    b.sale(
+        tenant, TODAY - dt.timedelta(days=12), 900, party=ramesh, kind="sales_order", status="open"
+    )
+    b.sale(
+        tenant, TODAY - dt.timedelta(days=2), 100, party=ramesh, kind="sales_order", status="open"
+    )
+    for status in ("draft", "converted", "cancelled"):
+        b.sale(tenant, TODAY, 5000, party=ramesh, kind="sales_order", status=status)
+    b.sale(tenant, TODAY - dt.timedelta(days=4), 250, party=ramesh, kind="delivery_challan")
+    b.sale(tenant, TODAY, 7000, party=ramesh, kind="delivery_challan", status="converted")
+    b.purchase(
+        tenant,
+        TODAY - dt.timedelta(days=6),
+        3000,
+        party=gupta,
+        kind="purchase_order",
+        status="sent",
+    )
+    b.purchase(tenant, TODAY, 8000, party=gupta, kind="purchase_order", status="billed")
+
+    orders = _tiles(tenant)["open_orders"]
+    assert orders == {
+        "sales_orders": {
+            "count": 2,
+            "amount": "1000.00",
+            "oldest_days": 12,
+            "oldest_date": (TODAY - dt.timedelta(days=12)).isoformat(),
+        },
+        "challans": {
+            "count": 1,
+            "amount": "250.00",
+            "oldest_days": 4,
+            "oldest_date": (TODAY - dt.timedelta(days=4)).isoformat(),
+        },
+        "purchase_orders": {
+            "count": 1,
+            "amount": "3000.00",
+            "oldest_days": 6,
+            "oldest_date": (TODAY - dt.timedelta(days=6)).isoformat(),
+        },
+    }
+    # Each travels with the permission that reads its own list.
+    payload = _dashboard(tenant)
+    assert set(
+        project(payload, granted=EVERYTHING, modules=ALL_MODULES)["tiles"]["open_orders"]
+    ) == {"challans", "purchase_orders"}
+    with_all = EVERYTHING | {"sales.estimate.read"}
+    assert set(project(payload, granted=with_all, modules=ALL_MODULES)["tiles"]["open_orders"]) == {
+        "sales_orders",
+        "challans",
+        "purchase_orders",
+    }
+    bare = project(payload, granted=frozenset({"reports.basic.read"}), modules=ALL_MODULES)
+    assert "open_orders" not in bare["tiles"]
+
+
+def test_a_shop_with_no_orders_has_empty_order_rows(tenant: Any) -> None:
+    """The first build computed the oldest order's age before asking whether
+    there was one, so every shop without orders lost the whole part."""
+    payload = _dashboard(tenant)
+    assert "unavailable" not in payload
+    assert payload["tiles"]["open_orders"]["sales_orders"] == {"count": 0, "amount": "0.00"}

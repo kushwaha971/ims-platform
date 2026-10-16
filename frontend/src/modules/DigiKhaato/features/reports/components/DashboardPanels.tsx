@@ -2,7 +2,15 @@
 
 import { useRouter } from 'next/navigation';
 
-import { AlarmClock, PackageX, Package, Truck } from 'lucide-react';
+import {
+  AlarmClock,
+  ClipboardList,
+  FileClock,
+  PackageX,
+  Package,
+  ShoppingCart,
+  Truck,
+} from 'lucide-react';
 
 import {
   UbAmount,
@@ -27,6 +35,7 @@ import {
   advancesLine,
   cashTile,
   overdueHref,
+  tabHref,
   shortInr,
   tileHref,
   tileTone,
@@ -57,7 +66,7 @@ export const PARTS = {
   today: ['documents', 'today_received', 'shop_cash_in_hand'],
   customers: ['party_tiles', 'documents', 'top_debtors'],
   suppliers: ['party_tiles', 'supplier_bills', 'top_creditors'],
-  attention: ['documents', 'supplier_bills', 'low_stock'],
+  attention: ['documents', 'supplier_bills', 'open_orders', 'low_stock'],
   activity: ['recent_activity'],
   lowStock: ['low_stock'],
 } as const;
@@ -382,6 +391,31 @@ export function SuppliersPanel({
   );
 }
 
+/** WP-06 — orders waiting on someone, each opening its own list's waiting tab. */
+const ORDER_ROWS = [
+  {
+    key: 'salesOrders',
+    title: 'reports.dashboard.attention.orders',
+    list: ROUTES.SALES_ORDERS,
+    tab: 'open',
+    icon: <ClipboardList />,
+  },
+  {
+    key: 'challans',
+    title: 'reports.dashboard.attention.challans',
+    list: ROUTES.SALES_CHALLANS,
+    tab: 'issued',
+    icon: <FileClock />,
+  },
+  {
+    key: 'purchaseOrders',
+    title: 'reports.dashboard.attention.purchaseOrders',
+    list: ROUTES.PURCHASE_ORDERS,
+    tab: 'sent',
+    icon: <ShoppingCart />,
+  },
+] as const;
+
 /**
  * Spec order 4 — what needs doing, always on the page (it was a collapsed
  * "Details" strip on a laptop): each row says how much, how many, how old,
@@ -422,6 +456,21 @@ export function NeedsAttention({
       href: overdueHref(ROUTES.PURCHASE_BILLS, payable, data.asOf),
       tone: 'warning',
     });
+  for (const order of ORDER_ROWS) {
+    const docs = tiles.openOrders?.[order.key];
+    if (docs && docs.count > 0)
+      items.push({
+        key: order.key,
+        title: t(order.title, { count: docs.count, amount: formatInr(docs.amount) }),
+        caption:
+          docs.oldestDays === undefined
+            ? undefined
+            : t('reports.dashboard.attention.waiting', { days: docs.oldestDays }),
+        icon: order.icon,
+        href: tabHref(order.list, order.tab, docs, data.asOf),
+        tone: 'warning',
+      });
+  }
   const stock = tiles.lowStock;
   if (stock && stock.outCount > 0)
     items.push({

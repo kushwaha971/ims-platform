@@ -80,6 +80,15 @@ console.log('udhaar got', (await api('POST', '/ledger-entries', { party_id: rame
 const cats = await api('GET', '/expense-categories', null, T);
 const catList = cats.body.data?.results ?? cats.body.data ?? [];
 if (catList.length) console.log('expense', (await api('POST', '/expenses', { amount: '150', category_id: catList[0].id, expense_date: iso(0), mode: 'cash', note: 'Tea for staff' }, T)).status);
+// Orders waiting on someone (WP-06 spec order 4): a customer order confirmed
+// twelve days ago, goods out on a challan four days ago, and a purchase order
+// sent to the supplier six days ago, none of them billed yet.
+const so = (await must('POST', '/sales/orders', { party_id: meena.id, document_date: iso(12), lines: [{ item_id: dal.id, qty: '5' }] }, T));
+await must('POST', `/sales/orders/${so.id}/confirm`, {}, T);
+const dc = await must('POST', '/sales/delivery-challans', { party_id: ramesh.id, document_date: iso(4), lines: [{ item_id: rice.id, qty: '1' }] }, T);
+await must('POST', `/sales/delivery-challans/${dc.id}/issue`, {}, T);
+const po = await must('POST', '/purchases/orders', { party_id: gupta.id, document_date: iso(6), lines: [{ item_id: sugar.id, qty: '20', unit_cost: '40.00' }] }, T);
+await must('POST', `/purchases/orders/${po.id}/send`, {}, T);
 
 const measure = (page) => page.evaluate(() => {
   const clipped = [];
@@ -143,6 +152,16 @@ for (const [size, viewport] of WIDTHS) {
       if (qs.get('from')) { wire.set('date_from', qs.get('from')); wire.set('date_to', qs.get('to')); }
       const listed = (await api('GET', `${path}?${wire}`, null, T)).body.meta.totals;
       console.log(`   ${region} overdue ${tile?.count} · ${tile?.amount} vs list ${listed.count} · ${listed.amount_due} (${href})`);
+    }
+    // Each order row equals the list its link opens.
+    for (const [rx, path] of [[/customer orders? to deliver/, '/sales/orders'], [/challans? not billed/, '/sales/delivery-challans'], [/purchase orders? waiting/, '/purchases/orders']]) {
+      const link = page.getByRole('region', { name: 'Needs attention' }).getByRole('link', { name: rx });
+      const href = (await link.count()) ? await link.first().getAttribute('href') : null;
+      const qs = new URLSearchParams((href ?? '').split('?')[1] ?? '');
+      const wire = new URLSearchParams({ tab: qs.get('tab') ?? '' });
+      if (qs.get('from')) { wire.set('date_from', qs.get('from')); wire.set('date_to', qs.get('to')); }
+      const listed = (await api('GET', `${path}?${wire}`, null, T)).body.meta?.totals;
+      console.log(`   order row ${rx}: "${href ? (await link.first().innerText()).replace(/\s+/g, ' ') : 'none'}" vs list ${listed?.count} · ${listed?.grand_total} (${href})`);
     }
     for (const name of ['Today', 'Customers', 'Suppliers', 'Needs attention']) {
       console.log(`   region "${name}": ${await page.getByRole('region', { name }).count()}`);
