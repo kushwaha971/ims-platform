@@ -90,9 +90,21 @@ The outgoing-text inventory is in [11-message-inventory.md](11-message-inventory
 - the payment receipt;
 - the sales document share. This one used to open WhatsApp with fixed text in a pop-up that phones block, and now opens the composer.
 
-The Lending and Library dialogs were already editable. Still open:
+The Lending dialog was already editable. (The Library dialog was thought to be, but only its custom message was; see below.)
 
-- ~~bulk "Remind all" editable (MSG-07/08)~~ and ~~the reminder log storing the merchant's final text (MSG-10)~~: done 16 Oct 2026;
-- the library counter slip and the pay-link text need moving onto a composer;
-- supplier messages do not exist yet.
+## WP-04 continuation — every buildable path (16 October 2026, cloud session)
+
+Done the same day, each with fail-before tests and a browser check:
+
+- bulk "Remind all" is editable per customer (MSG-07/08);
+- reminder and Library message logs keep the words that left (MSG-10), through `/reminders/{id}/send {text}` and the Library send's `final_text`, with one server rule (`whatsapp_text.final_text`);
+- the library counter slip, the UPI QR words, and every Library member and group message are editable.
+
+What remains:
+
+- M-12 supplier messages, which do not exist yet and start on the composer when WP-08 builds them;
+- M-03/M-04 (receipt and invoice share text not recorded), a WP-08 decision;
+- physical-device handoff evidence.
+
+The next order is WP-03 D-05 (quantity arithmetic), then WP-05, which begins with a design review for the owner before any build.
 
