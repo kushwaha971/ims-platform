@@ -99,3 +99,27 @@ it('UAT D1: a failed revoke never mints a second link', async () => {
   expect(sales.createShareLink).not.toHaveBeenCalled();
   expect(navigator.clipboard.writeText).not.toHaveBeenCalled();
 });
+
+it('MSG-02: WhatsApp opens an editable composer with the link, never a pop-up', async () => {
+  /* Before WP-04 this awaited the share link and then called `window.open` —
+     a window opened after a request returns is a pop-up the browser blocks on
+     phones and in-app browsers, and the merchant could not edit the words. */
+  sales.createShareLink.mockResolvedValue({
+    url: 'https://x/d/live',
+    expiresAt: '2026-10-28T00:00:00Z',
+  });
+  const open = jest.spyOn(window, 'open').mockImplementation(() => null);
+  const { result } = renderHook(() => useInvoiceDetail('d1', false), { wrapper });
+  await waitFor(() => expect(result.current.document?.id).toBe('d1'));
+
+  await act(async () => {
+    await result.current.share('whatsapp');
+  });
+
+  expect(open).not.toHaveBeenCalled();
+  expect(result.current.composer?.message).toContain('https://x/d/live');
+  expect(result.current.composer?.phone).toBe(makeDocument().partySnapshot?.mobile ?? null);
+  act(() => result.current.closeComposer());
+  expect(result.current.composer).toBeNull();
+  open.mockRestore();
+});

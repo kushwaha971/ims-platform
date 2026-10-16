@@ -368,3 +368,27 @@ Read this file, `git status`, current diff, root/frontend AGENTS, and the releva
   - Locales in step.
   - Production build passed. The bundle gate passed with no budget change.
 - No backend change in this step. No browser pass was run: the screens draw the same figures, except the waiver dialog, which no longer crashes. Railway deployment, device evidence and 9/10 readiness are NOT claimed.
+
+### 16 October 2026 — WP-04 first slice: the shared share sheet is an editable composer (cloud session)
+
+- The outgoing-text inventory is in `docs/shop-ims-readiness/11-message-inventory.md`: 14 paths, 11 in scope. 7 are editable now, 3 are open (bulk Remind all, library counter slip, pay-link text) and 1 is not built (supplier messages).
+- `UbShareSheet` changes:
+  - The default text sits in an editable box, and WhatsApp, SMS, Copy and More… carry exactly the box's text.
+  - A refetch keeps typed words; "Use the original message" restores the default.
+  - A new opening or a different recipient starts from the default.
+  - A blank message opens no channel and shows why.
+  - This applies at once to the khata reminder, the bill/source reminder and the payment receipt.
+- Labels for the sheet now come from one hook, `useShareSheetLabels`, which replaces three hand-built copies.
+- Defect fixed: sales document "Share on WhatsApp" awaited the share link and then called `window.open` with fixed text. Phones and in-app browsers block a window opened after a request. It now opens the composer, loaded with `dynamic()`, with the live link in the text and the recipient shown.
+- Fail-before:
+  - `UbShareSheet.test.tsx`: 7 of 18 failed before (5 new composer cases, plus the preview and tab-order cases updated for the editable box); 18 of 18 pass after.
+  - `useInvoiceDetail.share.test.tsx`: the new composer case failed before; 3 of 3 pass after.
+  - `sharedOwners.test.ts` gains a guard against `window.open(buildWhatsAppUrl…)`.
+- Gates:
+  - Frontend Jest: 4144 passed across 370 suites.
+  - `tsc` clean. ESLint and Prettier clean on the changed files.
+  - Locales in step: 6311 keys, with the two new `share.*` keys in English and Hindi.
+  - Production build passed.
+  - Bundle gate passed after raising only the internal `/design-system` gallery route, by the measured +0.5 / +0.6 KB, explained in `bundle-budgets.json`. Product routes stayed inside their budgets.
+- Not done: no browser pass on a live stack this step, and no physical-device WhatsApp/SMS handoff. The reminder log still stores the server text rather than the edit (MSG-10). Railway deployment and 9/10 readiness are NOT claimed.
+

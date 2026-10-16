@@ -1,9 +1,10 @@
 'use client';
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useState } from 'react';
 
 import type { UbShareSheetLabels } from 'src/design-system';
 import { usePermissions } from 'src/hooks/usePermissions';
+import { useShareSheetLabels } from 'src/hooks/useShareSheetLabels';
 import { useTranslation } from 'src/hooks/useTranslation';
 
 import { isRemindable, reminderRecipient } from '../view-model/reminderMessage';
@@ -75,18 +76,7 @@ export const usePartyReminder = (party: PartyReminderSource | null): UsePartyRem
 
   const openSheet = useCallback(() => setOpen(true), []);
 
-  const labels = useMemo<UbShareSheetLabels>(
-    () => ({
-      whatsapp: t('share.whatsapp'),
-      sms: t('share.sms'),
-      call: t('reminders.sheet.call'),
-      copy: t('share.copyText'),
-      more: t('share.more'),
-      close: t('common.action.close'),
-      preview: t('share.preview'),
-    }),
-    [t]
-  );
+  const labels = useShareSheetLabels(true);
 
   return {
     canRemind,

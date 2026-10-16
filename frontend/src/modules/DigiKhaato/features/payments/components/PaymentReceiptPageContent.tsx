@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 
 import dynamic from 'next/dynamic';
 import { useSearchParams } from 'next/navigation';
@@ -21,11 +21,11 @@ import {
   UbStack,
   UbStatusBadge,
   UbStatusBanner,
-  type UbShareSheetLabels,
 } from 'src/design-system';
 import { useAppDispatch, useAppSelector } from 'src/hooks/useAppStore';
 import { usePermissions } from 'src/hooks/usePermissions';
 import { useShareFeedback } from 'src/hooks/useShareFeedback';
+import { useShareSheetLabels } from 'src/hooks/useShareSheetLabels';
 import { useTranslation } from 'src/hooks/useTranslation';
 import { selectLocale } from 'src/redux/slice/localeSlice';
 import { showSnackbar } from 'src/redux/slice/snackbarSlice';
@@ -81,17 +81,7 @@ export function PaymentReceiptPageContent({ id }: Readonly<{ id: string }>): Rea
   const [again, setAgain] = useState<PaymentContext | null>(null);
   const payment = receipt.payment?.id === id ? receipt.payment : null;
 
-  const labels = useMemo<UbShareSheetLabels>(
-    () => ({
-      whatsapp: t('share.whatsapp'),
-      sms: t('share.sms'),
-      copy: t('share.copyText'),
-      more: t('share.more'),
-      close: t('common.action.close'),
-      preview: t('share.preview'),
-    }),
-    [t]
-  );
+  const labels = useShareSheetLabels();
 
   const { startShare, submitVoid, submitApply } = receipt;
   const confirmApply = useCallback(

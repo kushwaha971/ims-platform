@@ -16,6 +16,8 @@ const LABELS = {
   more: 'More…',
   close: 'Close',
   preview: 'Message',
+  reset: 'Reset to default',
+  empty: 'Write a message before sending.',
 } as const;
 
 const MESSAGE = 'Namaste Ramesh Traders,\nRs 2,500.00 is pending with Kumar & Co.';
@@ -73,9 +75,9 @@ describe('UbShareSheet', () => {
     renderSheet();
     const dialog = screen.getByRole('dialog', { name: 'Send reminder' });
     expect(dialog).toHaveAccessibleDescription('To Ramesh Traders · +91 98123 45678');
-    const preview = dialog.querySelector('[data-ub-share-preview]');
-    expect(preview?.textContent).toBe(MESSAGE);
-    expect(preview).toHaveClass('whitespace-pre-line');
+    const preview = dialog.querySelector<HTMLTextAreaElement>('[data-ub-share-preview]');
+    expect(preview?.value).toBe(MESSAGE);
+    expect(screen.getByRole('textbox', { name: 'Message' })).toBe(preview);
   });
 
   it('links WhatsApp to the party, in a new tab, with the whole message encoded', () => {
@@ -213,6 +215,8 @@ describe('UbShareSheet', () => {
     const props = renderSheet();
     expect(screen.getByRole('button', { name: 'Close' })).toHaveFocus();
     await user.tab();
+    expect(screen.getByRole('textbox', { name: 'Message' })).toHaveFocus();
+    await user.tab();
     expect(screen.getByRole('link', { name: 'WhatsApp' })).toHaveFocus();
     await user.tab();
     expect(screen.getByRole('link', { name: 'SMS' })).toHaveFocus();
@@ -230,5 +234,101 @@ describe('UbShareSheet', () => {
     renderSheet({ open: false });
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'WhatsApp' })).not.toBeInTheDocument();
+  });
+
+  /* MSG-01..05 (WP-04) — the default text is a starting point. Before this the
+     sheet showed it read-only, so a merchant who wanted to add "please pay by
+     Friday" had to copy, paste into WhatsApp and edit there — and the SMS row
+     could not be edited at all. */
+  describe('editing the message before it goes', () => {
+    const EDITED =
+      'नमस्ते Ramesh 🙏\nPlease pay ₹2,500 by Friday & send a photo: https://x.in/p?a=1';
+
+    it('sends exactly the edited text through every channel', async () => {
+      const writeText = jest.fn().mockResolvedValue(undefined);
+      Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+      const props = renderSheet({ smsMessage: 'Short SMS default' });
+      fireEvent.change(screen.getByRole('textbox', { name: 'Message' }), {
+        target: { value: EDITED },
+      });
+      const wa = screen.getByRole('link', { name: 'WhatsApp' }).getAttribute('href') ?? '';
+      expect(new URL(wa).searchParams.get('text')).toBe(EDITED);
+      const sms = screen.getByRole('link', { name: 'SMS' }).getAttribute('href') ?? '';
+      expect(decodeURIComponent(sms.split('&body=')[1] ?? '')).toBe(EDITED);
+      fireEvent.click(screen.getByRole('button', { name: 'Copy text' }));
+      await waitFor(() => expect(writeText).toHaveBeenCalledWith(EDITED));
+      expect(props.onShared).toHaveBeenCalledWith('copy');
+    });
+
+    it('keeps the edit when the default is refetched, and follows the default when untouched', () => {
+      const props = {
+        open: true,
+        onOpenChange: jest.fn(),
+        title: 'Send reminder',
+        message: MESSAGE,
+        phone: '+919812345678',
+        labels: LABELS,
+      };
+      const { rerender } = render(<UbShareSheet {...props} />);
+      rerender(<UbShareSheet {...props} message="A newer default" />);
+      expect(screen.getByRole('textbox', { name: 'Message' })).toHaveValue('A newer default');
+      fireEvent.change(screen.getByRole('textbox', { name: 'Message' }), {
+        target: { value: 'My words' },
+      });
+      rerender(<UbShareSheet {...props} message="Refetched default" />);
+      expect(screen.getByRole('textbox', { name: 'Message' })).toHaveValue('My words');
+    });
+
+    it('offers Reset to default only after an edit, and it restores the default', () => {
+      renderSheet();
+      expect(screen.queryByRole('button', { name: 'Reset to default' })).not.toBeInTheDocument();
+      fireEvent.change(screen.getByRole('textbox', { name: 'Message' }), {
+        target: { value: 'Changed' },
+      });
+      fireEvent.click(screen.getByRole('button', { name: 'Reset to default' }));
+      expect(screen.getByRole('textbox', { name: 'Message' })).toHaveValue(MESSAGE);
+      expect(
+        new URL(
+          screen.getByRole('link', { name: 'WhatsApp' }).getAttribute('href') ?? ''
+        ).searchParams.get('text')
+      ).toBe(MESSAGE);
+    });
+
+    it('will not open a channel with an empty message, and says why', () => {
+      renderSheet();
+      fireEvent.change(screen.getByRole('textbox', { name: 'Message' }), {
+        target: { value: '   \n ' },
+      });
+      expect(screen.queryByRole('link', { name: 'WhatsApp' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('link', { name: 'SMS' })).not.toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'WhatsApp' })).toBeDisabled();
+      expect(screen.getByRole('button', { name: 'Copy text' })).toBeDisabled();
+      expect(screen.getByRole('alert')).toHaveTextContent('Write a message before sending.');
+    });
+
+    it("never carries one person's edit to another, or into the next opening", () => {
+      const props = {
+        open: true,
+        onOpenChange: jest.fn(),
+        title: 'Send reminder',
+        message: MESSAGE,
+        phone: '+919812345678',
+        labels: LABELS,
+      };
+      const { rerender } = render(<UbShareSheet {...props} />);
+      fireEvent.change(screen.getByRole('textbox', { name: 'Message' }), {
+        target: { value: 'For Ramesh only' },
+      });
+      rerender(<UbShareSheet {...props} phone="+919900011122" message="Namaste Sita" />);
+      expect(screen.getByRole('textbox', { name: 'Message' })).toHaveValue('Namaste Sita');
+      fireEvent.change(screen.getByRole('textbox', { name: 'Message' }), {
+        target: { value: 'For Sita' },
+      });
+      rerender(
+        <UbShareSheet {...props} phone="+919900011122" message="Namaste Sita" open={false} />
+      );
+      rerender(<UbShareSheet {...props} phone="+919900011122" message="Namaste Sita" />);
+      expect(screen.getByRole('textbox', { name: 'Message' })).toHaveValue('Namaste Sita');
+    });
   });
 });

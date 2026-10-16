@@ -47,6 +47,12 @@ const PrintSheetLazy = dynamic(
   { ssr: false, loading: () => <UbPageSkeleton variant="card" /> }
 );
 
+/* MSG-02 — the editable share composer arrives only when somebody shares. */
+const InvoiceShareSheetLazy = dynamic(
+  () => import('./InvoiceShareSheet').then((m) => m.InvoiceShareSheet),
+  { ssr: false }
+);
+
 const PaymentFormDrawerLazy = dynamic(
   () => import('../../payments/components/PaymentFormDrawer').then((m) => m.PaymentFormDrawer),
   { ssr: false }
@@ -285,6 +291,15 @@ export function InvoiceDetailPageContent({
           />
         </UbStack>
       </UbStack>
+      {detail.composer && (
+        <InvoiceShareSheetLazy
+          title={t('sales.share.whatsapp')}
+          party={partyLabel(doc) ?? t('sales.walkIn.customer')}
+          message={detail.composer.message}
+          phone={detail.composer.phone}
+          onClose={detail.closeComposer}
+        />
+      )}
     </UbPageShell>
   );
 }

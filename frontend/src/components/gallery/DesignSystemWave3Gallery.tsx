@@ -93,6 +93,8 @@ export function DesignSystemWave3Gallery(): React.JSX.Element {
             more: 'More…',
             close: 'Close',
             preview: 'Message',
+            reset: 'Use the original message',
+            empty: 'Write a message before sending.',
           }}
           onShared={feedback.onShared}
           onFailed={feedback.onFailed}

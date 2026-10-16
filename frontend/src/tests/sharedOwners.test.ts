@@ -44,6 +44,12 @@ describe('one owner per shared rule', () => {
     expect(offenders(/https:\/\/wa\.me\/\$\{/, 'utils/share.ts')).toEqual([]);
   });
 
+  it('never opens WhatsApp or SMS with text the merchant could not edit (MSG-02)', () => {
+    // Outgoing text goes through `UbShareSheet`, the editable composer. A
+    // `window.open` after a request is also a pop-up phones block.
+    expect(offenders(/window\.open\(\s*build(WhatsApp|Sms)Url/, '')).toEqual([]);
+  });
+
   it('decides who may go over a credit limit in the session slice', () => {
     const typedOut = /role\s*===\s*'owner'\s*\|\|\s*role\s*===\s*'admin'/;
     expect(offenders(typedOut, 'redux/slice/sessionSlice.ts')).toEqual([]);

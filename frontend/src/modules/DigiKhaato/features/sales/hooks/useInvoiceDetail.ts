@@ -9,7 +9,6 @@ import { usePrintBranding } from 'src/print/usePrintBranding';
 import { showSnackbar } from 'src/redux/slice/snackbarSlice';
 import { formatBusinessDate } from 'src/utils/dates';
 import { formatInr } from 'src/utils/money';
-import { buildWhatsAppUrl } from 'src/utils/share';
 
 import { selectInvoiceDetail, type InvoiceDetailState } from '../redux/invoiceDetailSlice';
 import { fetchFlowDocument } from '../redux/salesFlowThunk';
@@ -76,6 +75,13 @@ export interface UseInvoiceDetailResult extends InvoiceDetailState {
   readonly setTemplate: (template: PrintTemplate) => void;
   readonly print: (template: PrintTemplate) => void;
   readonly share: (channel: 'link' | 'whatsapp') => Promise<void>;
+  /**
+   * MSG-02 (WP-04) — the WhatsApp share's default words and recipient, open in
+   * the shared composer (`UbShareSheet`) for the merchant to edit; `null` when
+   * closed. The link is minted first, so the words never point at nothing.
+   */
+  readonly composer: { readonly message: string; readonly phone: string | null } | null;
+  readonly closeComposer: () => void;
   /** UAT D1 — owner/admin: the old link stops working and a new one is copied. */
   readonly resetLink: () => Promise<void>;
   /** PAY-01 — re-read the bill after a payment against it moved its status. */
@@ -93,6 +99,8 @@ export const useInvoiceDetail = (
   const branding = usePrintBranding();
   const [template, setTemplate] = useState<PrintTemplate>('a4');
   const [printing, setPrinting] = useState(autoPrint);
+  const [composer, setComposer] = useState<UseInvoiceDetailResult['composer']>(null);
+  const closeComposer = useCallback(() => setComposer(null), []);
 
   useEffect(() => {
     const doc =
@@ -149,9 +157,12 @@ export const useInvoiceDetail = (
         }
         return;
       }
-      const text = shareText(doc, link, t);
-      const mobile = doc.partySnapshot?.mobile ?? doc.walkInMobile;
-      window.open(buildWhatsAppUrl(text, mobile), '_blank', 'noopener');
+      // No `window.open` here: a window opened after a request returns is a
+      // pop-up the browser blocks. The composer's WhatsApp row is a real link.
+      setComposer({
+        message: shareText(doc, link, t),
+        phone: doc.partySnapshot?.mobile ?? doc.walkInMobile ?? null,
+      });
     },
     [dispatch, detail.document, t, kind]
   );
@@ -175,5 +186,16 @@ export const useInvoiceDetail = (
     void dispatch(fetchInvoice(id));
   }, [dispatch, id]);
 
-  return { ...detail, branding, template, setTemplate, print, share, resetLink, reload };
+  return {
+    ...detail,
+    branding,
+    template,
+    setTemplate,
+    print,
+    share,
+    composer,
+    closeComposer,
+    resetLink,
+    reload,
+  };
 };

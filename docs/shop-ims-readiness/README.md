@@ -16,6 +16,7 @@ Status: implementation specification, 15 October 2026. Owner request: entire Sho
 | [Acceptance tracker](08-acceptance-and-evidence-tracker.md) | Delivery team and reviewers | Requirement statuses, score/sign-off record and evidence templates |
 | [Draft recovery contract](09-draft-recovery-contract.md) | Engineers | SH-011 durable draft creation for sales and purchases |
 | [Reuse inventory](10-reuse-inventory.md) | Engineering lead, reviewers | WP-03 shared owners, exception register and duplication debt |
+| [Message inventory](11-message-inventory.md) | Product, frontend, backend, QA | WP-04 every outgoing text path, its composer and status |
 
 ## Scope and boundaries
 

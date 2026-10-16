@@ -64,17 +64,17 @@ Status values: Not started, In progress, Needs acceptance review, Pass, Fail, Bl
 | ENG-06 | [engineering-and-code-reuse](04-engineering-and-code-reuse.md) | Engineering | Needs acceptance review | Sales and purchase save/load request identities ignore late results after reset; actor/tenant/family(kind) recovery isolation; claim tables registered for tenant export/deletion (sales omission fixed 16 Oct) | Whole-module review remains |
 | ENG-07 | [engineering-and-code-reuse](04-engineering-and-code-reuse.md) | Engineering | Needs acceptance review | — | — |
 | ENG-08 | [engineering-and-code-reuse](04-engineering-and-code-reuse.md) | Engineering | Needs acceptance review | — | — |
-| MSG-01 | [editable-messages-and-reminders](05-editable-messages-and-reminders.md) | Product/messaging | Needs acceptance review | — | — |
-| MSG-02 | [editable-messages-and-reminders](05-editable-messages-and-reminders.md) | Product/messaging | Needs acceptance review | — | — |
+| MSG-01 | [editable-messages-and-reminders](05-editable-messages-and-reminders.md) | Product/messaging | Needs acceptance review | First inventory M-01..M-14 in [message-inventory](11-message-inventory.md); 7 of 11 in-scope paths editable | M-06 bulk reminders, M-10 counter slip, M-11 pay-link text; M-12 supplier messages not built |
+| MSG-02 | [editable-messages-and-reminders](05-editable-messages-and-reminders.md) | Product/messaging | Needs acceptance review | `UbShareSheet` is the shared editable composer; invoice/estimate/order/challan share moved onto it (was a fixed-text `window.open` after a request) | Server-prepared bulk paths not yet |
 | MSG-03 | [editable-messages-and-reminders](05-editable-messages-and-reminders.md) | Product/messaging | Needs acceptance review | — | — |
-| MSG-04 | [editable-messages-and-reminders](05-editable-messages-and-reminders.md) | Product/messaging | Needs acceptance review | — | — |
-| MSG-05 | [editable-messages-and-reminders](05-editable-messages-and-reminders.md) | Product/messaging | Needs acceptance review | — | — |
+| MSG-04 | [editable-messages-and-reminders](05-editable-messages-and-reminders.md) | Product/messaging | Needs acceptance review | Composer keeps typed words across refetch, explicit 'Use the original message', resets on new opening or recipient (`UbShareSheet.test.tsx`) | — |
+| MSG-05 | [editable-messages-and-reminders](05-editable-messages-and-reminders.md) | Product/messaging | Needs acceptance review | Blank/whitespace message opens no channel and says why; Hindi, emoji, newline, `&` and URL round-trip to WhatsApp/SMS/copy (tests) | SMS segment disclosure not built; physical-device handoff not run |
 | MSG-06 | [editable-messages-and-reminders](05-editable-messages-and-reminders.md) | Product/messaging | Needs acceptance review | — | — |
 | MSG-07 | [editable-messages-and-reminders](05-editable-messages-and-reminders.md) | Product/messaging | Needs acceptance review | — | — |
 | MSG-08 | [editable-messages-and-reminders](05-editable-messages-and-reminders.md) | Product/messaging | Needs acceptance review | — | — |
 | MSG-09 | [editable-messages-and-reminders](05-editable-messages-and-reminders.md) | Product/messaging | Needs acceptance review | — | — |
-| MSG-10 | [editable-messages-and-reminders](05-editable-messages-and-reminders.md) | Product/messaging | Needs acceptance review | — | — |
-| MSG-11 | [editable-messages-and-reminders](05-editable-messages-and-reminders.md) | Product/messaging | Needs acceptance review | — | — |
+| MSG-10 | [editable-messages-and-reminders](05-editable-messages-and-reminders.md) | Product/messaging | Needs acceptance review | Lending/Library record the edited text | Khata/source reminder log stores the server text, not the merchant's edit |
+| MSG-11 | [editable-messages-and-reminders](05-editable-messages-and-reminders.md) | Product/messaging | Needs acceptance review | Edited-text-reaches-channel, reset, blank, rerender and wrong-recipient cases covered for the shared composer | Per-path regressions for M-06/M-10/M-11 pending |
 | MSG-12 | [editable-messages-and-reminders](05-editable-messages-and-reminders.md) | Product/messaging | Needs acceptance review | — | — |
 
 ## Score and release record
@@ -87,7 +87,7 @@ Status values: Not started, In progress, Needs acceptance review, Pass, Fail, Bl
 | Functionality/business weighted score | Not evaluated; target at least9.0 |
 | Lowest dimension / unresolved defects | Not evaluated; D-01 approved16 Oct; sales and purchase SH-011 implemented with simulated lost-reply browser evidence; physical device/network and release evidence remain open |
 | Mobile/desktop/device evidence | Link evidence for declared matrix |
-| Message inventory completion | Not audited against MSG-01 universal target |
+| Message inventory completion | First pass 16 Oct: 14 paths listed in [11](11-message-inventory.md); 7 of 11 in-scope editable; 3 open, 1 not built |
 | Duplication baseline / high-risk exceptions | First REUSE pass 16 Oct: 5 high-risk duplicates consolidated, 5 exceptions and 4 debts recorded in [10](10-reuse-inventory.md); no overall score measured |
 | Migration / rollback evidence | Attach when applicable |
 | Product/domain/design/engineering/QA sign-off | Pending |

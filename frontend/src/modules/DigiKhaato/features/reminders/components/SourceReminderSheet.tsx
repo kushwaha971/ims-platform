@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo } from 'react';
+import { useCallback, useEffect } from 'react';
 
 import { DEFAULT_TENANT_TIMEZONE } from 'src/constants';
 import {
@@ -9,10 +9,10 @@ import {
   UbSkeleton,
   UbStatusBanner,
   type UbShareChannel,
-  type UbShareSheetLabels,
 } from 'src/design-system';
 import { useAppDispatch, useAppSelector } from 'src/hooks/useAppStore';
 import { useShareFeedback } from 'src/hooks/useShareFeedback';
+import { useShareSheetLabels } from 'src/hooks/useShareSheetLabels';
 import { useTranslation } from 'src/hooks/useTranslation';
 import { selectTenantTimezone } from 'src/redux/slice/sessionSlice';
 import { toDialableNumber } from 'src/utils/share';
@@ -89,18 +89,7 @@ export function SourceReminderSheet({
     void dispatch(fetchSourcePreview({ sourceType, sourceId }));
   }, [dispatch, sourceType, sourceId]);
 
-  const labels = useMemo<UbShareSheetLabels>(
-    () => ({
-      whatsapp: t('share.whatsapp'),
-      sms: t('share.sms'),
-      call: t('reminders.sheet.call'),
-      copy: t('share.copyText'),
-      more: t('share.more'),
-      close: t('common.action.close'),
-      preview: t('share.preview'),
-    }),
-    [t]
-  );
+  const labels = useShareSheetLabels(true);
 
   const ready = status === 'succeeded' && preview?.sourceId === sourceId;
   const refused = ready && !preview.allowed;

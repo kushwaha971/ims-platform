@@ -81,3 +81,19 @@ The reuse inventory and exception register are in [10-reuse-inventory.md](10-reu
 
 Source-scan tests stop each one from being typed out again. Remaining WP-03 debt is mechanical: float money arithmetic in Library/Lending screens (D-01) and day arithmetic (D-02), then the UI-composition audit (D-04) alongside WP-05. WP-04 (editable messages) is next and must reuse `utils/share.ts`.
 
+## WP-04 first slice — the shared composer (16 October 2026, cloud session)
+
+The outgoing-text inventory is in [11-message-inventory.md](11-message-inventory.md). `UbShareSheet` is now the editable composer, which changed four paths at once:
+
+- the khata reminder;
+- the bill/source reminder;
+- the payment receipt;
+- the sales document share. This one used to open WhatsApp with fixed text in a pop-up that phones block, and now opens the composer.
+
+The Lending and Library dialogs were already editable. Still open:
+
+- bulk "Remind all" needs a template edit and preview step (MSG-07/08) and a backend `text` field;
+- the reminder log should store the merchant's final text (MSG-10);
+- the library counter slip and the pay-link text need moving onto a composer;
+- supplier messages do not exist yet.
+

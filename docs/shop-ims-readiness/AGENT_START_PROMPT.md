@@ -85,7 +85,7 @@ all documented sign-offs and both scorecards; passing many tests alone is not en
 
 Append: “Resume from the latest verified QA.md checkpoint and acceptance tracker. Inspect the working tree, current diff and running services first. Preserve completed work and unresolved decisions; do not restart the programme or overwrite unrelated changes.”
 
-## Current handoff — 16 October 2026 (after WP-03 first pass)
+## Current handoff — 16 October 2026 (after WP-03 and the first WP-04 slice)
 
 WP-02 is implemented. Its remaining evidence needs the owner or a real
 device. **WP-03** has had its first pass. Continue autonomously through
@@ -129,17 +129,25 @@ Shared owners (reuse these, do not copy them):
 - Browser checks: `node e2e/purchase-recovery-look.mjs` and
   `node e2e/sales-recovery-look.mjs`, on a live stack.
 
+WP-04 has started: read 11-message-inventory.md. `UbShareSheet` is the
+editable composer for client-built messages, and its labels come from
+`src/hooks/useShareSheetLabels.ts`. Never `window.open` a WhatsApp/SMS link
+built from text; the source-scan guard fails on it. Lending/Library dialogs are
+the server-prepared reference.
+
 **Next, in order:**
-1. D-01 (float money) and D-02 (day maths) are done (R-06, R-07). D-05
-   (quantities via `utils/quantity.ts`) is small and optional. Do it only if it
-   stays mechanical.
-2. WP-04 (editable messages) per 07-delivery-roadmap.md and 05: start with the
-   outgoing-text inventory, and reuse `utils/share.ts` and the shared owners
-   above.
-3. The UI-composition audit (D-04) goes alongside WP-05.
-4. Still owed to WP-02, needing the owner or a device: a physical
-   network-interruption check on a phone, and the owner's SH-011 release review
-   in the tracker. Do not wait on these.
+1. WP-04 M-06: bulk "Remind all" (`BulkReminderDialog`,
+   `ledger/services/reminders.bulk_reminders`). Add an editable template and
+   preview step before the batch is built, and pass the approved text to the
+   server so each `wa_url` uses it (MSG-07/08). Fail-first API and UI tests.
+2. WP-04 MSG-10: when a khata/source reminder channel is tapped, record the
+   merchant's final text, not only the server default.
+3. WP-04 M-10 (library counter slip) and M-11 (pay-link text) onto a composer.
+4. The UI-composition audit (WP-03 D-04) goes alongside WP-05. D-05
+   (quantities) is optional.
+5. Still owed to WP-02, needing the owner or a device: a physical
+   network-interruption check on a phone, and the owner's SH-011 release
+   review in the tracker. Do not wait on these.
 
 Known limits (do not claim otherwise): the purchase editor keeps no device
 copy, so its key is in memory only and a full reload after a lost reply starts
