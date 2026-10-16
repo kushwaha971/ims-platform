@@ -1,5 +1,6 @@
 import type { UbStatusBadgeTone } from 'src/design-system/UbStatusBadge/UbStatusBadge';
 import { daysBetweenIso, isValidWireDate } from 'src/utils/dates';
+import { remainingQuantity, subtractQuantity, trimQuantity } from 'src/utils/quantity';
 
 import { resolveExpensePreset } from '../../expenses/view-model/expenseDisplay';
 import {
@@ -131,8 +132,7 @@ export const voidConsequences = (bill: PurchaseBill): VoidConsequences => ({
 });
 
 /** "20.000" → "20", "2.500" → "2.5" — a quantity as a person writes it. */
-export const trimQty = (qty: string): string =>
-  qty.includes('.') ? qty.replace(/0+$/, '').replace(/\.$/, '') : qty;
+export const trimQty = trimQuantity;
 
 /** The `insufficient_stock` 409's lines, as "Rice would go to −8 NOS". */
 export interface ShortLine {
@@ -144,10 +144,10 @@ export interface ShortLine {
 export const shortLines = (details: Readonly<Record<string, unknown>> | undefined): ShortLine[] => {
   const lines = (details?.lines ?? []) as readonly Record<string, unknown>[];
   return lines.map((line) => {
-    const after = Number(line.available ?? 0) - Number(line.requested ?? 0);
+    const after = subtractQuantity(String(line.available ?? 0), String(line.requested ?? 0));
     return {
       name: String(line.item_name ?? ''),
-      after: trimQty(after.toFixed(3)).replace('-', '−'),
+      after: trimQty(after).replace('-', '−'),
       unit: String(line.unit_code ?? ''),
     };
   });
@@ -161,6 +161,5 @@ export const returnableQty = (
   line: Pick<PurchaseBillLine, 'lineNo' | 'qty'>,
   returned: Readonly<Record<string, string>>
 ): string => {
-  const left = Number(line.qty) - Number(returned[String(line.lineNo)] ?? 0);
-  return trimQty(String(Math.max(left, 0)));
+  return trimQty(remainingQuantity(line.qty, returned[String(line.lineNo)]));
 };

@@ -94,6 +94,24 @@ describe('calendar days are counted in utils/calendarDays.ts (WP-03 D-02)', () =
   });
 });
 
+describe('quantities are worked out in utils/quantity.ts, not in floats (WP-03 D-05)', () => {
+  it('never subtracts or compares Number(qty) values', () => {
+    // `Number('0.3') - Number('0.1')` is 0.19999999999999998: a return cap
+    // worked out that way refused the last 0.2 KG and printed the noise.
+    const floatQty = [
+      // A sign test (`Number(qty) > 0`) is exact and stays allowed.
+      /Number\([\w.?]*(qty|Qty|available|requested)[^)]*\)\s*([-+<]|>(?!\s*0\b))/,
+      // `(?<!=)` so an arrow function's `=>` is not read as a comparison.
+      /(?<!=)[-+<>]\s*Number\([\w.?]*(qty|Qty|available|requested)[^)]*\)/,
+    ];
+    const found = FILES.filter(
+      (file) =>
+        file.path !== 'utils/quantity.ts' && floatQty.some((pattern) => pattern.test(file.text))
+    ).map((file) => file.path);
+    expect(found).toEqual([]);
+  });
+});
+
 describe('client previews of server rules match the server', () => {
   it('names the same override roles as apps/parties/services/credit.py', () => {
     const python = readFileSync(

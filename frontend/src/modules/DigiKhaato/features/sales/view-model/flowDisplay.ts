@@ -1,4 +1,5 @@
 import { ROUTES } from 'src/routes';
+import { compareQuantity, remainingQuantity } from 'src/utils/quantity';
 
 import {
   CREDIT_NOTE_TABS,
@@ -95,7 +96,7 @@ export const canReturn = (doc: SalesDocument): boolean =>
   (doc.kind === 'invoice' || doc.kind === 'bill_of_supply') &&
   ['issued', 'partially_paid', 'paid', 'overdue'].includes(doc.status) &&
   doc.party !== null &&
-  doc.lines.some((line) => Number(line.qty) > Number(line.returnedQty || '0'));
+  doc.lines.some((line) => compareQuantity(remainingQuantity(line.qty, line.returnedQty), '0') > 0);
 
 /** SAL-04 FR-9 — a note with open credit can be applied to another bill. */
 export const canApply = (doc: SalesDocument): boolean =>

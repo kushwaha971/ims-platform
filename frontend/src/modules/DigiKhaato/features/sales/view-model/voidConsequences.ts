@@ -1,4 +1,5 @@
 import { formatInr } from 'src/utils/money';
+import { trimQuantity as trimQty } from 'src/utils/quantity';
 
 import type { SalesDocument } from '../types/sales.types';
 
@@ -16,8 +17,6 @@ export interface VoidConsequence {
   readonly id: string;
   readonly values: Readonly<Record<string, string>>;
 }
-
-const trimQty = (qty: string): string => String(Number(qty));
 
 export const voidConsequences = (doc: SalesDocument): VoidConsequence[] => {
   const out: VoidConsequence[] = [];

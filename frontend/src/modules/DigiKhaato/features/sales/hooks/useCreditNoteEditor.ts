@@ -13,6 +13,7 @@ import { usePermissions } from 'src/hooks/usePermissions';
 import { selectTenantTimezone } from 'src/redux/slice/sessionSlice';
 import { ROUTES } from 'src/routes';
 import { todayInTenantTz } from 'src/utils/dates';
+import { exceedsQuantity } from 'src/utils/quantity';
 
 import {
   creditNoteEditorReset,
@@ -96,8 +97,8 @@ export const useCreditNoteEditor = (againstId: string | null): UseCreditNoteEdit
   const overCap = useMemo(() => {
     if (!source || !values?.lines) return false;
     const { remaining } = returnCaps(source);
-    return values.lines.some(
-      (row) => !!row?.qty && Number(row.qty) > (remaining[row.againstLineId] ?? 0)
+    return values.lines.some((row) =>
+      exceedsQuantity(row?.qty, remaining[row.againstLineId] ?? '0')
     );
   }, [source, values]);
   const split = useMemo(

@@ -1,4 +1,5 @@
 import { sumMoney } from 'src/utils/money';
+import { sumQuantities, trimQuantity } from 'src/utils/quantity';
 
 import { THERMAL_NAME_CHARS } from '../../constants/salesConstants';
 import { showsTax } from '../../view-model/invoiceDisplay';
@@ -104,10 +105,7 @@ export const lineTotals = (
   readonly total: string;
 } => {
   const units = new Set(lines.map((line) => line.unitCode));
-  const qty =
-    units.size === 1
-      ? String(Number(lines.reduce((sum, line) => sum + Number(line.qty), 0).toFixed(3)))
-      : null;
+  const qty = units.size === 1 ? trimQuantity(sumQuantities(lines.map((line) => line.qty))) : null;
   return {
     qty,
     taxable: sumMoney(lines.map((r) => r.taxableValue)),
@@ -141,4 +139,4 @@ export const halfRate = (rate: string): string => String(Number(rate) / 2);
 export const pct = (rate: string): string => `${rateLabel(rate)}%`;
 
 /** The line's gross (qty × rate) is printed per line (Rule 46 "total value"). */
-export const trimQty = (qty: string): string => String(Number(qty));
+export const trimQty = (qty: string): string => trimQuantity(qty);

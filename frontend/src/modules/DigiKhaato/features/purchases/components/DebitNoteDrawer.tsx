@@ -25,6 +25,7 @@ import { showSnackbar } from 'src/redux/slice/snackbarSlice';
 import { ROUTES } from 'src/routes';
 import type { ApiErrorShape } from 'src/types/api.types';
 import { formatInr } from 'src/utils/money';
+import { exceedsQuantity } from 'src/utils/quantity';
 
 import { issueDebitNote } from '../redux/purchaseBillThunk';
 import {
@@ -75,7 +76,7 @@ export function DebitNoteDrawer({
     [bill.lines, bill.links.returned]
   );
   const picked = lines.filter(({ line }) => Number(qty[line.lineNo] || 0) > 0);
-  const over = picked.some(({ line, left }) => Number(qty[line.lineNo]) > Number(left));
+  const over = picked.some(({ line, left }) => exceedsQuantity(qty[line.lineNo], left));
   const reasonOptions = useMemo(
     () =>
       DEBIT_NOTE_REASONS.map((value) => ({

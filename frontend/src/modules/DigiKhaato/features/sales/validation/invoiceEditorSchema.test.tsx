@@ -190,4 +190,28 @@ describe('the return form (SAL-04 §10)', () => {
     );
     await expect(schema.validate(values('2', '1.5'))).resolves.toBeTruthy();
   });
+
+  it('lets back exactly what is left of a weighed line, to the gram', async () => {
+    /* Prevents: WP-03 D-05 — 0.3 KG sold and 0.1 returned left a float cap of
+       0.19999999999999998, so returning the last 0.2 KG was refused as "Only
+       0.19999999999999998 can be returned". */
+    const { useSalesFlowSchemas } = await import('./salesFlowSchemas');
+    const { creditNoteSchemaFor } = renderHook(() => useSalesFlowSchemas(), { wrapper }).result
+      .current;
+    const { makeDocument, wireLine } = await import('../testing/salesFixtures');
+    const { emptyCreditNoteForm, returnCaps } = await import('../view-model/creditNoteForm');
+    const invoice = makeDocument({
+      document_date: TODAY,
+      lines: [wireLine({ id: 'l1', qty: '0.300', returned_qty: '0.100', unit_code: 'KG' })],
+    });
+    const schema = creditNoteSchemaFor(returnCaps(invoice));
+    const values = (qty: string) => ({
+      ...emptyCreditNoteForm(invoice, TODAY),
+      lines: [{ againstLineId: 'l1', qty }],
+    });
+    await expect(schema.validate(values('0.2'))).resolves.toBeTruthy();
+    await expect(schema.validateAt('lines[0].qty', values('0.25'))).rejects.toThrow(
+      'Only 0.2 can be returned'
+    );
+  });
 });

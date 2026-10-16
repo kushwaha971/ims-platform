@@ -4,6 +4,7 @@ import {
   daysLate,
   purchaseFiltersFromQuery,
   purchaseQueryFromFilters,
+  returnableQty,
   shortLines,
   voidConsequences,
 } from './purchaseBillDisplay';
@@ -228,5 +229,14 @@ describe('the list filters in the address bar', () => {
     const parsed = purchaseFiltersFromQuery(new URLSearchParams(qs), today);
     expect(parsed).toMatchObject({ dateFrom: '2026-09-01', tab: 'unpaid', q: 'AT/778' });
     expect(new URLSearchParams(purchaseQueryFromFilters(parsed)).get('q')).toBe('AT/778');
+  });
+});
+
+describe('what a bill line may still send back (WP-03 D-05)', () => {
+  it('is exact to the gram, and never below nothing', () => {
+    /* Prevents: 0.3 KG less 0.1 KG returned showing "0.19999999999999998". */
+    expect(returnableQty({ lineNo: 1, qty: '0.300' }, { '1': '0.100' })).toBe('0.2');
+    expect(returnableQty({ lineNo: 1, qty: '2.000' }, {})).toBe('2');
+    expect(returnableQty({ lineNo: 1, qty: '1.000' }, { '1': '3.000' })).toBe('0');
   });
 });

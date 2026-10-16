@@ -11,12 +11,13 @@ import {
 } from 'src/design-system';
 import { useTranslation } from 'src/hooks/useTranslation';
 import { formatInr } from 'src/utils/money';
+import { compareQuantity, trimQuantity } from 'src/utils/quantity';
 
 import { remainingQty } from '../view-model/creditNoteForm';
 
 import type { SalesDocument } from '../types/sales.types';
 
-const trim = (qty: string): string => String(Number(qty));
+const trim = trimQuantity;
 
 /**
  * SAL-04 §7 — the return-mode lines: every line of the invoice, with what was
@@ -35,7 +36,9 @@ export function CreditNoteLinesSection({
       <UbStack gap={3} className="p-4" data-testid="credit-note-lines">
         <UbText variant="h4">{t('sales.creditNote.linesTitle')}</UbText>
         {invoice.lines.map((line, index) => {
-          const left = remainingQty(line);
+          const remaining = remainingQty(line);
+          const left = trimQuantity(remaining);
+          const anyLeft = compareQuantity(remaining, '0') > 0;
           return (
             <UbStack key={line.id ?? index} gap={2}>
               {index > 0 && <UbDivider />}
@@ -56,8 +59,8 @@ export function CreditNoteLinesSection({
                 <UbField
                   name={`lines.${index}.qty`}
                   label={t('sales.creditNote.returnQty')}
-                  placeholder={t('sales.creditNote.returnQtyPlaceholder', { count: String(left) })}
-                  hint={left > 0 ? t('sales.creditNote.upTo', { count: String(left) }) : undefined}
+                  placeholder={t('sales.creditNote.returnQtyPlaceholder', { count: left })}
+                  hint={anyLeft ? t('sales.creditNote.upTo', { count: left }) : undefined}
                 >
                   {(field) => (
                     <UbQuantityInput
@@ -65,7 +68,7 @@ export function CreditNoteLinesSection({
                       value={(field.value as string) ?? ''}
                       unit={line.unitCode}
                       decimals={/^(NOS|PCS)$/.test(line.unitCode) ? 0 : 3}
-                      disabled={disabled || left === 0}
+                      disabled={disabled || !anyLeft}
                     />
                   )}
                 </UbField>

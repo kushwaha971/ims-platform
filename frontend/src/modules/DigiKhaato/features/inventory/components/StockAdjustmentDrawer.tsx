@@ -27,7 +27,7 @@ import { useAppDispatch } from 'src/hooks/useAppStore';
 import { useScannerListener } from 'src/hooks/useScannerListener';
 import { useTranslation } from 'src/hooks/useTranslation';
 import { showSnackbar } from 'src/redux/slice/snackbarSlice';
-import { formatQuantity } from 'src/utils/quantity';
+import { formatQuantity, stepQuantity } from 'src/utils/quantity';
 import { comboPaging } from 'src/utils/searchPaging';
 
 import { ADJUSTMENT_MAX_LINES, ADJUSTMENT_REASONS } from '../constants/inventoryConstants';
@@ -176,7 +176,7 @@ export function StockAdjustmentDrawer({
            just goes back to the line (a count is typed, not tallied). */
         const line = current[existing];
         if (line && line.mode === 'by') {
-          const next = String(Number(line.qty || '0') + 1);
+          const next = stepQuantity(line.qty || '0');
           setValue(`lines.${existing}.qty`, next, { shouldValidate: true });
         }
         if (!current[index]?.itemId) fieldArray.remove(index);
@@ -209,7 +209,7 @@ export function StockAdjustmentDrawer({
         if (existing >= 0) {
           const line = current[existing];
           if (line?.mode === 'by') {
-            setValue(`lines.${existing}.qty`, String(Number(line.qty || '0') + 1), {
+            setValue(`lines.${existing}.qty`, stepQuantity(line.qty || '0'), {
               shouldValidate: true,
             });
           }

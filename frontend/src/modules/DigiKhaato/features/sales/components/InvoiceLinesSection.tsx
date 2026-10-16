@@ -19,7 +19,7 @@ import { useAppDispatch } from 'src/hooks/useAppStore';
 import { useTranslation } from 'src/hooks/useTranslation';
 import { showSnackbar } from 'src/redux/slice/snackbarSlice';
 import { formatAmount, formatInr } from 'src/utils/money';
-import { formatQuantity } from 'src/utils/quantity';
+import { exceedsQuantity, formatQuantity } from 'src/utils/quantity';
 import { comboPaging } from 'src/utils/searchPaging';
 
 import { getPartyRates } from '../../inventory/api/priceListService';
@@ -318,7 +318,7 @@ export function InvoiceLinesSection({
       const line = lines?.[index];
       if (!line?.itemId) return null;
       const held = stock[line.itemId];
-      const short = held !== undefined && Number(line.qty || 0) > Number(held.onHand);
+      const short = held !== undefined && exceedsQuantity(line.qty, held.onHand);
       const stockNote = short ? (
         <UbText variant="caption" tone="error" data-testid="line-stock-short">
           {t('sales.line.stockShort', {

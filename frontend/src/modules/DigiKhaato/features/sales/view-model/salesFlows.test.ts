@@ -77,7 +77,7 @@ describe('the return preview (SAL-04 BR-1 / FR-4)', () => {
     const invoice = makeDocument({
       lines: [wireLine({ id: 'l1', qty: '5.000', returned_qty: '2.000' })],
     });
-    expect(returnCaps(invoice).remaining).toEqual({ l1: 3 });
+    expect(returnCaps(invoice).remaining).toEqual({ l1: '3.000' });
   });
 
   it('sends a refund only for the credit the invoice does not absorb', () => {

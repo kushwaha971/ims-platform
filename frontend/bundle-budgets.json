@@ -1366,7 +1366,8 @@
     "",
     "16 Oct 2026 (WP-04 MSG-02): /design-system +0.5 KB route / +0.6 KB first load (measured 110.4 / 349.5) — the gallery renders UbShareSheet, which is now the editable composer (UbTextArea + reset + empty-message state). The product routes that share stayed inside their budgets: the invoice page loads the composer with dynamic() and /payments/[id] and /parties/[id] grew 0.1–0.6 KB within their existing figures.",
     "16 Oct 2026 (WP-04 MSG-07/10): /design-system +0.1 KB route (measured 110.6 / 349.6) — the composer's message box became its own exported component, UbMessageBox, so \"Remind all\" uses the same box instead of a copy. Every product route stayed inside its budget.",
-    "16 Oct 2026 (WP-04 M-11 follow-up): /payments/[id] route 63.2 -> 63.3 (measured 63.2, over by under 0.05 KB) — the shared message box now scrolls its blank-message reason into view, because in the UPI QR dialog on a phone it sat under the sticky footer. The receipt page renders the share sheet statically, so it carries those few bytes. A stable ref callback replaced the first version's effect to keep the cost to the minimum."
+    "16 Oct 2026 (WP-04 M-11 follow-up): /payments/[id] route 63.2 -> 63.3 (measured 63.2, over by under 0.05 KB) — the shared message box now scrolls its blank-message reason into view, because in the UPI QR dialog on a phone it sat under the sticky footer. The receipt page renders the share sheet statically, so it carries those few bytes. A stable ref callback replaced the first version's effect to keep the cost to the minimum.",
+    "16 Oct 2026 (WP-03 D-05): /d/[token] route 39.5 -> 39.7 (measured 39.6, a few bytes over 39.6) — the shared invoice print now adds and trims its quantities with sumQuantities / trimQuantity from utils/quantity, the one owner of quantity arithmetic, instead of a float reduce of its own. The float version rounded to three places so it printed correctly; the change is so the source-scan guard can forbid float quantity sums everywhere without an exception. The share page renders the print, so it carries the helpers. Every other route stayed inside its budget."
   ],
   "default": {
     "route": 56,
@@ -1730,7 +1731,7 @@
       "firstLoad": 290
     },
     "/d/[token]": {
-      "route": 39.5,
+      "route": 39.7,
       "firstLoad": 279.1
     },
     "/accept-invite/[token]": {

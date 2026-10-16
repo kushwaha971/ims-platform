@@ -1,5 +1,7 @@
 import Decimal from 'decimal.js-light';
 
+import { remainingQuantity } from 'src/utils/quantity';
+
 import { unitAllowsDecimal } from './invoiceForm';
 import { computeDocumentTotals, type EngineGstType, type EngineResult } from './taxEngine';
 
@@ -25,9 +27,9 @@ const num = (raw: string | null | undefined): Decimal => {
   return /^\d+(\.\d+)?$/.test(text) ? new Decimal(text) : new Decimal(0);
 };
 
-/** How much of an invoice line can still come back (`qty − returned_qty`). */
-export const remainingQty = (line: SalesDocumentLine): number =>
-  Math.max(Number(line.qty) - Number(line.returnedQty || '0'), 0);
+/** How much of an invoice line can still come back (`qty − returned_qty`), exact. */
+export const remainingQty = (line: SalesDocumentLine): string =>
+  remainingQuantity(line.qty, line.returnedQty);
 
 export const returnCaps = (invoice: SalesDocument): ReturnCaps => ({
   remaining: Object.fromEntries(invoice.lines.map((line) => [line.id ?? '', remainingQty(line)])),

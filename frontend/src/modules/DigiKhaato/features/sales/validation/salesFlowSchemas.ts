@@ -5,6 +5,7 @@ import * as Yup from 'yup';
 import { useTranslation } from 'src/hooks/useTranslation';
 import { useValidationSchemas } from 'src/hooks/useValidationSchemas';
 import { PAYMENT_MODES, type PaymentMode } from 'src/types/domain.types';
+import { QUANTITY_TEXT, exceedsQuantity, trimQuantity } from 'src/utils/quantity';
 
 import {
   CREDIT_NOTE_REASONS,
@@ -39,7 +40,7 @@ export interface CreditNoteFormValues {
 
 export interface ReturnCaps {
   /** The most each invoice line can still take back (`qty − returned_qty`). */
-  readonly remaining: Readonly<Record<string, number>>;
+  readonly remaining: Readonly<Record<string, string>>;
   readonly invoiceDate: string;
   /** Lines whose unit is counted, not weighed — the server refuses "1.5 NOS". */
   readonly wholeOnly?: Readonly<Record<string, boolean>>;
@@ -92,17 +93,18 @@ export const useSalesFlowSchemas = (): SalesFlowSchemas => {
               .defined()
               .default('')
               .test('number', t('sales.creditNote.qtyFormat'), (value) =>
-                value ? /^\d+(\.\d{1,3})?$/.test(value) : true
+                value ? QUANTITY_TEXT.test(value) : true
               )
               .test('whole', t('validation.qty.wholeOnly'), function whole(value) {
                 const counted = caps.wholeOnly?.[this.parent.againstLineId as string] ?? false;
                 return !counted || !value || /^\d+(\.0{1,3})?$/.test(value);
               })
               .test('cap', '', function cap(value) {
-                const left = caps.remaining[this.parent.againstLineId as string] ?? 0;
-                if (!value || Number(value) <= left) return true;
+                const left = caps.remaining[this.parent.againstLineId as string] ?? '0';
+                // Valid digits only (the 'number' test above says why otherwise).
+                if (!exceedsQuantity(value, left)) return true;
                 return this.createError({
-                  message: t('sales.creditNote.overCap', { count: String(left) }),
+                  message: t('sales.creditNote.overCap', { count: trimQuantity(left) }),
                 });
               }),
           })
