@@ -458,5 +458,17 @@ export const selectTenantTimezone = (state: RootState): string | null =>
 export const selectActiveRole = (state: RootState): string | null =>
   state.session.activeTenant?.role ?? null;
 
+/**
+ * The roles that may go over a party's credit limit — the client's copy of
+ * `OVERRIDE_ROLES` in `apps/parties/services/credit.py`, kept equal to it by
+ * `src/tests/sharedOwners.test.ts`. A ROLE and not a codename, for the reason
+ * above: granting the counter a permission must not hand it the owner's cap.
+ */
+export const CREDIT_OVERRIDE_ROLES: readonly string[] = ['owner', 'admin'];
+
+/** Whether to draw "Save anyway" / "Issue anyway" (LED-01 BR-8). The server re-checks. */
+export const selectMayOverrideCreditLimit = (state: RootState): boolean =>
+  CREDIT_OVERRIDE_ROLES.includes(selectActiveRole(state) ?? '');
+
 export const selectSessionTenants = (state: RootState): readonly SessionTenant[] =>
   state.session.tenants;

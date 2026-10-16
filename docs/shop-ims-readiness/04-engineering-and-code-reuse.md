@@ -30,6 +30,8 @@ Start by reviewing existing `src/components/records`, `src/design-system`, `src/
 
 ## Whole-codebase duplicate audit
 
+Inventory, exception register and debt: [10-reuse-inventory.md](10-reuse-inventory.md) (first pass 16 October 2026).
+
 REUSE-01: inventory repeated components, services, selectors, validation, filters, phone/message builders, balance arithmetic and request recovery. Search and review semantic duplication as well as copied text. Record baseline, locations, risk, proposed owner and affected callers.
 
 REUSE-02: prioritize duplicated money/stock/permission rules, then duplicated message/contact/retry behavior, then repeated UI composition. Extract behind a stable public interface; migrate every equivalent caller and delete the obsolete implementation.

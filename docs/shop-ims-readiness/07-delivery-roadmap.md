@@ -67,3 +67,17 @@ Sales SH-011 is implemented with the [durable recovery contract](09-draft-recove
 ## WP-02 continuation — purchases (16 October 2026, cloud session)
 
 Purchase bills/orders now follow the durable recovery contract (09, ADR-063 addendum), with the protocol mechanics moved to shared owners and sales migrated onto them. Simulated lost-reply browser checks now pass for purchase save, purchase Record and sales invoice save (`e2e/purchase-recovery-look.mjs`, `e2e/sales-recovery-look.mjs`). Remaining in WP-02: physical network-interruption/device evidence for both editors and SH-011's release review by the owner. Next package after that evidence: WP-03 reuse inventory (continue from the shared owners added here), then WP-04.
+
+
+## WP-03 first pass — shared owners (16 October 2026, cloud session)
+
+The reuse inventory and exception register are in [10-reuse-inventory.md](10-reuse-inventory.md). This pass covered money, stock, permission, phone and retry rules. Five duplicated rules now have one owner, and each move was test-first:
+
+- the udhaar balance move (`move_main_balance`);
+- the purchase bill due (`payment_seam.outstanding`);
+- the credit-override role (`selectMayOverrideCreditLimit`);
+- lending's asked-today figure;
+- the WhatsApp link builder (a dead copy that guessed numbers was deleted).
+
+Source-scan tests stop each one from being typed out again. Remaining WP-03 debt is mechanical: float money arithmetic in Library/Lending screens (D-01) and day arithmetic (D-02), then the UI-composition audit (D-04) alongside WP-05. WP-04 (editable messages) is next and must reuse `utils/share.ts`.
+

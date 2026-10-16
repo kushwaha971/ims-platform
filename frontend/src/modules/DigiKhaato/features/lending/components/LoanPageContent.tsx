@@ -45,6 +45,7 @@ import { selectLendingLoans } from '../redux/lendingLoansSlice';
 import { fetchLendingLoan } from '../redux/lendingThunk';
 import {
   LOAN_STATUS_TONE,
+  askedToday,
   endedReason,
   isNonZero,
   isRemindable,
@@ -184,7 +185,7 @@ export function LoanPageContent({
   // "Receipt after a collection": offered on the latest one still standing.
   // An opening row (QA F8) had no receipt, so it is never the one offered.
   const latestCollection = state.collections.find((c) => !c.voided && !c.opening);
-  const asked = (Number(loan.dueToday) + Number(loan.arrears)).toFixed(2);
+  const asked = askedToday(loan);
   const schedule = showAll
     ? loan.schedule
     : loan.schedule.filter((d) => d.status !== 'paid').slice(0, 6);

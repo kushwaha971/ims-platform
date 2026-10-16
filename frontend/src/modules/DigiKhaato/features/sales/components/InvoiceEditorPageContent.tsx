@@ -25,7 +25,7 @@ import {
 import { useAppDispatch, useAppSelector } from 'src/hooks/useAppStore';
 import { useTranslation } from 'src/hooks/useTranslation';
 import { selectLocale } from 'src/redux/slice/localeSlice';
-import { selectActiveRole } from 'src/redux/slice/sessionSlice';
+import { selectMayOverrideCreditLimit } from 'src/redux/slice/sessionSlice';
 import type { RootState } from 'src/redux/store';
 import { ROUTES } from 'src/routes';
 import { formatInr } from 'src/utils/money';
@@ -81,7 +81,6 @@ export function InvoiceEditorPageContent({
   const dispatch = useAppDispatch();
   const store = useStore<RootState>();
   const locale = useAppSelector(selectLocale);
-  const role = useAppSelector(selectActiveRole);
   const editor = useInvoiceEditor(documentId, kind);
   const autosave = useDraftAutosave(editor, documentId);
   const { form, preview, editor: server, canWrite, save, issue, values, today } = editor;
@@ -122,7 +121,7 @@ export function InvoiceEditorPageContent({
     server.saveState !== 'conflict';
   const stockShort =
     server.error?.code === 'insufficient_stock' ? stockShortLines(server.error.details) : [];
-  const mayOverride = role === 'owner' || role === 'admin';
+  const mayOverride = useAppSelector(selectMayOverrideCreditLimit);
 
   const finishIssue = useCallback(
     async (payment: readonly PaymentRowForm[] | null, override = false) => {

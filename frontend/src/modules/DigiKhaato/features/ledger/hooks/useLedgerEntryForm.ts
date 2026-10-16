@@ -6,7 +6,7 @@ import { useAppDispatch, useAppSelector } from 'src/hooks/useAppStore';
 import { useDegradedNetwork } from 'src/hooks/useDegradedNetwork';
 import { useIdempotencyKey } from 'src/hooks/useIdempotencyKey';
 import { usePermissions } from 'src/hooks/usePermissions';
-import { selectActiveRole } from 'src/redux/slice/sessionSlice';
+import { selectMayOverrideCreditLimit } from 'src/redux/slice/sessionSlice';
 import { showSnackbar } from 'src/redux/slice/snackbarSlice';
 import type { ApiErrorShape, RequestStatus } from 'src/types/api.types';
 import { applyServerErrors } from 'src/utils/applyServerErrors';
@@ -81,7 +81,6 @@ export const useLedgerEntryForm = (): UseLedgerEntryFormResult => {
   const dispatch = useAppDispatch();
   const { can } = usePermissions();
   const { canWrite: canWriteIn } = useDegradedNetwork();
-  const role = useAppSelector(selectActiveRole);
   const openFor = useAppSelector(selectEntryOpenFor);
   const direction = useAppSelector(selectEntryDirection);
   const status = useAppSelector(selectEntryStatus);
@@ -106,7 +105,7 @@ export const useLedgerEntryForm = (): UseLedgerEntryFormResult => {
    * `deferred` would have taken the party form's Save away on.
    */
   const canWrite = can('ledger.entry.write') && canWriteIn('queueable');
-  const canOverride = role === 'owner' || role === 'admin';
+  const canOverride = useAppSelector(selectMayOverrideCreditLimit);
 
   const openEntry = useCallback(
     (partyId: string, next: LedgerDirection, options?: { readonly amount?: string | null }) => {

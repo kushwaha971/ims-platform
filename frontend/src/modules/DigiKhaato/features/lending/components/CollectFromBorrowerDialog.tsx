@@ -41,7 +41,7 @@ import {
 } from '../types/lending.types';
 import { useLendingSchemas } from '../validation/lendingSchemas';
 import { splitFromRefusal } from '../view-model/borrowerSplit';
-import { isNonZero } from '../view-model/lendingDisplay';
+import { askedToday, isNonZero } from '../view-model/lendingDisplay';
 
 import { CollectDialog } from './CollectDialog';
 
@@ -203,7 +203,7 @@ export function CollectFromBorrowerDialog({
     </UbStack>
   );
   if (selectedLoan) {
-    const due = (Number(selectedLoan.dueToday) + Number(selectedLoan.arrears)).toFixed(2);
+    const due = askedToday(selectedLoan);
     return (
       <CollectDialog
         key={selectedLoan.id}

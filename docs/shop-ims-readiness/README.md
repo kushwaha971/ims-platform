@@ -14,6 +14,8 @@ Status: implementation specification, 15 October 2026. Owner request: entire Sho
 | [QA and release scorecard](06-qa-and-release-scorecard.md) | QA, product, design | Evidence, score calculation, scenarios and release gates |
 | [Delivery roadmap](07-delivery-roadmap.md) | Entire team | Ordered work packages, dependencies and decision register |
 | [Acceptance tracker](08-acceptance-and-evidence-tracker.md) | Delivery team and reviewers | Requirement statuses, score/sign-off record and evidence templates |
+| [Draft recovery contract](09-draft-recovery-contract.md) | Engineers | SH-011 durable draft creation for sales and purchases |
+| [Reuse inventory](10-reuse-inventory.md) | Engineering lead, reviewers | WP-03 shared owners, exception register and duplication debt |
 
 ## Scope and boundaries
 
@@ -27,7 +29,7 @@ Shared message editing and code-reuse requirements extend to Shop, Library, Lend
 
 Source: [Shop audit](../review/06-shop-user-audit.md), [QA handoff](../../QA.md), and [existing decisions](../DECISIONS.md). Last recorded baseline: 1,542 Shop backend tests, 4,096 frontend tests, build/types/locale/contrast/bundle checks passed. This baseline precedes the future work here and is not evidence that these requirements are implemented.
 
-SH-009 is resolved by the explicit owner choice on16 October2026: keep weighted-average stock costing and correct conflicting return documentation. Known open work: desktop billing density SH-010; SH-011 release proof (sales and purchase recovery are implemented and documented; purchase browser journey pending); mobile price visibility SH-012; supplier-return proof SH-013; terminology/paging SH-014. Local audit fixes require release verification; a journal entry saying “fixed locally” is not proof of deployment.
+SH-009 is resolved by the explicit owner choice on16 October2026: keep weighted-average stock costing and correct conflicting return documentation. Known open work: desktop billing density SH-010; SH-011 release proof (sales and purchase recovery are implemented, documented and checked in a browser with simulated lost replies; physical device/network evidence pending); mobile price visibility SH-012; supplier-return proof SH-013; terminology/paging SH-014. Local audit fixes require release verification; a journal entry saying “fixed locally” is not proof of deployment.
 
 ## Agent entry point
 

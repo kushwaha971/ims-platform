@@ -100,6 +100,19 @@ def status_for(*, amount_paid: Decimal, amount_due: Decimal, due_on: Any, today:
     return DocumentStatus.RECORDED
 
 
+def outstanding(document: Any, *, amount_paid: Decimal | None = None) -> Decimal:
+    """`grand_total − amount_paid − debit notes applied` (PUR-02 §1, PUR-07), unclamped.
+
+    The ONE spelling of a bill's due: the payment writer below and the debit-note
+    writer (`debit_notes._move_bill_due`) both read it, so neither can forget the
+    other's term. `amount_paid` is the figure being tried, when it is not yet saved.
+    """
+    from apps.purchases.services.debit_notes import debit_applied
+
+    paid = document.amount_paid if amount_paid is None else amount_paid
+    return document.grand_total - paid - debit_applied(document)
+
+
 def apply_payment(*, document: Any, amount: Decimal, today: dt.date) -> Any:
     """Move a LOCKED bill's paid/due by `amount` (negative to undo). Saves and returns it."""
     if document.status not in PAYABLE_STATUSES:
@@ -108,10 +121,8 @@ def apply_payment(*, document: Any, amount: Decimal, today: dt.date) -> Any:
             "This bill cannot take a payment.",
             details={"document_id": str(document.id), "status": document.status},
         )
-    from apps.purchases.services.debit_notes import debit_applied
-
     paid = document.amount_paid + amount
-    due = document.grand_total - paid - debit_applied(document)
+    due = outstanding(document, amount_paid=paid)
     if paid < ZERO or due < ZERO:
         raise BusinessRuleViolation(
             "over_allocated",

@@ -161,13 +161,6 @@ export const daysOverdue = (dueOn: string | null, today: string): number => {
   return Math.round(ms / 86_400_000);
 };
 
-/** SAL-03 BR-3 / FR-6 — the WhatsApp text, filled from the document (EN or HI). */
-export const whatsappUrl = (mobile: string | null, text: string): string => {
-  const digits = (mobile ?? '').replace(/\D/g, '').slice(-10);
-  const target = digits.length === 10 ? `91${digits}` : '';
-  return `https://wa.me/${target}?text=${encodeURIComponent(text)}`;
-};
-
 /**
  * QA B1 — the `insufficient_stock` 409's lines as message params: "QA Pen —
  * asked 7, 5 NOS in stock". Quantities are trimmed the way a shelf reads them.

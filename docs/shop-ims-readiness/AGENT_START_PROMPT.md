@@ -85,43 +85,60 @@ all documented sign-offs and both scorecards; passing many tests alone is not en
 
 Append: “Resume from the latest verified QA.md checkpoint and acceptance tracker. Inspect the working tree, current diff and running services first. Preserve completed work and unresolved decisions; do not restart the programme or overwrite unrelated changes.”
 
-## Current handoff — 16 October 2026 (after purchase recovery)
+## Current handoff — 16 October 2026 (after WP-03 first pass)
 
-Still **WP-02**, functionality/data reliability. Continue autonomously through
+WP-02 is implemented. Its remaining evidence needs the owner or a real
+device. **WP-03** has had its first pass. Continue autonomously through
 authorized work; a passing checkpoint is not a reason to stop. Do not move
 pricing/contact onboarding ahead of WP-07. Read the newest QA.md entry and git
 history for exact commits and gate results.
 
-Completed in WP-02 so far: D-01 resolved (weighted-average stock costing,
-original-bill supplier credit). Sales drafts (invoice/bill of supply, estimate,
-order, challan) and now **purchase bills and orders** have durable first-create
-identity and recovery (ADR-063 + its addendum, 09-draft-recovery-contract.md).
-Read both before touching that protocol. The sales claim table was missing
-from the tenant export/deletion registry; that is fixed and both tables are
-registered — any new claim table must be registered too.
+Completed in WP-02:
+- D-01 resolved (weighted-average stock costing, original-bill supplier credit).
+- Sales drafts (invoice/bill of supply, estimate, order, challan) and purchase
+  bills and orders have durable first-create identity and recovery. See ADR-063
+  and its addendum, plus 09-draft-recovery-contract.md. Read both before
+  touching that protocol.
+- Any new claim table must be registered for tenant export/deletion.
 
-Shared owners (WP-03 — reuse these, do not copy them):
-- server: `backend/apps/common/draft_creation.py` (claim / recovered / attach,
-  `client_draft_key_field`) and `apps.common.models.DraftCreationBase`; each app
-  keeps its own claim table with a FK to its own document.
-- client: `src/hooks/useDraftSaveQueue.ts` (one serial save lane, scope and
-  teardown) and `src/utils/draftCreation.ts` (`draftReplyOutcome`,
-  `draftSnapshot`, `settleAutosave`); adapters `salesDraftReply`
-  (invoiceEditorSlice) and `purchaseDraftReply` (purchaseBillEditorSlice).
-- browser checks: `node e2e/purchase-recovery-look.mjs` (save + Record after a
-  lost reply) and `node e2e/sales-recovery-look.mjs`, on a live stack.
+Completed in WP-03 (first pass): see 10-reuse-inventory.md. Read it before
+adding a helper, because the owner may already exist.
+
+Shared owners (reuse these, do not copy them):
+- server, drafts: `backend/apps/common/draft_creation.py` and
+  `DraftCreationBase`.
+- server, udhaar balance move: `parties/services/balance.move_main_balance`.
+  It writes balance, the receivable/payable split, last activity and the
+  collection-date clear; `apply_entry` and LED-03 corrections both call it.
+- server, purchase bill due: `purchases/services/payment_seam.outstanding`.
+- client, drafts: `src/hooks/useDraftSaveQueue.ts` and
+  `src/utils/draftCreation.ts`.
+- client, credit-limit override: `selectMayOverrideCreditLimit` /
+  `CREDIT_OVERRIDE_ROLES` in `sessionSlice`. This is a role, not a codename,
+  and a contract test keeps it equal to the server's `OVERRIDE_ROLES`.
+- client, WhatsApp/SMS links and phone display: `src/utils/share.ts`.
+- client, money: `src/utils/money.ts` (Decimal).
+- client, lending asked-today: `lendingDisplay.askedToday`.
+- Guards: `frontend/src/tests/sharedOwners.test.ts`,
+  `backend/tests/architecture/test_shared_owners.py` and
+  `backend/apps/purchases/tests/test_bill_due_owner.py`. When you clear a debt,
+  add its pattern there.
+- Browser checks: `node e2e/purchase-recovery-look.mjs` and
+  `node e2e/sales-recovery-look.mjs`, on a live stack.
 
 **Next, in order:**
-1. WP-02 is implemented with simulated lost-reply browser evidence
-   (`node e2e/purchase-recovery-look.mjs`, `node e2e/sales-recovery-look.mjs`
-   on a live stack). What is left needs the owner or a device: physical
-   network interruption on a real phone, and the owner's SH-011 release review
-   in 08-acceptance-and-evidence-tracker.md. Do not wait on these.
-2. WP-03 reuse inventory: continue from the shared owners above; list other
-   duplicated editor lifecycle code (sales vs purchases autosave hooks still
-   differ: sales has device copies, purchases do not) and record intentional
-   exceptions in 04-engineering-and-code-reuse.md.
-3. Then WP-04 (editable messages) per 07-delivery-roadmap.md.
+1. WP-03 debt D-01: replace float money arithmetic in the Library and Lending
+   screens, the ledger slice and the import review (listed in 10) with
+   `utils/money.ts`.
+2. WP-03 debt D-02: one day-difference helper in `utils/dates.ts`. Keep each
+   in a small, separate commit and add a guard pattern for each.
+3. WP-04 (editable messages) per 07-delivery-roadmap.md and 05: start with the
+   outgoing-text inventory, and reuse `utils/share.ts` and the shared owners
+   above.
+4. The UI-composition audit (D-04) goes alongside WP-05.
+5. Still owed to WP-02, needing the owner or a device: a physical
+   network-interruption check on a phone, and the owner's SH-011 release review
+   in the tracker. Do not wait on these.
 
 Known limits (do not claim otherwise): the purchase editor keeps no device
 copy, so its key is in memory only and a full reload after a lost reply starts

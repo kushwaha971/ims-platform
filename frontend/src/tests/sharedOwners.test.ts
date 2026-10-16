@@ -1,0 +1,84 @@
+/**
+ * @jest-environment node
+ *
+ * WP-03 REUSE-02 / REUSE-04 — rules that have ONE owner stay with it.
+ *
+ * Each case below was found by the readiness reuse audit
+ * (docs/shop-ims-readiness/10-reuse-inventory.md) as a rule written out again
+ * in feature code instead of being called from where it lives. A copy agrees
+ * with its owner on the day it is pasted and then drifts: the sales copy of the
+ * WhatsApp link guessed an Indian number out of the last ten digits of ANY
+ * number, which the shared builder refuses to do because a balance sent to a
+ * half-parsed number cannot be taken back.
+ *
+ * The scan reads source text rather than an import graph because the defect is
+ * the re-typed rule, not a missing import. Tests and the owners themselves are
+ * excluded.
+ */
+import { readFileSync, readdirSync } from 'node:fs';
+import { join, relative, sep } from 'node:path';
+
+import { CREDIT_OVERRIDE_ROLES, selectMayOverrideCreditLimit } from 'src/redux/slice/sessionSlice';
+import type { RootState } from 'src/redux/store';
+
+const SRC = join(process.cwd(), 'src');
+
+const sourceFiles = (dir: string): string[] =>
+  readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+    const path = join(dir, entry.name);
+    if (entry.isDirectory()) return entry.name === 'node_modules' ? [] : sourceFiles(path);
+    if (!/\.(ts|tsx)$/.test(entry.name) || /\.test\.(ts|tsx)$/.test(entry.name)) return [];
+    return [path];
+  });
+
+const FILES = sourceFiles(SRC).map((path) => ({
+  path: relative(SRC, path).split(sep).join('/'),
+  text: readFileSync(path, 'utf8'),
+}));
+
+const offenders = (pattern: RegExp, owner: string): string[] =>
+  FILES.filter((file) => file.path !== owner && pattern.test(file.text)).map((file) => file.path);
+
+describe('one owner per shared rule', () => {
+  it('builds every wa.me link in src/utils/share.ts', () => {
+    expect(offenders(/https:\/\/wa\.me\/\$\{/, 'utils/share.ts')).toEqual([]);
+  });
+
+  it('decides who may go over a credit limit in the session slice', () => {
+    const typedOut = /role\s*===\s*'owner'\s*\|\|\s*role\s*===\s*'admin'/;
+    expect(offenders(typedOut, 'redux/slice/sessionSlice.ts')).toEqual([]);
+  });
+
+  it("adds a lending stop's arrears to today's instalment in lendingDisplay only", () => {
+    const asked = /Number\([\w.]+\.dueToday\)\s*\+\s*Number\([\w.]+\.arrears\)/;
+    expect(
+      offenders(asked, 'modules/DigiKhaato/features/lending/view-model/lendingDisplay.ts')
+    ).toEqual([]);
+  });
+});
+
+describe('client previews of server rules match the server', () => {
+  it('names the same override roles as apps/parties/services/credit.py', () => {
+    const python = readFileSync(
+      join(process.cwd(), '..', 'backend', 'apps', 'parties', 'services', 'credit.py'),
+      'utf8'
+    );
+    const declared = /OVERRIDE_ROLES[^=]*=\s*\(([^)]*)\)/.exec(python)?.[1] ?? '';
+    const roles = [...declared.matchAll(/"([a-z_]+)"/g)].map((match) => match[1]);
+    expect(roles.length).toBeGreaterThan(0);
+    expect([...CREDIT_OVERRIDE_ROLES]).toEqual(roles);
+  });
+});
+
+describe('selectMayOverrideCreditLimit', () => {
+  const as = (role: string | null) =>
+    ({ session: { activeTenant: role ? { role } : null } }) as unknown as RootState;
+
+  it('lets the owner and an admin go over, and nobody else', () => {
+    expect(selectMayOverrideCreditLimit(as('owner'))).toBe(true);
+    expect(selectMayOverrideCreditLimit(as('admin'))).toBe(true);
+    expect(selectMayOverrideCreditLimit(as('staff'))).toBe(false);
+    expect(selectMayOverrideCreditLimit(as('lending_agent'))).toBe(false);
+    expect(selectMayOverrideCreditLimit(as(null))).toBe(false);
+  });
+});

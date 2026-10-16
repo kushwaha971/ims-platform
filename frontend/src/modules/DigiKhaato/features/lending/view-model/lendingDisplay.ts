@@ -1,5 +1,6 @@
 import type { UbStatusBadgeTone } from 'src/design-system';
 import { addDaysIso, addMonthsIso } from 'src/utils/dates';
+import { addMoney } from 'src/utils/money';
 
 import type { Frequency, LoanStatus, PlanType, TodayStop } from '../types/lending.types';
 
@@ -14,9 +15,13 @@ export const LOAN_STATUS_TONE: Readonly<Record<LoanStatus, UbStatusBadgeTone>> =
 export const isNonZero = (amount: string | null | undefined): boolean =>
   !!amount && Number(amount) !== 0;
 
-/** What a stop asks for today: today's instalment plus anything late. */
-export const askedToday = (stop: Pick<TodayStop, 'dueToday' | 'arrears'>): string =>
-  (Number(stop.dueToday) + Number(stop.arrears)).toFixed(2);
+/**
+ * What a stop — or a loan — asks for today: today's instalment plus anything
+ * late. The round, the loan page and "Collect from" all show this figure, so
+ * they read it from here (WP-03; `src/tests/sharedOwners.test.ts`).
+ */
+export const askedToday = (loan: Pick<TodayStop, 'dueToday' | 'arrears'>): string =>
+  addMoney(loan.dueToday, loan.arrears);
 
 export type StopState = 'paid' | 'part' | 'visited' | 'late' | 'due';
 

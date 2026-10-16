@@ -132,6 +132,20 @@ def apply_entry(
         setattr(party, other, (getattr(party, other) or ZERO) + moved)
         party.save(update_fields=[other, "updated_at"])
         return getattr(party, other)
+    return move_main_balance(party=party, delta=delta)
+
+
+def move_main_balance(*, party: Party, delta: Decimal) -> Decimal:
+    """Move the udhaar book (`main`) by a signed `delta` on a LOCKED party. Returns the balance.
+
+    The ONE writer of `balance`, its receivable/payable split, `last_activity_at`
+    and the settled-clears-the-collection-date rule. `apply_entry` calls it with an
+    entry's signed amount; LED-03's corrections call it with
+    `−signed(original) + signed(replacement)`, which can be any sign. They used to
+    carry a copy each (WP-03 R-05, `tests/architecture/test_shared_owners.py`).
+    `recalc_balances` deliberately does not: it is the independent replay this
+    cache is checked against.
+    """
     party.last_activity_at = timezone.now()
     party.balance = (party.balance or ZERO) + delta
     fields = ["balance", "receivable_total", "payable_total", "last_activity_at", "updated_at"]

@@ -208,10 +208,10 @@ def _post_stock(ctx: Ctx, note: Any, picked: list[tuple[Any, Decimal]]) -> list[
 
 def _move_bill_due(bill: Any, applied: Decimal) -> None:
     """Add `applied` (negative to undo) to the bill's debit-note total and recompute its due."""
-    from apps.purchases.services.payment_seam import status_for
+    from apps.purchases.services.payment_seam import outstanding, status_for
 
     _set_debit_applied(bill, debit_applied(bill) + applied)
-    bill.amount_due = max(bill.grand_total - bill.amount_paid - debit_applied(bill), ZERO)
+    bill.amount_due = max(outstanding(bill), ZERO)
     bill.status = status_for(
         amount_paid=bill.amount_paid,
         amount_due=bill.amount_due,

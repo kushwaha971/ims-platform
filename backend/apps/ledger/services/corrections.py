@@ -42,7 +42,6 @@ from apps.common.audit import AuditAction, write_audit
 from apps.common.constants import Direction
 from apps.common.context import Ctx
 from apps.common.exceptions import BusinessRuleViolation, NotFound, ValidationFailed
-from apps.common.money import ZERO
 from apps.ledger.constants import (
     MANUAL_ENTRY_TYPE_FOR_DIRECTION,
     REASON_MAX_LENGTH,
@@ -52,7 +51,7 @@ from apps.ledger.constants import (
 )
 from apps.ledger.models import LedgerEntry
 from apps.ledger.services.entries import _clean_text, validate_entry_payload
-from apps.parties.services.balance import clear_collection_date_if_settled, lock_party
+from apps.parties.services.balance import lock_party, move_main_balance
 
 REASON_MIN_LENGTH = 3
 
@@ -181,28 +180,13 @@ def _apply_delta(*, party: Any, delta: Decimal) -> Decimal:
     direction and an amount because an ENTRY has both. A correction's net effect
     is `−signed(original) + signed(replacement)`, which can be zero, negative or
     positive regardless of either row's direction — so what moves the cache here
-    is the arithmetic itself.
+    is the arithmetic itself. The cache write is `move_main_balance`, the one
+    `apply_entry` uses too, so the receivable/payable split, BR-4's
+    `last_activity_at` and LED-05 BR-2's "a correction that takes the balance to
+    zero clears the date exactly as a payment would" cannot drift apart. Manual
+    entries — the only correctable ones — are always in the `main` book.
     """
-    from django.utils import timezone
-
-    party.balance = (party.balance or ZERO) + delta
-    party.receivable_total = max(party.balance, ZERO)
-    party.payable_total = max(-party.balance, ZERO)
-    # BR-4 of LED-01 — correcting an entry is something happening on this khata.
-    party.last_activity_at = timezone.now()
-    party.save(
-        update_fields=[
-            "balance",
-            "receivable_total",
-            "payable_total",
-            "last_activity_at",
-            "updated_at",
-        ]
-    )
-    # LED-05 BR-2 — "after any posting (…, correction)": a correction that
-    # takes the balance to zero clears the date exactly as a payment would.
-    clear_collection_date_if_settled(party=party)
-    return party.balance
+    return move_main_balance(party=party, delta=delta)
 
 
 def _write_reversal(*, ctx: Ctx, original: LedgerEntry, reason: str) -> LedgerEntry:

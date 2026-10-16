@@ -51,15 +51,15 @@ Status values: Not started, In progress, Needs acceptance review, Pass, Fail, Bl
 | STK-03 | [business-rules-and-data-integrity](03-business-rules-and-data-integrity.md) | Domain/inventory | Needs acceptance review | — | — |
 | STK-04 | [business-rules-and-data-integrity](03-business-rules-and-data-integrity.md) | Domain/inventory | Needs acceptance review | Owner D-01 choice16 Oct2026; 180 purchase/inventory tests, including mixed/depleted/price-only/void/replay | Policy approved by owner16 Oct; broader release review pending |
 | STK-05 | [business-rules-and-data-integrity](03-business-rules-and-data-integrity.md) | Domain/inventory | Needs acceptance review | — | — |
-| ENG-01 | [engineering-and-code-reuse](04-engineering-and-code-reuse.md) | Engineering | Needs acceptance review | — | — |
+| ENG-01 | [engineering-and-code-reuse](04-engineering-and-code-reuse.md) | Engineering | Needs acceptance review | Five shared-owner moves (R-01..R-05), including the udhaar balance move and the purchase bill due; guarded by source-scan tests | Recorded debt D-01..D-04 remains |
 | ENG-02 | [engineering-and-code-reuse](04-engineering-and-code-reuse.md) | Engineering | Needs acceptance review | — | — |
 | ENG-03 | [engineering-and-code-reuse](04-engineering-and-code-reuse.md) | Engineering | Needs acceptance review | — | — |
 | ENG-04 | [engineering-and-code-reuse](04-engineering-and-code-reuse.md) | Engineering | Needs acceptance review | — | — |
-| REUSE-01 | [engineering-and-code-reuse](04-engineering-and-code-reuse.md) | Engineering | Needs acceptance review | — | — |
-| REUSE-02 | [engineering-and-code-reuse](04-engineering-and-code-reuse.md) | Engineering | Needs acceptance review | — | — |
-| REUSE-03 | [engineering-and-code-reuse](04-engineering-and-code-reuse.md) | Engineering | Needs acceptance review | — | — |
-| REUSE-04 | [engineering-and-code-reuse](04-engineering-and-code-reuse.md) | Engineering | Needs acceptance review | — | — |
-| REUSE-05 | [engineering-and-code-reuse](04-engineering-and-code-reuse.md) | Engineering | Needs acceptance review | — | — |
+| REUSE-01 | [engineering-and-code-reuse](04-engineering-and-code-reuse.md) | Engineering | Needs acceptance review | First pass for money/stock/permission/phone/retry in [reuse-inventory](10-reuse-inventory.md) | UI composition (D-04) not yet inventoried |
+| REUSE-02 | [engineering-and-code-reuse](04-engineering-and-code-reuse.md) | Engineering | Needs acceptance review | R-01..R-05 consolidated test-first, each copy migrated or deleted | D-01 float money and D-02 day arithmetic remain |
+| REUSE-03 | [engineering-and-code-reuse](04-engineering-and-code-reuse.md) | Engineering | Needs acceptance review | Exception register X-01..X-05 with reason, owner and review trigger | Reviewer acceptance pending |
+| REUSE-04 | [engineering-and-code-reuse](04-engineering-and-code-reuse.md) | Engineering | Needs acceptance review | `sharedOwners.test.ts`, `test_bill_due_owner.py` and `tests/architecture/test_shared_owners.py` fail on a re-typed rule | No duplication score claimed |
+| REUSE-05 | [engineering-and-code-reuse](04-engineering-and-code-reuse.md) | Engineering | Needs acceptance review | No behaviour change: 4,130 frontend tests, purchases/payments/ledger/parties suites, build and bundle gate passed | Full backend run noted in QA.md |
 | ENG-05 | [engineering-and-code-reuse](04-engineering-and-code-reuse.md) | Engineering | Needs acceptance review | Sales durable recovery: 8 backend scenarios; lost-response/remount, overlapping-save and stale-copy frontend coverage; desktop/390px save/reload. Purchases (16 Oct): 7 backend scenarios (bill+order retry/tombstone, scoping, concurrency, recovered recorded bill, corrected validation, direct record), 7 editor scenarios (lost reply, overlap, adopt v1, conflict, no re-record, slow autosave, late reply); shared queue/decision owners Browser (live stack, 1280/390): purchase lost-reply retry and Record-after-lost-reply (one recorded bill, no draft) 30/30; sales invoice lost-reply retry 18/18 | Purchase reload after lost reply starts a new bill (no device copy); physical network-loss/storage and multi-new-tab cases remain |
 | ENG-06 | [engineering-and-code-reuse](04-engineering-and-code-reuse.md) | Engineering | Needs acceptance review | Sales and purchase save/load request identities ignore late results after reset; actor/tenant/family(kind) recovery isolation; claim tables registered for tenant export/deletion (sales omission fixed 16 Oct) | Whole-module review remains |
 | ENG-07 | [engineering-and-code-reuse](04-engineering-and-code-reuse.md) | Engineering | Needs acceptance review | — | — |
@@ -88,7 +88,7 @@ Status values: Not started, In progress, Needs acceptance review, Pass, Fail, Bl
 | Lowest dimension / unresolved defects | Not evaluated; D-01 approved16 Oct; sales and purchase SH-011 implemented with simulated lost-reply browser evidence; physical device/network and release evidence remain open |
 | Mobile/desktop/device evidence | Link evidence for declared matrix |
 | Message inventory completion | Not audited against MSG-01 universal target |
-| Duplication baseline / high-risk exceptions | Not measured; REUSE audit required |
+| Duplication baseline / high-risk exceptions | First REUSE pass 16 Oct: 5 high-risk duplicates consolidated, 5 exceptions and 4 debts recorded in [10](10-reuse-inventory.md); no overall score measured |
 | Migration / rollback evidence | Attach when applicable |
 | Product/domain/design/engineering/QA sign-off | Pending |
 

@@ -329,3 +329,25 @@ Read this file, `git status`, current diff, root/frontend AGENTS, and the releva
 - Browser (real stack: runserver + standalone build + Playwright Chromium): new `e2e/purchase-recovery-look.mjs` drops the reply of the first purchase save (supplier pick) after the server committed it, then presses Save draft. 16/16 checks at 1280 and 390 px: same creation key on the retry, exactly one draft bill on the server with the chosen supplier, "Draft saved" shown, no page overflow, no page errors. Screenshots were in `/tmp/e2e-shots/purchase-recovery` (cloud sandbox, not kept). A browser fail-before was not rebuilt; the unit and API fail-before above cover it.
 - Limits: purchase editor has no device copy, so its key is in memory only; a full reload after a lost reply starts a new bill and the first draft stays under Drafts (documented in 09 and ADR-063 addendum). Contrast gate not rerun (no style/colour change). Physical network/device evidence, Railway deployment and 9/10 readiness are NOT claimed.
 - Follow-up the same session (browser evidence, live stack, Playwright Chromium, synthetic businesses only): `e2e/purchase-recovery-look.mjs` now also loses the first save's reply, adds a line and presses Record at once — the save before Record adopts the original draft, the page opens the recorded bill (PB/26-27/0001, ₹300), and the server holds ONE recorded bill and no draft; 30/30 checks at 1280 and 390 px. New `e2e/sales-recovery-look.mjs` does the lost-reply retry on `/sales/invoices/new` (wholesale shop, customer picked, autosave's first POST reply dropped, then Save draft): same key, editor moves to the draft's edit URL, ONE draft on the server; 18/18 at both sizes. While writing it, one harness check passed for the wrong reason (`/purchases/bills/[^/]+$` matched `/new`); tightened to a UUID before relying on it. On the phone the purchase invoice-number field sits behind "More details", so that bill was recorded without one (optional field).
+
+### 16 October 2026 — WP-03 first reuse pass: shared owners for money, permission and link rules (cloud session)
+
+- Ran in the same Claude cloud sandbox from `dev` at `40bb117`, with synthetic data only. Inventory, exception register and debt are in `docs/shop-ims-readiness/10-reuse-inventory.md`.
+- Five duplicated rules moved to one owner, with no behaviour change:
+  - the udhaar balance move: `parties/services/balance.move_main_balance`, now used by `apply_entry` and LED-03 corrections;
+  - the purchase bill due: `purchases/services/payment_seam.outstanding`, now used by payments and debit notes;
+  - the credit-override role: `selectMayOverrideCreditLimit`, now used by the ledger drawer and the invoice editor;
+  - lending's asked-today figure: `lendingDisplay.askedToday`, now Decimal, used by the loan page and Collect from;
+  - the WhatsApp link builder: a dead sales copy that guessed an Indian number from the last ten digits of any number was deleted.
+- Fail-before:
+  - `frontend/src/tests/sharedOwners.test.ts`: 4 of 4 failed before the change; 5 of 5 pass after, including a contract test that reads `credit.py`'s `OVERRIDE_ROLES`.
+  - `backend/tests/architecture/test_shared_owners.py`: failed on `ledger/services/corrections.py`; passes after.
+  - `backend/apps/purchases/tests/test_bill_due_owner.py`: import error before; 2 of 2 pass after.
+- Gates:
+  - Full frontend Jest: 4130 passed across 368 suites.
+  - `tsc` clean. ESLint and Prettier clean on the changed files.
+  - Production build passed. The bundle gate passed with no budget change.
+  - Backend: purchases + payments (232), ledger + parties, and `test_recalc_balances` (including the corrected-party full replay) all pass.
+  - Black, isort and flake8 are clean on the changed files. Two isort/black findings were already on `dev`: `payment_seam.py` import order and `test_purchase_orders.py`. They are untouched.
+  - A full backend run is recorded in the next line once it finishes.
+- Limits: no browser pass was run, because there is no UI change; the screens draw the same figures and buttons. Railway deployment, device evidence and 9/10 readiness are NOT claimed.
