@@ -56,6 +56,8 @@ export interface UsePurchaseBillListResult extends Omit<PurchaseBillListState, '
   readonly setQuery: (q: string) => void;
   readonly setPage: (page: number) => void;
   readonly clearFilters: () => void;
+  /** WP-06 — drops the due-date window a dashboard link brought. */
+  readonly clearDue: () => void;
   readonly refetch: () => void;
 }
 
@@ -98,6 +100,8 @@ export const usePurchaseBillList = (
       partyId: null,
       q: filters.q,
       page: filters.page,
+      dueFrom: filters.dueFrom,
+      dueTo: filters.dueTo,
     }),
     [filters, kind]
   );
@@ -173,7 +177,11 @@ export const usePurchaseBillList = (
   const setQuery = useCallback((q: string) => push({ ...filters, q, page: 1 }), [push, filters]);
   const setPage = useCallback((page: number) => push({ ...filters, page }), [push, filters]);
   const clearFilters = useCallback(
-    () => push({ ...filters, tab: 'all', q: '', page: 1 }),
+    () => push({ ...filters, tab: 'all', q: '', page: 1, dueFrom: null, dueTo: null }),
+    [push, filters]
+  );
+  const clearDue = useCallback(
+    () => push({ ...filters, dueFrom: null, dueTo: null, page: 1 }),
     [push, filters]
   );
   const refetch = useCallback(() => {
@@ -193,6 +201,7 @@ export const usePurchaseBillList = (
     setQuery,
     setPage,
     clearFilters,
+    clearDue,
     refetch,
   };
 };

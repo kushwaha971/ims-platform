@@ -80,6 +80,11 @@ console.log('udhaar got', (await api('POST', '/ledger-entries', { party_id: rame
 const cats = await api('GET', '/expense-categories', null, T);
 const catList = cats.body.data?.results ?? cats.body.data ?? [];
 if (catList.length) console.log('expense', (await api('POST', '/expenses', { amount: '150', category_id: catList[0].id, expense_date: iso(0), mode: 'cash', note: 'Tea for staff' }, T)).status);
+// A supplier bill falling due in three days, and one in ten (not this week).
+for (const [due, qty] of [[-3, '2'], [-10, '1']]) {
+  const r = await api('POST', '/purchases/bills?record=true', { party_id: gupta.id, supplier_invoice_number: `GWD-${qty}-${Date.now() % 10000}`, supplier_invoice_date: iso(1), document_date: iso(1), due_on: iso(due), lines: [{ item_id: dal.id, qty, unit_cost: '100.00', tax_code: 'GST5' }] }, T);
+  if (r.status >= 400) throw new Error(`bill ${r.status} ${JSON.stringify(r.body).slice(0, 300)}`);
+}
 // Orders waiting on someone (WP-06 spec order 4): a customer order confirmed
 // twelve days ago, goods out on a challan four days ago, and a purchase order
 // sent to the supplier six days ago, none of them billed yet.
@@ -152,6 +157,24 @@ for (const [size, viewport] of WIDTHS) {
       if (qs.get('from')) { wire.set('date_from', qs.get('from')); wire.set('date_to', qs.get('to')); }
       const listed = (await api('GET', `${path}?${wire}`, null, T)).body.meta.totals;
       console.log(`   ${region} overdue ${tile?.count} · ${tile?.amount} vs list ${listed.count} · ${listed.amount_due} (${href})`);
+    }
+    // "Due this week" opens exactly the bills it counted.
+    {
+      const link = page.getByRole('region', { name: 'Suppliers' }).getByRole('link', { name: /due this week/ });
+      const href = (await link.count()) ? await link.first().getAttribute('href') : null;
+      const qs = new URLSearchParams((href ?? '').split('?')[1] ?? '');
+      const wire = new URLSearchParams({ tab: qs.get('tab') ?? '', date_from: qs.get('from') ?? '', date_to: qs.get('to') ?? '', due_from: qs.get('due_from') ?? '', due_to: qs.get('due_to') ?? '' });
+      const listed = (await api('GET', `/purchases/bills?${wire}`, null, T)).body.meta?.totals;
+      console.log(`   due this week ${dash.supplier_bills?.due_week?.count} · ${dash.supplier_bills?.due_week?.amount} vs list ${listed?.count} · ${listed?.amount_due} (${href})`);
+      if (href) {
+        await link.first().click();
+        await page.waitForURL(/\/purchases\/bills/, { timeout: 20000 });
+        await page.waitForLoadState('networkidle');
+        await page.waitForTimeout(800);
+        console.log(`   bill list shows chip: ${await page.getByRole('button', { name: /^Due / }).count()}`);
+        await page.screenshot({ path: `${ROOT}/${size}-due-week-list.png` });
+        await page.goto(`${FE}/dashboard`, { waitUntil: 'networkidle' });
+      }
     }
     // Each order row equals the list its link opens.
     for (const [rx, path] of [[/customer orders? to deliver/, '/sales/orders'], [/challans? not billed/, '/sales/delivery-challans'], [/purchase orders? waiting/, '/purchases/orders']]) {

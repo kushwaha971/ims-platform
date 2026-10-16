@@ -126,6 +126,20 @@ it('lists this financial year and shows the server payables totals (PUR-03 FR-3)
   expect(lastAsked()).toMatchObject({ tab: 'all', dateFrom: expect.stringMatching(/-04-01$/) });
 });
 
+it('asks for the bills due in the window a link names, says so, and can drop it (WP-06)', async () => {
+  // The dashboard's "1 bill due this week" opened every unpaid bill.
+  mockSearch = 'tab=unpaid&from=2026-09-01&to=2026-09-25&due_from=2026-09-25&due_to=2026-10-02';
+  signIn(['purchases.bill.read']);
+  renderWithProviders(<PurchaseBillsListPageContent />);
+  await screen.findAllByText(/Agro Traders/);
+  expect(lastAsked()).toMatchObject({ tab: 'unpaid', dueFrom: '2026-09-25', dueTo: '2026-10-02' });
+  const chip = screen.getByRole('button', { name: 'Due 25/09/2026 to 02/10/2026' });
+  expect(chip).toHaveAttribute('aria-pressed', 'true');
+  await userEvent.setup().click(chip);
+  await waitFor(() => expect(lastAsked()).toMatchObject({ dueFrom: null, dueTo: null }));
+  expect(screen.queryByRole('button', { name: /^Due / })).not.toBeInTheDocument();
+});
+
 it('asks the server for unpaid bills when the Unpaid tab is chosen (AC-1)', async () => {
   signIn(['purchases.bill.read']);
   renderWithProviders(<PurchaseBillsListPageContent />);

@@ -138,6 +138,7 @@
   "purchases.list.caption": "खरीद बिल",
   "purchases.list.daysLate": "{days} दिन देर",
   "purchases.list.dueOn": "देय {date}",
+  "purchases.list.dueWindow": "{from} से {to} तक चुकाना",
   "purchases.list.error.body": "कनेक्शन जाँचें और फिर कोशिश करें।",
   "purchases.list.error.title": "बिल लोड नहीं हो सके",
   "purchases.list.loading": "बिल लोड हो रहे हैं…",

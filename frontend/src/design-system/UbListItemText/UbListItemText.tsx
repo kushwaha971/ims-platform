@@ -35,6 +35,12 @@ export interface UbListItemTextProps {
   readonly secondaryTone?: UbTextTone;
   /** Native tooltip for a title the row had to cut short. */
   readonly title?: string;
+  /**
+   * Wrap the title to two lines instead of cutting it with an ellipsis. For a
+   * person's or a shop's name, where the cut-off half is the part that says
+   * which one ("…General Store, Station R", WP-06).
+   */
+  readonly wrapPrimary?: boolean;
   readonly className?: string;
 }
 
@@ -46,6 +52,7 @@ function UbListItemTextBase({
   secondaryVariant = 'caption',
   secondaryTone = 'tertiary',
   title,
+  wrapPrimary = false,
   className,
 }: Readonly<UbListItemTextProps>) {
   return (
@@ -53,7 +60,11 @@ function UbListItemTextBase({
       <MLBox
         as="span"
         title={title}
-        className={cn('truncate', UB_TEXT_VARIANT[primaryVariant], UB_TEXT_TONE[primaryTone])}
+        className={cn(
+          wrapPrimary ? 'line-clamp-2 break-words' : 'truncate',
+          UB_TEXT_VARIANT[primaryVariant],
+          UB_TEXT_TONE[primaryTone]
+        )}
       >
         {primary}
       </MLBox>

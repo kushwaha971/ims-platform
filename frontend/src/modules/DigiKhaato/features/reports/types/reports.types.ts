@@ -46,7 +46,7 @@ export interface DashboardTiles {
   /** WP-06 — purchase bills overdue (with the oldest's age) and due this week. */
   readonly supplierBills?: {
     readonly overdue: AgedCountAmount;
-    readonly dueWeek: CountAmount;
+    readonly dueWeek: AgedCountAmount;
   };
   readonly lowStock?: { readonly count: number; readonly outCount: number };
   /**

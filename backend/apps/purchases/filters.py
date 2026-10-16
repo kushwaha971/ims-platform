@@ -20,6 +20,9 @@ from apps.purchases.models import PurchaseDocument
 class PurchaseBillFilterSet(BaseTenantFilterSet):
     date_from = django_filters.DateFilter(field_name="document_date", lookup_expr="gte")
     date_to = django_filters.DateFilter(field_name="document_date", lookup_expr="lte")
+    #: WP-06 — bills falling due in a window, which the dashboard's "due this week" opens.
+    due_from = django_filters.DateFilter(field_name="due_on", lookup_expr="gte")
+    due_to = django_filters.DateFilter(field_name="due_on", lookup_expr="lte")
     party_id = django_filters.UUIDFilter(field_name="party_id")
     #: FR-7's duplicate pre-check — exact after the same folding the server stores.
     supplier_invoice_number = django_filters.CharFilter(method="filter_invoice_number")

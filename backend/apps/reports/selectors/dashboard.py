@@ -211,7 +211,8 @@ def money_received_today(*, tenant: Any, today: dt.date) -> dict[str, Any]:
 def supplier_bills(*, tenant: Any, today: dt.date) -> dict[str, Any]:
     """WP-06 spec order 3 — the Suppliers panel's bills: overdue (the purchase
     list's own `overdue` tab, with the oldest's age) and those falling due in the
-    next seven days that are still open (the `unpaid` tab, by due date)."""
+    next seven days that are still open (the `unpaid` tab with `due_from` and
+    `due_to`, and the oldest's bill date so its range holds every one)."""
     from apps.purchases.constants import OPEN_STATUSES
     from apps.purchases.models import PurchaseDocument
 
@@ -224,6 +225,7 @@ def supplier_bills(*, tenant: Any, today: dt.date) -> dict[str, Any]:
         overdue_first=Min("document_date", filter=overdue),
         week_count=Count("id", filter=week),
         week_due=_sum("amount_due", week),
+        week_first=Min("document_date", filter=week),
     )
     return {
         "overdue": {
@@ -231,7 +233,13 @@ def supplier_bills(*, tenant: Any, today: dt.date) -> dict[str, Any]:
             "amount": _money(row["overdue_due"]),
             **_age(row["overdue_since"], today, row["overdue_first"]),
         },
-        "due_week": {"count": row["week_count"], "amount": _money(row["week_due"])},
+        # The list opens by due date; the bill dates bound it too, because the
+        # list defaults to this financial year (WP-06).
+        "due_week": {
+            "count": row["week_count"],
+            "amount": _money(row["week_due"]),
+            **({"oldest_bill_date": row["week_first"].isoformat()} if row["week_first"] else {}),
+        },
     }
 
 

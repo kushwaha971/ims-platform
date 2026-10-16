@@ -34,6 +34,7 @@ import { formatInr } from 'src/utils/money';
 import {
   advancesLine,
   cashTile,
+  dueWeekHref,
   overdueHref,
   tabHref,
   shortInr,
@@ -54,7 +55,6 @@ import type { AgedCountAmount, DashboardData, TopCreditor } from '../types/repor
  * money held the other way round named under each.
  */
 
-const UNPAID_PURCHASES = `${ROUTES.PURCHASE_BILLS}?tab=unpaid`;
 const RECEIVED_TODAY = `${ROUTES.PAYMENTS}?period=today&tab=in`;
 
 /**
@@ -303,6 +303,7 @@ function CreditorRows({
           {index > 0 && <UbDivider />}
           <UbStack direction="row" align="center" justify="between" className="gap-3 py-2.5">
             <UbListItemText
+              wrapPrimary
               className="min-w-0"
               primary={
                 <UbLink href={partyPath(row.id)} variant="body-sm-medium" className="line-clamp-2">
@@ -373,7 +374,7 @@ export function SuppliersPanel({
           )}
           {bills.dueWeek.count > 0 && (
             <BillsLine
-              href={UNPAID_PURCHASES}
+              href={dueWeekHref(bills.dueWeek, data.asOf)}
               text={t('reports.dashboard.suppliers.dueWeek', {
                 count: bills.dueWeek.count,
                 amount: formatInr(bills.dueWeek.amount),

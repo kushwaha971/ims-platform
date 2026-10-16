@@ -65,6 +65,7 @@ export function RecentActivityList({
                 {index > 0 && <UbDivider />}
                 <UbStack direction="row" justify="between" align="center" className="gap-3 py-2.5">
                   <UbListItemText
+                    wrapPrimary
                     className="min-w-0"
                     primary={
                       href ? (
@@ -140,6 +141,7 @@ export function TopDebtorsList({
               {index > 0 && <UbDivider />}
               <UbStack direction="row" align="center" justify="between" className="gap-3 py-2.5">
                 <UbListItemText
+                  wrapPrimary
                   className="min-w-0"
                   primary={
                     <UbLink
@@ -234,6 +236,7 @@ export function LowStockCard({
               {index > 0 && <UbDivider />}
               <UbStack direction="row" align="center" justify="between" className="gap-3 py-2.5">
                 <UbListItemText
+                  wrapPrimary
                   className="min-w-0"
                   primary={
                     <UbLink

@@ -91,7 +91,9 @@ def test_a_sent_order_counts_as_no_purchase_anywhere(
     assert owner.get(bill_url(order["id"])).status_code == 404
     assert record(owner, order["id"]).status_code == 404
     assert (
-        owner.post(bill_url(order["id"], "void"), {"reason": "Entered twice"}, format="json").status_code
+        owner.post(
+            bill_url(order["id"], "void"), {"reason": "Entered twice"}, format="json"
+        ).status_code
         == 404
     )
 

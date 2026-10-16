@@ -1,5 +1,6 @@
 import type { TranslateFn } from 'src/hooks/useTranslation';
 import { ROUTES } from 'src/routes';
+import { addDaysIso } from 'src/utils/calendarDays';
 import { formatBusinessDate } from 'src/utils/dates';
 import {
   formatInr,
@@ -115,6 +116,14 @@ export const tabHref = (list: string, tab: string, docs: AgedCountAmount, today:
 
 export const overdueHref = (list: string, bills: AgedCountAmount, today: string): string =>
   tabHref(list, 'overdue', bills, today);
+
+/**
+ * Supplier bills falling due in the next seven days: the Unpaid tab over that
+ * due-date window, and over bill dates from the oldest one's, so the list holds
+ * exactly what the figure counted (it opened every unpaid bill before, WP-06).
+ */
+export const dueWeekHref = (bills: AgedCountAmount, today: string): string =>
+  `${tabHref(ROUTES.PURCHASE_BILLS, 'unpaid', bills, today)}&due_from=${today}&due_to=${addDaysIso(today, 7)}`;
 
 export const advancesLine = (
   key: 'toCollect' | 'toPay',

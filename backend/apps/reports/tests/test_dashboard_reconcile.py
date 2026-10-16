@@ -423,7 +423,11 @@ def test_the_suppliers_panel_is_who_you_owe_most_and_the_bills_falling_due(tenan
             "oldest_days_late": 12,
             "oldest_bill_date": (TODAY - dt.timedelta(days=30)).isoformat(),
         },
-        "due_week": {"count": 1, "amount": "2150.00"},
+        "due_week": {
+            "count": 1,
+            "amount": "2150.00",
+            "oldest_bill_date": (TODAY - dt.timedelta(days=10)).isoformat(),
+        },
     }
 
 

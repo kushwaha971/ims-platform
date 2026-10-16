@@ -148,3 +148,38 @@ def test_the_overdue_tab_counts_a_bill_past_due_before_the_nightly_job(
     assert [row["id"] for row in overdue["data"]] == [book["one"]["id"]]
     assert overdue["meta"]["counts"]["overdue"] == 1
     assert overdue["meta"]["totals"]["amount_due"] == "105.00"
+
+
+def test_bills_falling_due_this_week_are_a_list_the_dashboard_can_open(
+    owner: Any, shop: Any, book: dict
+) -> None:
+    """WP-06 — the dashboard's "2 bills due this week · ₹158.00" opened the whole
+    Unpaid tab, because the list had no way to ask for a due date: an undeclared
+    `due_from` is dropped silently, which is a list claiming to be filtered while
+    showing everything. The list now filters by due date, and the same bills,
+    count and amount come back as the dashboard counted."""
+    from apps.common.dates import tenant_today
+    from apps.reports.selectors.dashboard import supplier_bills
+
+    today = tenant_today(shop)
+    week_end = today + dt.timedelta(days=7)
+    PurchaseDocument.objects.filter(pk=book["one"]["id"]).update(due_on=today)
+    PurchaseDocument.objects.filter(pk=book["two"]["id"]).update(
+        due_on=week_end + dt.timedelta(days=1)
+    )
+    PurchaseDocument.objects.filter(pk=book["three"]["id"]).update(due_on=week_end)
+
+    week = supplier_bills(tenant=shop, today=today)["due_week"]
+    listed = get(
+        owner,
+        tab="unpaid",
+        due_from=today.isoformat(),
+        due_to=week_end.isoformat(),
+        date_from=week["oldest_bill_date"],
+        date_to=today.isoformat(),
+    )
+    assert sorted(row["id"] for row in listed["data"]) == sorted(
+        [book["one"]["id"], book["three"]["id"]]
+    )
+    assert listed["meta"]["totals"]["count"] == week["count"] == 2
+    assert listed["meta"]["totals"]["amount_due"] == week["amount"]

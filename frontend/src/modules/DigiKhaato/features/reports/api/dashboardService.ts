@@ -48,7 +48,7 @@ interface DashboardWire {
       /** WP-06 — the Shop's own drawer; `cash_in_hand` is every book's (DEC-019). */
       readonly shop_cash_in_hand?: { readonly amount: string; readonly since?: string | null };
       readonly today_received?: CountAmountWire;
-      readonly supplier_bills?: { readonly overdue: AgedWire; readonly due_week: CountAmountWire };
+      readonly supplier_bills?: { readonly overdue: AgedWire; readonly due_week: AgedWire };
       /** WP-06 — orders waiting on someone, each only for a reader of its list. */
       readonly open_orders?: {
         readonly sales_orders?: WaitingWire;
@@ -186,7 +186,7 @@ const toTiles = (wire: DashboardWire['data']['tiles']): DashboardTiles => ({
     ? {
         supplierBills: {
           overdue: aged(wire.supplier_bills.overdue),
-          dueWeek: countAmount(wire.supplier_bills.due_week),
+          dueWeek: aged(wire.supplier_bills.due_week),
         },
       }
     : {}),

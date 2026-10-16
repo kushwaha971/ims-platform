@@ -49,6 +49,9 @@ export interface PurchaseBillListFilters {
   readonly tab: PurchaseBillTab;
   readonly q: string;
   readonly page: number;
+  /** WP-06 — bills falling due in this window (both or neither), as a dashboard link asks. */
+  readonly dueFrom: string | null;
+  readonly dueTo: string | null;
 }
 
 export const resolvePurchasePreset = (
@@ -75,6 +78,9 @@ export const purchaseFiltersFromQuery = (
   const resolved = resolvePurchasePreset(preset, today);
   const tab = query.get('tab') as PurchaseBillTab | null;
   const page = Number(query.get('page') ?? '1');
+  const dueFrom = query.get('due_from');
+  const dueTo = query.get('due_to');
+  const hasDue = isValidWireDate(dueFrom) && isValidWireDate(dueTo);
   return {
     preset,
     dateFrom: resolved?.dateFrom ?? (hasDates ? (from as string) : today),
@@ -82,6 +88,8 @@ export const purchaseFiltersFromQuery = (
     tab: tab && tabs.includes(tab) ? tab : 'all',
     q: query.get('q') ?? '',
     page: Number.isInteger(page) && page > 1 ? page : 1,
+    dueFrom: hasDue ? dueFrom : null,
+    dueTo: hasDue ? dueTo : null,
   };
 };
 
@@ -96,11 +104,15 @@ export const purchaseQueryFromFilters = (filters: PurchaseBillListFilters): stri
   if (filters.tab !== 'all') search.set('tab', filters.tab);
   if (filters.q.trim()) search.set('q', filters.q.trim());
   if (filters.page > 1) search.set('page', String(filters.page));
+  if (filters.dueFrom && filters.dueTo) {
+    search.set('due_from', filters.dueFrom);
+    search.set('due_to', filters.dueTo);
+  }
   return search.toString();
 };
 
 export const isPurchaseListNarrowed = (filters: PurchaseBillListFilters): boolean =>
-  filters.tab !== 'all' || !!filters.q.trim();
+  filters.tab !== 'all' || !!filters.q.trim() || !!filters.dueFrom;
 
 /** FR-5 — "3 days late", computed on the row (BR-2: same-day accuracy). */
 export const daysLate = (dueOn: string | null, today: string): number => {

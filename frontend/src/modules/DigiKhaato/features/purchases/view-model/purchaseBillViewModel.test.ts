@@ -2,6 +2,7 @@ import { computeDocumentTotals } from '../../sales/view-model/taxEngine';
 
 import {
   daysLate,
+  isPurchaseListNarrowed,
   purchaseFiltersFromQuery,
   purchaseQueryFromFilters,
   returnableQty,
@@ -229,6 +230,26 @@ describe('the list filters in the address bar', () => {
     const parsed = purchaseFiltersFromQuery(new URLSearchParams(qs), today);
     expect(parsed).toMatchObject({ dateFrom: '2026-09-01', tab: 'unpaid', q: 'AT/778' });
     expect(new URLSearchParams(purchaseQueryFromFilters(parsed)).get('q')).toBe('AT/778');
+  });
+});
+
+describe('bills falling due in a window (WP-06)', () => {
+  it('reads a due-date window from the address and writes it back', () => {
+    // The dashboard's "1 bill due this week" opened the whole Unpaid tab.
+    const qs = 'tab=unpaid&from=2026-09-01&to=2026-09-25&due_from=2026-09-25&due_to=2026-10-02';
+    const parsed = purchaseFiltersFromQuery(new URLSearchParams(qs), '2026-09-25');
+    expect(parsed).toMatchObject({ dueFrom: '2026-09-25', dueTo: '2026-10-02', tab: 'unpaid' });
+    const back = new URLSearchParams(purchaseQueryFromFilters(parsed));
+    expect([back.get('due_from'), back.get('due_to')]).toEqual(['2026-09-25', '2026-10-02']);
+    expect(isPurchaseListNarrowed({ ...parsed, tab: 'all' })).toBe(true);
+  });
+
+  it('ignores half a window or a date that is not one', () => {
+    const parsed = purchaseFiltersFromQuery(
+      new URLSearchParams('due_from=2026-09-25&due_to=soon'),
+      '2026-09-25'
+    );
+    expect(parsed).toMatchObject({ dueFrom: null, dueTo: null });
   });
 });
 

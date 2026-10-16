@@ -61,7 +61,7 @@ const DATA = (over: Partial<DashboardData> = {}): DashboardData => ({
     todayReceived: { count: 2, amount: '700.00' },
     supplierBills: {
       overdue: { count: 1, amount: '1000.00', oldestDays: 12 },
-      dueWeek: { count: 1, amount: '2150.00' },
+      dueWeek: { count: 1, amount: '2150.00', firstBillDate: '2026-09-08' },
     },
     lowStock: { count: 3, outCount: 1 },
   },
@@ -253,6 +253,22 @@ it('lists the orders waiting on someone in Needs attention, each opening its lis
   expect(within(panel).queryByText(/challan/)).not.toBeInTheDocument();
 });
 
+it('wraps a long customer or supplier name instead of cutting it (WP-06)', async () => {
+  // At 360 px "Suresh Kumar General Store, Station Road" read "…Station R": the
+  // row's title cut mid-word. A name wraps to two lines (CLAUDE.md: no word cut
+  // by an ellipsis); jsdom cannot measure, so the cutting class is what is read.
+  service.getDashboard.mockResolvedValue(DATA());
+  signIn(OWNER);
+  renderWithProviders(<DashboardPageContent />);
+  const customers = await screen.findByRole('region', { name: 'Customers' });
+  const name = within(customers).getByRole('link', { name: 'Ramesh' });
+  expect(name.closest('.truncate')).toBeNull();
+  const suppliers = screen.getByRole('region', { name: 'Suppliers' });
+  expect(
+    within(suppliers).getByRole('link', { name: 'Gupta Wholesale' }).closest('.truncate')
+  ).toBeNull();
+});
+
 it('gives customers and suppliers a panel each, every figure opening its own list', async () => {
   service.getDashboard.mockResolvedValue(DATA());
   signIn(OWNER);
@@ -281,7 +297,10 @@ it('gives customers and suppliers a panel each, every figure opening its own lis
   ).toHaveAttribute('href', '/purchases/bills?tab=overdue');
   expect(
     within(suppliers).getByRole('link', { name: /1 bill due this week · ₹2,150\.00/ })
-  ).toHaveAttribute('href', '/purchases/bills?tab=unpaid');
+  ).toHaveAttribute(
+    'href',
+    '/purchases/bills?tab=unpaid&from=2026-09-08&to=2026-09-18&due_from=2026-09-18&due_to=2026-09-25'
+  );
   expect(within(suppliers).getByRole('link', { name: 'Gupta Wholesale' })).toHaveAttribute(
     'href',
     '/parties/s1'

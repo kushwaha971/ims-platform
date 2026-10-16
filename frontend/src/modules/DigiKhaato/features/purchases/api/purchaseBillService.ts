@@ -208,6 +208,9 @@ export interface PurchaseBillListQuery {
   readonly partyId: string | null;
   readonly q: string;
   readonly page: number;
+  /** WP-06 — bills falling due in a window; absent or null is any due date. */
+  readonly dueFrom?: string | null;
+  readonly dueTo?: string | null;
 }
 
 export const purchaseBillListQuery = (filters: PurchaseBillListQuery): string =>
@@ -216,6 +219,8 @@ export const purchaseBillListQuery = (filters: PurchaseBillListQuery): string =>
     date_from: filters.dateFrom || undefined,
     date_to: filters.dateTo || undefined,
     party_id: filters.partyId || undefined,
+    due_from: filters.dueFrom || undefined,
+    due_to: filters.dueTo || undefined,
     q: filters.q.trim() || undefined,
     page: filters.page > 1 ? filters.page : undefined,
   });

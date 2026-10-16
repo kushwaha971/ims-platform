@@ -4,13 +4,14 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { useRouter } from 'next/navigation';
 
-import { Plus } from 'lucide-react';
+import { Plus, X } from 'lucide-react';
 
 import {
   UbActionLink,
   UbButton,
   UbDateRangePicker,
   UbEmptyState,
+  UbFilterChip,
   UbFilterSheet,
   UbPageHeader,
   UbPageHeaderMobileActions,
@@ -30,6 +31,7 @@ import {
 import { useDebounce } from 'src/hooks/useDebounce';
 import { useTranslation } from 'src/hooks/useTranslation';
 import { ROUTES } from 'src/routes';
+import { formatBusinessDate } from 'src/utils/dates';
 
 import {
   DEFAULT_PURCHASE_BILL_PRESET,
@@ -299,6 +301,21 @@ export function PurchaseBillsListPageContent({
       className={phone ? 'min-w-0 flex-1' : 'w-56'}
     />
   );
+  // WP-06 — a due-date window a dashboard link brought; shown so the list does
+  // not read as every unpaid bill, and one tap drops it.
+  const dueChip =
+    filters.dueFrom && filters.dueTo ? (
+      <UbFilterChip
+        label={t('purchases.list.dueWindow', {
+          from: formatBusinessDate(filters.dueFrom),
+          to: formatBusinessDate(filters.dueTo),
+        })}
+        pressed
+        onToggle={list.clearDue}
+        adornment={<X className="h-3.5 w-3.5" aria-hidden />}
+        className="self-start"
+      />
+    ) : null;
   const stats = list.totals ? (
     <PurchaseBillListStats totals={list.totals} order={order} kind={kind} />
   ) : null;
@@ -389,6 +406,7 @@ export function PurchaseBillsListPageContent({
                 }}
               />
             </UbStack>
+            {dueChip}
             {stats}
             {grid}
           </>
@@ -412,6 +430,7 @@ export function PurchaseBillsListPageContent({
                 close: t('common.action.close'),
               }}
             />
+            {dueChip}
             {stats}
             <UbTabs<PurchaseBillTab>
               value={filters.tab}

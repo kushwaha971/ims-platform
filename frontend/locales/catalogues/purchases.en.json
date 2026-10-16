@@ -138,6 +138,7 @@
   "purchases.list.caption": "Purchase bills",
   "purchases.list.daysLate": "{days, plural, one {# day late} other {# days late}}",
   "purchases.list.dueOn": "Due {date}",
+  "purchases.list.dueWindow": "Due {from} to {to}",
   "purchases.list.error.body": "Check the connection and try again.",
   "purchases.list.error.title": "Bills could not be loaded",
   "purchases.list.loading": "Loading bills…",
