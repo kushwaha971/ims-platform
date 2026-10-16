@@ -7,7 +7,9 @@ import { AlarmClock, PackageX, Package, Truck } from 'lucide-react';
 import {
   UbAmount,
   UbAttentionList,
+  UbButton,
   UbDivider,
+  UbGrid,
   UbLink,
   UbListItemText,
   UbPanel,
@@ -21,9 +23,15 @@ import type { TranslateFn } from 'src/hooks/useTranslation';
 import { partyPath, ROUTES } from 'src/routes';
 import { formatInr } from 'src/utils/money';
 
-import { advancesLine, overdueHref, shortInr, tileHref, tileTone } from '../view-model/dashboardDisplay';
+import {
+  advancesLine,
+  overdueHref,
+  shortInr,
+  tileHref,
+  tileTone,
+} from '../view-model/dashboardDisplay';
 
-import { TopDebtorsList } from './DashboardLists';
+import { LowStockCard, RecentActivityList, TopDebtorsList } from './DashboardLists';
 
 import type { AgedCountAmount, DashboardData, TopCreditor } from '../types/reports.types';
 
@@ -39,6 +47,46 @@ import type { AgedCountAmount, DashboardData, TopCreditor } from '../types/repor
 const UNPAID_PURCHASES = `${ROUTES.PURCHASE_BILLS}?tab=unpaid`;
 const RECEIVED_TODAY = `${ROUTES.PAYMENTS}?period=today&tab=in`;
 
+/**
+ * WP-06 DASH-04 — the server's parts each panel is built from. One that failed
+ * is named in `unavailable`; the panel then says it could not load, with its
+ * own Retry, instead of drawing a false "nobody" or "nothing".
+ */
+export const PARTS = {
+  today: ['documents', 'today_received', 'shop_cash_in_hand'],
+  customers: ['party_tiles', 'documents', 'top_debtors'],
+  suppliers: ['party_tiles', 'supplier_bills', 'top_creditors'],
+  attention: ['documents', 'supplier_bills', 'low_stock'],
+  activity: ['recent_activity'],
+  lowStock: ['low_stock'],
+} as const;
+
+export const failed = (data: DashboardData, parts: readonly string[]): boolean =>
+  parts.some((part) => data.unavailable?.includes(part));
+
+/** "This section could not load." and a Retry, inside the panel that failed. */
+export function PartUnavailable({
+  onRetry,
+  t,
+  className,
+}: Readonly<{ onRetry: () => void; t: TranslateFn; className?: string }>): React.JSX.Element {
+  return (
+    <UbStack
+      direction="row"
+      align="center"
+      justify="between"
+      className={`gap-3 ${className ?? ''}`}
+    >
+      <UbText variant="body-sm" tone="secondary">
+        {t('reports.dashboard.section.unavailable')}
+      </UbText>
+      <UbButton variant="secondary" size="sm" onClick={onRetry}>
+        {t('common.action.retry')}
+      </UbButton>
+    </UbStack>
+  );
+}
+
 const oldestLine = (bills: AgedCountAmount, t: TranslateFn): string | undefined =>
   bills.oldestDays === undefined
     ? undefined
@@ -47,48 +95,57 @@ const oldestLine = (bills: AgedCountAmount, t: TranslateFn): string | undefined 
 /** Net sales, money received and cash in hand — each says "today" and opens its records. */
 export function DashboardTodayRow({
   data,
+  onRetry,
   t,
-}: Readonly<{ data: DashboardData; t: TranslateFn }>): React.JSX.Element | null {
+}: Readonly<{
+  data: DashboardData;
+  onRetry: () => void;
+  t: TranslateFn;
+}>): React.JSX.Element | null {
   const router = useRouter();
   const { tiles } = data;
   const units = {
     lakh: t('reports.dashboard.short.lakh'),
     crore: t('reports.dashboard.short.crore'),
   };
-  if (!tiles.todaySales && !tiles.todayReceived && !tiles.cashInHand) return null;
+  const broken = failed(data, PARTS.today);
+  if (!tiles.todaySales && !tiles.todayReceived && !tiles.cashInHand && !broken) return null;
   return (
-    <UbStatGrid live label={t('reports.dashboard.today.title')}>
-      {tiles.todaySales && (
-        <UbStatCard
-          key="sales"
-          label={t('reports.dashboard.today.sales')}
-          value={shortInr(tiles.todaySales.amount, units).text}
-          subtext={t('reports.dashboard.today.salesCaption', { count: tiles.todaySales.count })}
-          tone={tileTone('todaySales', tiles) === 'danger' ? 'danger' : 'default'}
-          onClick={() => router.push(tileHref('todaySales', tiles))}
-        />
-      )}
-      {tiles.todayReceived && (
-        <UbStatCard
-          key="received"
-          label={t('reports.dashboard.today.received')}
-          value={shortInr(tiles.todayReceived.amount, units).text}
-          subtext={t('reports.dashboard.today.receivedCaption', {
-            count: tiles.todayReceived.count,
-          })}
-          onClick={() => router.push(RECEIVED_TODAY)}
-        />
-      )}
-      {tiles.cashInHand && (
-        <UbStatCard
-          key="cash"
-          label={t('reports.dashboard.tile.cashInHand')}
-          value={shortInr(tiles.cashInHand.amount, units).text}
-          subtext={t('reports.dashboard.tile.cashInHand.baseline')}
-          onClick={() => router.push(tileHref('cashInHand', tiles))}
-        />
-      )}
-    </UbStatGrid>
+    <UbStack gap={2}>
+      <UbStatGrid live label={t('reports.dashboard.today.title')}>
+        {tiles.todaySales && (
+          <UbStatCard
+            key="sales"
+            label={t('reports.dashboard.today.sales')}
+            value={shortInr(tiles.todaySales.amount, units).text}
+            subtext={t('reports.dashboard.today.salesCaption', { count: tiles.todaySales.count })}
+            tone={tileTone('todaySales', tiles) === 'danger' ? 'danger' : 'default'}
+            onClick={() => router.push(tileHref('todaySales', tiles))}
+          />
+        )}
+        {tiles.todayReceived && (
+          <UbStatCard
+            key="received"
+            label={t('reports.dashboard.today.received')}
+            value={shortInr(tiles.todayReceived.amount, units).text}
+            subtext={t('reports.dashboard.today.receivedCaption', {
+              count: tiles.todayReceived.count,
+            })}
+            onClick={() => router.push(RECEIVED_TODAY)}
+          />
+        )}
+        {tiles.cashInHand && (
+          <UbStatCard
+            key="cash"
+            label={t('reports.dashboard.tile.cashInHand')}
+            value={shortInr(tiles.cashInHand.amount, units).text}
+            subtext={t('reports.dashboard.tile.cashInHand.baseline')}
+            onClick={() => router.push(tileHref('cashInHand', tiles))}
+          />
+        )}
+      </UbStatGrid>
+      {broken && <PartUnavailable onRetry={onRetry} t={t} className="px-1" />}
+    </UbStack>
   );
 }
 
@@ -168,10 +225,16 @@ function PanelHeading({
 /** Customers: what they owe you, their overdue bills, and who owes most. */
 export function CustomersPanel({
   data,
+  onRetry,
   t,
-}: Readonly<{ data: DashboardData; t: TranslateFn }>): React.JSX.Element | null {
+}: Readonly<{
+  data: DashboardData;
+  onRetry: () => void;
+  t: TranslateFn;
+}>): React.JSX.Element | null {
   const { tiles } = data;
-  if (!tiles.toCollect) return null;
+  const broken = failed(data, PARTS.customers);
+  if (!tiles.toCollect && !broken) return null;
   const list = tileHref('toCollect', tiles);
   const overdue = tiles.overdue?.invoices;
   return (
@@ -182,13 +245,16 @@ export function CustomersPanel({
           href={list}
           viewAll={t('reports.dashboard.customers.viewAll')}
         />
-        <LeadFigure
-          href={list}
-          label={t('reports.dashboard.tile.toCollect')}
-          amount={tiles.toCollect.amount}
-          tone="receivable"
-          note={advancesLine('toCollect', tiles, t)}
-        />
+        {tiles.toCollect && (
+          <LeadFigure
+            href={list}
+            label={t('reports.dashboard.tile.toCollect')}
+            amount={tiles.toCollect.amount}
+            tone="receivable"
+            note={advancesLine('toCollect', tiles, t)}
+          />
+        )}
+        {broken && <PartUnavailable onRetry={onRetry} t={t} className="px-4 py-2.5" />}
       </UbStack>
       {overdue && overdue.count > 0 && (
         <BillsLine
@@ -200,9 +266,11 @@ export function CustomersPanel({
           caption={oldestLine(overdue, t)}
         />
       )}
-      <UbStack gap={0} className="px-4 pb-2">
-        <TopDebtorsList debtors={data.topDebtors} t={t} />
-      </UbStack>
+      {!failed(data, ['top_debtors']) && (
+        <UbStack gap={0} className="px-4 pb-2">
+          <TopDebtorsList debtors={data.topDebtors} t={t} />
+        </UbStack>
+      )}
     </UbPanel>
   );
 }
@@ -249,10 +317,16 @@ function CreditorRows({
 /** Suppliers: what you owe them, their bills overdue or due this week, and whom you owe most. */
 export function SuppliersPanel({
   data,
+  onRetry,
   t,
-}: Readonly<{ data: DashboardData; t: TranslateFn }>): React.JSX.Element | null {
+}: Readonly<{
+  data: DashboardData;
+  onRetry: () => void;
+  t: TranslateFn;
+}>): React.JSX.Element | null {
   const { tiles } = data;
-  if (!tiles.toPay) return null;
+  const broken = failed(data, PARTS.suppliers);
+  if (!tiles.toPay && !broken) return null;
   const list = tileHref('toPay', tiles);
   const bills = tiles.supplierBills;
   return (
@@ -263,13 +337,16 @@ export function SuppliersPanel({
           href={list}
           viewAll={t('reports.dashboard.suppliers.viewAll')}
         />
-        <LeadFigure
-          href={list}
-          label={t('reports.dashboard.tile.toPay')}
-          amount={tiles.toPay.amount}
-          tone="payable"
-          note={advancesLine('toPay', tiles, t)}
-        />
+        {tiles.toPay && (
+          <LeadFigure
+            href={list}
+            label={t('reports.dashboard.tile.toPay')}
+            amount={tiles.toPay.amount}
+            tone="payable"
+            note={advancesLine('toPay', tiles, t)}
+          />
+        )}
+        {broken && <PartUnavailable onRetry={onRetry} t={t} className="px-4 py-2.5" />}
       </UbStack>
       {bills && (bills.overdue.count > 0 || bills.dueWeek.count > 0) && (
         <UbStack gap={0}>
@@ -294,9 +371,11 @@ export function SuppliersPanel({
           )}
         </UbStack>
       )}
-      <UbStack gap={0} className="px-4 pb-2">
-        <CreditorRows creditors={data.topCreditors} t={t} />
-      </UbStack>
+      {!failed(data, ['top_creditors']) && (
+        <UbStack gap={0} className="px-4 pb-2">
+          <CreditorRows creditors={data.topCreditors} t={t} />
+        </UbStack>
+      )}
     </UbPanel>
   );
 }
@@ -309,8 +388,10 @@ export function SuppliersPanel({
  */
 export function NeedsAttention({
   data,
+  onRetry,
   t,
-}: Readonly<{ data: DashboardData; t: TranslateFn }>): React.JSX.Element {
+}: Readonly<{ data: DashboardData; onRetry: () => void; t: TranslateFn }>): React.JSX.Element {
+  const broken = failed(data, PARTS.attention);
   const { tiles } = data;
   const items: UbAttentionItem[] = [];
   const overdue = tiles.overdue?.invoices;
@@ -364,14 +445,69 @@ export function NeedsAttention({
         <UbText as="h2" variant="h3" className="px-4 pt-4">
           {t('reports.dashboard.attention.title')}
         </UbText>
-        {items.length === 0 ? (
-          <UbText variant="body-sm" tone="tertiary" className="p-4">
-            {t('reports.dashboard.attention.none')}
-          </UbText>
+        {items.length > 0 && <UbAttentionList items={items} className="mx-0 py-1" />}
+        {/* "Nothing needs you" only when every part it reads arrived. */}
+        {broken ? (
+          <PartUnavailable onRetry={onRetry} t={t} className="p-4" />
         ) : (
-          <UbAttentionList items={items} className="mx-0 py-1" />
+          items.length === 0 && (
+            <UbText variant="body-sm" tone="tertiary" className="p-4">
+              {t('reports.dashboard.attention.none')}
+            </UbText>
+          )
         )}
       </UbStack>
     </UbPanel>
+  );
+}
+
+/** A list's own panel when its part failed: its title, the line, and Retry. */
+function UnavailablePanel({
+  title,
+  onRetry,
+  t,
+}: Readonly<{ title: string; onRetry: () => void; t: TranslateFn }>): React.JSX.Element {
+  return (
+    <UbPanel as="section" aria-label={title}>
+      <UbStack gap={2} className="p-4">
+        <UbText as="h2" variant="h3">
+          {title}
+        </UbText>
+        <PartUnavailable onRetry={onRetry} t={t} />
+      </UbStack>
+    </UbPanel>
+  );
+}
+
+/** Recent activity and Running low, side by side on a laptop; either may have failed alone. */
+export function ActivityAndLowStock({
+  data,
+  onRetry,
+  t,
+}: Readonly<{
+  data: DashboardData;
+  onRetry: () => void;
+  t: TranslateFn;
+}>): React.JSX.Element | null {
+  const activityDown = failed(data, PARTS.activity);
+  const lowDown = failed(data, PARTS.lowStock);
+  const activity = activityDown || data.recentActivity.length > 0;
+  const low = lowDown || (!!data.tiles.lowStock && data.lowStockItems.length > 0);
+  if (!(activity || low)) return null;
+  return (
+    <UbGrid columns={{ base: 1, lg: activity && low ? 2 : 1 }} gap={4}>
+      {activity &&
+        (activityDown ? (
+          <UnavailablePanel title={t('reports.dashboard.activity.title')} onRetry={onRetry} t={t} />
+        ) : (
+          <RecentActivityList items={data.recentActivity} t={t} />
+        ))}
+      {low &&
+        (lowDown ? (
+          <UnavailablePanel title={t('reports.dashboard.lowStock.title')} onRetry={onRetry} t={t} />
+        ) : (
+          <LowStockCard items={data.lowStockItems} t={t} />
+        ))}
+    </UbGrid>
   );
 }

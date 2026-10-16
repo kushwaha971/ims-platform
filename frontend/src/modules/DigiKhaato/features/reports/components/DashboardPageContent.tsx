@@ -31,11 +31,13 @@ import { appForPath, useNavigation } from '../../navigation/useNavigation';
 import { useDashboard } from '../hooks/useDashboard';
 import { isFirstUse } from '../view-model/dashboardDisplay';
 
-import { FirstUseChecklist, LowStockCard, RecentActivityList } from './DashboardLists';
+import { FirstUseChecklist } from './DashboardLists';
 import { DashboardModuleSections } from './DashboardModuleSections';
 import {
+  ActivityAndLowStock,
   CustomersPanel,
   DashboardTodayRow,
+  failed,
   NeedsAttention,
   SuppliersPanel,
 } from './DashboardPanels';
@@ -219,25 +221,15 @@ export function DashboardPageContent(): React.JSX.Element {
                 />
               ) : (
                 <>
-                  <DashboardTodayRow data={data} t={t} />
-                  {(data.tiles.toCollect || data.tiles.toPay) && (
+                  <DashboardTodayRow data={data} onRetry={dash.refresh} t={t} />
+                  {(data.tiles.toCollect || data.tiles.toPay || failed(data, ['party_tiles'])) && (
                     <UbGrid columns={{ base: 1, lg: 2 }} gap={4}>
-                      <CustomersPanel data={data} t={t} />
-                      <SuppliersPanel data={data} t={t} />
+                      <CustomersPanel data={data} onRetry={dash.refresh} t={t} />
+                      <SuppliersPanel data={data} onRetry={dash.refresh} t={t} />
                     </UbGrid>
                   )}
-                  <NeedsAttention data={data} t={t} />
-                  {(() => {
-                    const activity = data.recentActivity.length > 0;
-                    const low = !!data.tiles.lowStock && data.lowStockItems.length > 0;
-                    if (!(activity || low)) return null;
-                    return (
-                      <UbGrid columns={{ base: 1, lg: activity && low ? 2 : 1 }} gap={4}>
-                        {activity && <RecentActivityList items={data.recentActivity} t={t} />}
-                        {low && <LowStockCard items={data.lowStockItems} t={t} />}
-                      </UbGrid>
-                    );
-                  })()}
+                  <NeedsAttention data={data} onRetry={dash.refresh} t={t} />
+                  <ActivityAndLowStock data={data} onRetry={dash.refresh} t={t} />
                 </>
               )}
 

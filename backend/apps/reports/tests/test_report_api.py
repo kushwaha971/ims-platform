@@ -356,3 +356,32 @@ def test_a_big_day_book_is_queued_built_and_named(
     rows = _csv(download)
     assert rows[0] == DAY_BOOK_HEADER
     assert [r[-5] for r in rows[1:]] == ["10.00", "21.00", "33.00", "46.00", "60.00"]
+
+
+def test_a_failing_part_is_answered_named_and_not_cached(
+    tenant: Any, api_as: Any, monkeypatch: Any
+) -> None:
+    """WP-06 DASH-04 — one failing figure used to be a 500 and a blank home
+    screen. It is a 200 naming the part, with every other figure in it; and that
+    payload is not stored, so the next reader (or the panel's Retry) is not
+    served the failure for the snapshot's sixty seconds."""
+    from apps.reports.selectors import dashboard
+
+    real = dashboard.top_creditors
+
+    def broken(**_kwargs: Any) -> Any:
+        raise RuntimeError("creditors query failed")
+
+    b.party(tenant, "Ramesh", shop_balance=Decimal("900"))
+    owner, _ = api_as(tenant)
+    monkeypatch.setattr(dashboard, "top_creditors", broken)
+    first = owner.get(reverse(DASHBOARD))
+    assert first.status_code == 200
+    assert first.json()["data"]["unavailable"] == ["top_creditors"]
+    assert first.json()["data"]["tiles"]["to_collect"]["amount"] == "900.00"
+    assert not Snapshot.objects.filter(tenant=tenant).exists()
+
+    monkeypatch.setattr(dashboard, "top_creditors", real)
+    second = owner.get(reverse(DASHBOARD)).json()
+    assert "unavailable" not in second["data"]
+    assert second["meta"]["cached"] is False

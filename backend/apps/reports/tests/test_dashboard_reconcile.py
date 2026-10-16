@@ -526,3 +526,61 @@ def test_cash_in_hand_is_the_shops_drawer_alone(tenant: Any) -> None:
     assert len(book.rows) == 3
     cashbook = build_cashbook(tenant=tenant, date_from=TODAY, date_to=TODAY)
     assert cashbook["range"]["closing"]["cash"] == "390.00"
+
+
+def test_one_failing_figure_leaves_the_rest_of_the_dashboard(tenant: Any, monkeypatch: Any) -> None:
+    """WP-06 Finding 7 / DASH-04 — every figure came from one computation, so one
+    failing query was a 500 and the whole home screen became one error. Each part
+    now fails alone: it is left out and named in `unavailable`, every other figure
+    is sent as usual, and the reader's cut carries the name so the client can say
+    which panel could not load and offer Retry there."""
+    from apps.reports.selectors import dashboard
+
+    def broken(**_kwargs: Any) -> Any:
+        raise RuntimeError("supplier bills query failed")
+
+    gupta = b.party(
+        tenant, "Gupta", shop_balance=Decimal("-450"), is_supplier=True, is_customer=False
+    )
+    ramesh = b.party(tenant, shop_balance=Decimal("900"))
+    b.sale(tenant, TODAY, 900, party=ramesh)
+    b.purchase(tenant, TODAY, 450, party=gupta)
+    monkeypatch.setattr(dashboard, "supplier_bills", broken)
+
+    payload = _dashboard(tenant)
+    assert payload["unavailable"] == ["supplier_bills"]
+    assert "supplier_bills" not in payload["tiles"]
+    assert payload["tiles"]["today_sales"]["amount"] == "900.00"
+    assert payload["tiles"]["to_pay"]["amount"] == "450.00"
+    assert [row["name"] for row in payload["top_creditors"]] == ["Gupta"]
+
+    cut = project(payload, granted=EVERYTHING, modules=ALL_MODULES)
+    assert cut["unavailable"] == ["supplier_bills"]
+    assert "supplier_bills" not in cut["tiles"] and "today_sales" in cut["tiles"]
+
+
+def test_a_failing_list_is_named_and_the_figures_still_arrive(
+    tenant: Any, monkeypatch: Any
+) -> None:
+    """The same for a list: the debtors query failing leaves an empty list that
+    is NAMED unavailable, so the panel says it could not load rather than "no
+    customers owe you", which would be a false statement about the book."""
+    from apps.reports.selectors import dashboard
+
+    def broken(**_kwargs: Any) -> Any:
+        raise RuntimeError("debtors query failed")
+
+    b.party(tenant, shop_balance=Decimal("900"))
+    monkeypatch.setattr(dashboard, "top_debtors", broken)
+    cut = project(_dashboard(tenant), granted=EVERYTHING, modules=ALL_MODULES)
+    assert cut["unavailable"] == ["top_debtors"]
+    assert cut["top_debtors"] == []
+    assert cut["tiles"]["to_collect"]["amount"] == "900.00"
+
+
+def test_a_whole_dashboard_names_nothing_unavailable(tenant: Any) -> None:
+    """Absent when nothing failed, so the cached payload and the golden file
+    keep their shape."""
+    payload = _dashboard(tenant)
+    assert "unavailable" not in payload
+    assert "unavailable" not in project(payload, granted=EVERYTHING, modules=ALL_MODULES)

@@ -514,3 +514,48 @@ it('sends a member who may read neither reports nor Customers to the first menu 
   expect(mockReplace).toHaveBeenCalledWith('/sales/invoices');
   expect(service.getDashboard).not.toHaveBeenCalled();
 });
+
+/**
+ * WP-06 DASH-04 — one failing figure used to blank the whole home screen. The
+ * server now names the part that failed and sends the rest; the panel that
+ * owns it says so with a Retry of its own, and nothing pretends the part is
+ * empty ("No customer owes you", "Nothing needs you") when it is unknown.
+ */
+it('says which panel could not load and keeps the rest of the page', async () => {
+  service.getDashboard.mockResolvedValue({
+    ...DATA(),
+    topDebtors: [],
+    unavailable: ['top_debtors', 'supplier_bills'],
+  });
+  signIn(OWNER);
+  renderWithProviders(<DashboardPageContent />);
+  const customers = await screen.findByRole('region', { name: 'Customers' });
+  expect(within(customers).getByText('This section could not load.')).toBeInTheDocument();
+  expect(within(customers).queryByText('No customer owes you.')).not.toBeInTheDocument();
+  expect(
+    within(customers).getByRole('link', { name: /To collect.*₹7,000\.00/ })
+  ).toBeInTheDocument();
+
+  const attention = screen.getByRole('region', { name: 'Needs attention' });
+  expect(within(attention).getByText('This section could not load.')).toBeInTheDocument();
+  expect(within(attention).queryByText('Nothing needs you right now.')).not.toBeInTheDocument();
+  expect(screen.getByRole('region', { name: 'Today' })).toBeInTheDocument();
+
+  await userEvent.click(within(customers).getByRole('button', { name: 'Try again' }));
+  expect(service.getDashboard).toHaveBeenLastCalledWith({ refresh: true }, expect.anything());
+});
+
+it('keeps a panel on the page with a Retry when its own figure failed', async () => {
+  const { toPay: _toPay, ...tiles } = DATA().tiles;
+  service.getDashboard.mockResolvedValue({
+    ...DATA(),
+    tiles,
+    topCreditors: [],
+    unavailable: ['party_tiles'],
+  });
+  signIn(OWNER);
+  renderWithProviders(<DashboardPageContent />);
+  const suppliers = await screen.findByRole('region', { name: 'Suppliers' });
+  expect(within(suppliers).getByText('This section could not load.')).toBeInTheDocument();
+  expect(within(suppliers).getByRole('button', { name: 'Try again' })).toBeInTheDocument();
+});

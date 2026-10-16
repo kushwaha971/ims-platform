@@ -137,6 +137,12 @@ export interface DashboardData {
   readonly lowStockItems: readonly LowStockRow[];
   readonly firstUse: FirstUse;
   readonly sections: readonly DashboardSection[];
+  /**
+   * WP-06 DASH-04 — the server's parts that failed (`party_tiles`, `documents`,
+   * `supplier_bills`, `top_debtors`, …). Each panel that owns one says it could
+   * not load, with a Retry; absent or empty when everything arrived.
+   */
+  readonly unavailable?: readonly string[];
 }
 
 // ── RPT-02 — the day book ───────────────────────────────────────────────────

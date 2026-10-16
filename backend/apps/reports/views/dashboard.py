@@ -32,10 +32,12 @@ also says no-store for everything but share pages).
 from __future__ import annotations
 
 import logging
-from datetime import date
+from dataclasses import dataclass
+from datetime import date, datetime
 from typing import Any
 
 from django.db import transaction
+from django.utils import timezone
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 
@@ -84,6 +86,14 @@ def module_sections(tenant: Any, today: date, *, granted: frozenset[str]) -> lis
     return sections
 
 
+@dataclass(frozen=True)
+class _Unstored:
+    """A snapshot's shape for a payload that is answered but not cached."""
+
+    payload: dict
+    computed_at: datetime
+
+
 class DashboardView(TenantScopeMixin, APIView):
     permission_classes = [
         IsAuthenticated,
@@ -109,7 +119,14 @@ class DashboardView(TenantScopeMixin, APIView):
         snapshot = None if refresh else read_fresh(**key, max_age_seconds=DASHBOARD_MAX_AGE_SECONDS)
         cached = snapshot is not None
         if snapshot is None:
-            snapshot = store(**key, payload=build_dashboard(tenant=tenant, today=today))
+            payload = build_dashboard(tenant=tenant, today=today)
+            # DASH-04 — a payload with a failed part is answered, never stored:
+            # the next reader, or the panel's Retry, computes it afresh.
+            snapshot = (
+                _Unstored(payload=payload, computed_at=timezone.now())
+                if payload.get("unavailable")
+                else store(**key, payload=payload)
+            )
 
         granted = granted_permissions(tenant)
         body = project(

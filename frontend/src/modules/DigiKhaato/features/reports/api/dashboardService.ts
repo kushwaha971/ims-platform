@@ -88,6 +88,8 @@ interface DashboardWire {
       readonly has_document: boolean;
       readonly has_upi: boolean;
     };
+    /** WP-06 DASH-04 — the parts that failed; absent when none did. */
+    readonly unavailable?: readonly string[];
     /** A10 — absent from a server older than the module registries. */
     readonly sections?: readonly {
       readonly key: string;
@@ -229,5 +231,6 @@ export const getDashboard = async (
       hasUpi: data.first_use.has_upi,
     },
     sections: (data.sections ?? []).map(toSection),
+    unavailable: data.unavailable ?? [],
   };
 };

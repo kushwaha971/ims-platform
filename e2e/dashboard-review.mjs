@@ -102,7 +102,7 @@ const report = {};
 const browser = await chromium.launch(process.env.PW_CHROMIUM ? { executablePath: process.env.PW_CHROMIUM } : {});
 const network = [];
 for (const [size, viewport] of WIDTHS) {
-  const ctx = await browser.newContext({ viewport, locale: 'en-IN' });
+  const ctx = await browser.newContext({ viewport, locale: 'en-IN', serviceWorkers: 'block' });
   const page = await ctx.newPage();
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
@@ -155,6 +155,28 @@ for (const [size, viewport] of WIDTHS) {
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(800);
     await page.screenshot({ path: `${ROOT}/${size}-overdue-list.png` });
+    await page.goto(`${FE}/dashboard`, { waitUntil: 'networkidle' });
+  }
+  if (size === '360' || size === '1280') {
+    // DASH-04 — one part failing: the server names it; the page keeps the rest.
+    // The failure is staged by rewriting the response, since a live query cannot
+    // be made to fail on demand.
+    await page.route((url) => url.pathname.endsWith("/reports/dashboard"), async (route) => {
+
+      const res = await route.fetch();
+      const body = await res.json();
+      delete body.data.tiles.supplier_bills;
+      body.data.recent_activity = [];
+      body.data.unavailable = ['supplier_bills', 'recent_activity'];
+      await route.fulfill({ response: res, json: body });
+    });
+    await page.goto(`${FE}/dashboard`, { waitUntil: 'networkidle' });
+    await page.waitForTimeout(800);
+    const lines = await page.getByText('This section could not load.').count();
+    const nothing = await page.getByText('Nothing needs you right now.').count();
+    console.log(`   one part failing: ${lines} panels say so, "Nothing needs you" shown ${nothing}, regions ${await page.getByRole('region').count()}`);
+    await page.screenshot({ path: `${ROOT}/${size}-part-failed.png`, fullPage: true });
+    await page.unrouteAll();
     await page.goto(`${FE}/dashboard`, { waitUntil: 'networkidle' });
   }
   if (size === '360') {
