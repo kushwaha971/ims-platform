@@ -190,6 +190,11 @@ the server-prepared reference.
    Period chips (Today, Yesterday, This week, This month; owner's choice)
    are in 72ceb6c, `period_figures` in dashboard.py. Next: the owner's
    acceptance review of WP-06; nothing on the review's list is open.
+   WP-07 began with item pricing: the review and the proposed contract are
+   14-item-pricing-design-review.md, with two questions for the owner
+   (which cost the margin is based on; whether staff keep seeing bill
+   costs). Build test-first once answered; the recommended answers are the
+   defaults.
 4. Still owed to WP-02, needing the owner or a device: a physical
    network-interruption check on a phone, and the owner's SH-011 release
    review in the tracker. Do not wait on these.
