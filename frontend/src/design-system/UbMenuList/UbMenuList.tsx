@@ -37,6 +37,8 @@ export interface UbMenuListRow {
   readonly selected?: boolean;
   /** The row's language, when its label is in another script (हिन्दी). */
   readonly lang?: string;
+  /** `data-testid` on the row's control, for the e2e harnesses. */
+  readonly testId?: string;
 }
 
 export interface UbMenuListProps {
@@ -110,7 +112,7 @@ function UbMenuListBase({ title, rows, selectable = false, className }: Readonly
         {rows.map((row) => (
           <li key={row.key} className="flex">
             {row.href ? (
-              <Link href={row.href} className={ROW}>
+              <Link href={row.href} className={ROW} data-testid={row.testId}>
                 <RowBody row={row} showChevron />
               </Link>
             ) : row.onSelect ? (
@@ -120,6 +122,7 @@ function UbMenuListBase({ title, rows, selectable = false, className }: Readonly
                 role={selectable ? 'radio' : undefined}
                 aria-checked={selectable ? Boolean(row.selected) : undefined}
                 className={ROW}
+                data-testid={row.testId}
               >
                 <RowBody row={row} showChevron={false} />
               </button>

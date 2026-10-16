@@ -1,11 +1,11 @@
 'use client';
 
-import { useCallback, useState, type Ref } from 'react';
+import { type Ref } from 'react';
 
-import { Ban, CircleCheck, MoreHorizontal, Pencil } from 'lucide-react';
+import { Ban, CircleCheck, Pencil } from 'lucide-react';
 
-import { CompactDialog } from 'src/components/records/CompactOverlays';
-import { UbButton, UbStack } from 'src/design-system';
+import { COMPACT_OVERLAY_CLASSNAME } from 'src/components/records/CompactOverlays';
+import { UbMoreActions } from 'src/design-system';
 import type { TranslateFn } from 'src/hooks/useTranslation';
 
 /**
@@ -20,6 +20,8 @@ import type { TranslateFn } from 'src/hooks/useTranslation';
  *
  * The page passes an item only when the viewer may use it (owner or admin,
  * §19.7.5: hidden, not disabled). With nothing to offer there is no ⋯ at all.
+ * The ⋯ and its sheet are `UbMoreActions`, which owns closing the sheet before
+ * a row opens its drawer (WP-03 D-04a).
  */
 export interface BorrowerHeaderMenuProps {
   readonly t: TranslateFn;
@@ -38,64 +40,38 @@ export function BorrowerHeaderMenu({
   onUnblock,
   triggerRef,
 }: Readonly<BorrowerHeaderMenuProps>): React.JSX.Element | null {
-  const [open, setOpen] = useState(false);
-
-  /* Close the sheet BEFORE opening the next overlay, or Escape closes the
-     wrong one (the khata menu's finding). */
-  const run = useCallback((action?: () => void) => {
-    setOpen(false);
-    action?.();
-  }, []);
-
-  const items = [
-    { key: 'edit', label: t('lending.borrower.edit.action'), icon: Pencil, action: onEdit },
-    { key: 'block', label: t('lending.borrower.block.action'), icon: Ban, action: onBlock },
-    {
-      key: 'unblock',
-      label: t('lending.borrower.unblock.action'),
-      icon: CircleCheck,
-      action: onUnblock,
-    },
-  ].filter((item) => item.action !== undefined);
-
-  if (items.length === 0) return null;
-
   return (
-    <>
-      <UbButton
-        ref={triggerRef}
-        variant="outlineNeutral"
-        icon={<MoreHorizontal className="h-4 w-4" aria-hidden />}
-        iconOnly="mobile"
-        className="max-sm:h-10 max-sm:w-10"
-        aria-label={t('lending.borrower.menu.moreActions')}
-        onClick={() => setOpen(true)}
-        data-testid="lending-borrower-menu"
-      >
-        {t('lending.borrower.menu.more')}
-      </UbButton>
-      <CompactDialog
-        open={open}
-        onOpenChange={setOpen}
-        title={t('lending.borrower.menu.moreActions')}
-        closeLabel={t('common.action.close')}
-      >
-        <UbStack gap={1}>
-          {items.map((item) => (
-            <UbButton
-              key={item.key}
-              variant="ghost"
-              fullWidth
-              className="justify-start"
-              icon={<item.icon className="h-4 w-4" aria-hidden />}
-              onClick={() => run(item.action)}
-              data-testid={`lending-borrower-${item.key}`}
-            >
-              {item.label}
-            </UbButton>
-          ))}
-        </UbStack>
-      </CompactDialog>
-    </>
+    <UbMoreActions
+      label={t('lending.borrower.menu.more')}
+      title={t('lending.borrower.menu.moreActions')}
+      closeLabel={t('common.action.close')}
+      triggerRef={triggerRef}
+      className="max-sm:h-10 max-sm:w-10"
+      sheetClassName={COMPACT_OVERLAY_CLASSNAME}
+      testId="lending-borrower-menu"
+      rows={[
+        {
+          key: 'edit',
+          label: t('lending.borrower.edit.action'),
+          icon: <Pencil className="h-5 w-5" />,
+          onSelect: onEdit,
+          testId: 'lending-borrower-edit',
+        },
+        {
+          key: 'block',
+          label: t('lending.borrower.block.action'),
+          icon: <Ban className="h-5 w-5" />,
+          onSelect: onBlock,
+          testId: 'lending-borrower-block',
+        },
+        {
+          key: 'unblock',
+          label: t('lending.borrower.unblock.action'),
+          icon: <CircleCheck className="h-5 w-5" />,
+          onSelect: onUnblock,
+          testId: 'lending-borrower-unblock',
+        },
+      ]}
+    />
   );
 }

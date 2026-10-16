@@ -59,8 +59,8 @@ export { UbTotalDock } from './UbTotalDock';
 export { UbAttentionList, UbHeroPair, UbMiniStatStrip, UbQuickActions } from './UbHomeBlocks';
 export type { UbAttentionItem, UbHeroFigure, UbMiniStat, UbQuickAction } from './UbHomeBlocks';
 export type { UbTotalDockProps } from './UbTotalDock';
-export { UbActionSheet, useUbActionPresentation } from './UbActionSheet';
-export type { UbActionPresentation, UbActionSheetProps } from './UbActionSheet';
+export { UbActionSheet, UbMoreActions, useUbActionPresentation } from './UbActionSheet';
+export type { UbActionPresentation, UbActionSheetProps, UbMoreActionsProps } from './UbActionSheet';
 export type { UbMenuListProps, UbMenuListRow } from './UbMenuList';
 
 export { UbDivider } from './UbDivider';

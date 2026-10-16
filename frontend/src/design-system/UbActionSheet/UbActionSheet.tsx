@@ -1,8 +1,9 @@
 'use client';
 
-import { memo, type ReactNode, type RefObject } from 'react';
+import { memo, useMemo, type ReactNode, type RefObject } from 'react';
 
 import { UbDialog } from 'src/design-system/UbDialog';
+import { UbMenuList, type UbMenuListRow } from 'src/design-system/UbMenuList';
 
 import { UbActionPresentationContext } from './actionPresentation';
 
@@ -17,17 +18,28 @@ import { UbActionPresentationContext } from './actionPresentation';
  * actions once and gets both shapes — and a new action added to a header later
  * appears in the phone's sheet without anyone remembering to add it there.
  *
- * Choosing a row closes the sheet (after the row's own handler has run), as a
- * menu does; a row that opens a dialog of its own receives `returnFocusRef`
- * from its caller as usual.
+ * Choosing a row closes the sheet BEFORE the row acts, as a menu does. A row
+ * that opens a dialog while its sheet is still mounted leaves two overlays,
+ * and Escape then closes the wrong one — the khata menu found that, and five
+ * feature menus each re-solved it until they moved here (WP-03 D-04a). The
+ * close is a state update, so the row's own handler still runs in the same
+ * event, and its dialog opens in the render that removes the sheet. A row
+ * that opens a dialog receives `returnFocusRef` from its caller as usual.
+ *
+ * `rows` draws actions given as data (`UbMenuList` rows); `children` draws
+ * header actions in their sheet presentation, or a note under the rows.
  */
 export interface UbActionSheetProps {
   readonly open: boolean;
   readonly onOpenChange: (open: boolean) => void;
   readonly title: string;
   readonly closeLabel: string;
-  readonly children: ReactNode;
+  readonly children?: ReactNode;
+  /** Actions as data; a row without `onSelect` or `href` is not drawn. */
+  readonly rows?: readonly UbMenuListRow[];
   readonly returnFocusRef?: RefObject<HTMLElement | null>;
+  /** Passed to the dialog, for an app's own overlay sizing. */
+  readonly className?: string;
 }
 
 function UbActionSheetBase({
@@ -36,8 +48,27 @@ function UbActionSheetBase({
   title,
   closeLabel,
   children,
+  rows,
   returnFocusRef,
+  className,
 }: Readonly<UbActionSheetProps>) {
+  const shown = useMemo(
+    () =>
+      (rows ?? [])
+        .filter((row) => row.onSelect || row.href)
+        .map((row) =>
+          row.onSelect
+            ? {
+                ...row,
+                onSelect: () => {
+                  onOpenChange(false);
+                  row.onSelect?.();
+                },
+              }
+            : row
+        ),
+    [rows, onOpenChange]
+  );
   return (
     <UbDialog
       open={open}
@@ -45,6 +76,7 @@ function UbActionSheetBase({
       title={title}
       closeLabel={closeLabel}
       returnFocusRef={returnFocusRef}
+      className={className}
     >
       <UbActionPresentationContext.Provider value="sheet">
         {/* The body is padded 24 px; the rows run edge to edge like a menu. */}
@@ -53,12 +85,19 @@ function UbActionSheetBase({
           aria-label={title}
           className="-mx-6 -my-3 flex flex-col"
           onClickCapture={(event) => {
-            if ((event.target as HTMLElement).closest('a, button')) {
-              // After the row's own handler: closing first would unmount it.
-              window.setTimeout(() => onOpenChange(false), 0);
+            // Capture runs before the row's own handler, which still runs: the
+            // close is a state update and nothing unmounts mid-event.
+            const target = event.target as HTMLElement;
+            if (target.closest('a, button') && !target.closest('[data-ub-sheet-rows]')) {
+              onOpenChange(false);
             }
           }}
         >
+          {shown.length > 0 ? (
+            <div data-ub-sheet-rows="">
+              <UbMenuList rows={shown} />
+            </div>
+          ) : null}
           {children}
         </div>
       </UbActionPresentationContext.Provider>

@@ -124,7 +124,24 @@ describe('a reason is three to 160 characters, decided in utils/reason.ts (WP-03
       /requiredBoundedText\(\s*(160|REASON_MAX)\s*,\s*3\b/,
     ];
     const found = FILES.filter(
-      (file) => file.path !== 'utils/reason.ts' && typedOut.some((pattern) => pattern.test(file.text))
+      (file) =>
+        file.path !== 'utils/reason.ts' && typedOut.some((pattern) => pattern.test(file.text))
+    ).map((file) => file.path);
+    expect(found).toEqual([]);
+  });
+});
+
+describe('a ⋯ sheet of actions is UbMoreActions / UbActionSheet (WP-03 D-04a)', () => {
+  it('is not built again from a ⋯ button and a dialog in feature code', () => {
+    // Five menus each paired a MoreHorizontal button with a dialog of ghost
+    // buttons and wrote "close before acting" themselves; the design-system
+    // sheet closed in the other order. A sixth copy would choose again.
+    const dialogs = /<(UbDialog|CompactDialog|LibraryDialog)\b/;
+    const found = FILES.filter(
+      (file) =>
+        !file.path.startsWith('design-system/') &&
+        /\bMoreHorizontal\b/.test(file.text) &&
+        dialogs.test(file.text)
     ).map((file) => file.path);
     expect(found).toEqual([]);
   });

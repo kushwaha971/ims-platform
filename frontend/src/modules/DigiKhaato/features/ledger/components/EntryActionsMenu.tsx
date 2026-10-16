@@ -4,7 +4,7 @@ import { useCallback } from 'react';
 
 import { Pencil, Undo2 } from 'lucide-react';
 
-import { UbButton, UbDialog, UbStack, UbText } from 'src/design-system';
+import { UbActionSheet, UbText } from 'src/design-system';
 import type { TranslateFn } from 'src/hooks/useTranslation';
 
 import { khataEntryTitle } from '../view-model/narration';
@@ -48,16 +48,14 @@ export function EntryActionsMenu({
   onCorrect,
   onReverse,
 }: Readonly<EntryActionsMenuProps>): React.JSX.Element | null {
-  /* Close BEFORE acting, always. A menu item that opens a drawer while its own
-     dialog is still mounted leaves two overlays on screen, and Escape then
-     closes the wrong one — `PartyHeaderMenu` learned this first. */
+  /* `UbActionSheet` closes the sheet before a row acts (WP-03 D-04a): a
+     correction drawer opened under a still-mounted sheet leaves two overlays,
+     and Escape then closes the wrong one — `PartyHeaderMenu` learned this. */
   const run = useCallback(
     (action: (chosen: LedgerEntry) => void) => {
-      if (!entry) return;
-      onClose();
-      action(entry);
+      if (entry) action(entry);
     },
-    [entry, onClose]
+    [entry]
   );
 
   const handleOpenChange = useCallback(
@@ -70,39 +68,33 @@ export function EntryActionsMenu({
   if (!entry) return null;
 
   return (
-    <UbDialog
+    <UbActionSheet
       open
       onOpenChange={handleOpenChange}
       title={khataEntryTitle(entry, t)}
       closeLabel={t('common.action.close')}
+      rows={[
+        {
+          key: 'correct',
+          label: t('ledger.correction.action.correct'),
+          icon: <Pencil className="h-5 w-5" />,
+          onSelect: () => run(onCorrect),
+        },
+        {
+          key: 'reverse',
+          label: t('ledger.correction.action.reverse'),
+          icon: <Undo2 className="h-5 w-5" />,
+          onSelect: () => run(onReverse),
+        },
+      ]}
     >
-      <UbStack gap={1}>
-        <UbButton
-          variant="ghost"
-          fullWidth
-          className="justify-start"
-          icon={<Pencil className="h-4 w-4" aria-hidden />}
-          onClick={() => run(onCorrect)}
-        >
-          {t('ledger.correction.action.correct')}
-        </UbButton>
-        <UbButton
-          variant="ghost"
-          fullWidth
-          className="justify-start"
-          icon={<Undo2 className="h-4 w-4" aria-hidden />}
-          onClick={() => run(onReverse)}
-        >
-          {t('ledger.correction.action.reverse')}
-        </UbButton>
-        {/* Said once, here, rather than in both dialogs: whichever they pick,
-            the line they are looking at stays in the book. A merchant who
-            expects a delete and gets a strike-through would otherwise find out
-            by seeing it. */}
-        <UbText variant="caption" tone="tertiary" className="px-3 pt-1">
-          {t('ledger.correction.menu.hint')}
-        </UbText>
-      </UbStack>
-    </UbDialog>
+      {/* Said once, here, rather than in both dialogs: whichever they pick,
+          the line they are looking at stays in the book. A merchant who
+          expects a delete and gets a strike-through would otherwise find out
+          by seeing it. */}
+      <UbText variant="caption" tone="tertiary" className="px-4 pb-3 pt-1">
+        {t('ledger.correction.menu.hint')}
+      </UbText>
+    </UbActionSheet>
   );
 }

@@ -1370,7 +1370,8 @@
     "16 Oct 2026 (WP-03 D-05): /d/[token] route 39.5 -> 39.7 (measured 39.6, a few bytes over 39.6) — the shared invoice print now adds and trims its quantities with sumQuantities / trimQuantity from utils/quantity, the one owner of quantity arithmetic, instead of a float reduce of its own. The float version rounded to three places so it printed correctly; the change is so the source-scan guard can forbid float quantity sums everywhere without an exception. The share page renders the print, so it carries the helpers. Every other route stayed inside its budget.",
     "16 Oct 2026 (WP-03 D-04b): /login/email route 58 -> 58.1 and /reset-password 52 -> 52.1 (each measured a few bytes over) — the central validator hook gained reasonText(), the one place a required reason's three-to-160-character rule lives, replacing eleven schemas and ten dialogs that wrote the numbers out. The hook ships on every form route, sign-in included; the constants live in the import-free utils/reason.ts so they add nothing else.",
     "16 Oct 2026 (WP-05 layout A, owner's choice): the eight sales editor routes 152.1 -> 152.5 (measured 152.4 with the compact-context fold) — UbLineItemsEditor now measures its own width with a ResizeObserver and draws the table whenever every column's minimum fits, instead of only from a 1536 px screen, and the totals panel is right-aligned at a readable width under the lines. That is what turns a 1280 or 1440 laptop's 290 px phone card per line into a 61 px table row. The dock's breakpoint hook lives in src/hooks rather than the design-system motion module, because there it put 0.9 KB on the landing page.",
-    "16 Oct 2026 (WP-05, timed counter entry): the bill line's item cell, drawn twice word for word by the sales invoice and the purchase bill, is one shared ItemLineCell now, and UbAsyncCombobox gained afterPick so a pick sends the caret on to Qty instead of back to the item trigger, where the quantity typed next reopened the search. The eight sales editor routes measured 152.5 against 152.5 and the four purchase editor routes 151.8-151.9 against 151.3-151.4; raised by the measured + 0.5 rule: sales 152.5 -> 153, purchases -> 152.4. The search's `pending` (an Enter before the answer waits for it, and with no row highlighted takes the first, because the timed run billed K001 for K003) then put /purchases/bills/new and /purchases/orders/new a few bytes over their first-load ceiling of 390.3: 390.3 -> 390.8."
+    "16 Oct 2026 (WP-05, timed counter entry): the bill line's item cell, drawn twice word for word by the sales invoice and the purchase bill, is one shared ItemLineCell now, and UbAsyncCombobox gained afterPick so a pick sends the caret on to Qty instead of back to the item trigger, where the quantity typed next reopened the search. The eight sales editor routes measured 152.5 against 152.5 and the four purchase editor routes 151.8-151.9 against 151.3-151.4; raised by the measured + 0.5 rule: sales 152.5 -> 153, purchases -> 152.4. The search's `pending` (an Enter before the answer waits for it, and with no row highlighted takes the first, because the timed run billed K001 for K003) then put /purchases/bills/new and /purchases/orders/new a few bytes over their first-load ceiling of 390.3: 390.3 -> 390.8.",
+    "16 Oct 2026 (WP-03 D-04a): the five hand-made ⋯ menus (khata, borrower, catalogue, team member, ledger entry) are UbMoreActions / UbActionSheet now, whose rows are UbMenuList, and the sheet closes BEFORE a row acts instead of after it on a timer. The khata, library and lending routes that render a ⋯ now carry UbMenuList (a Link-or-button row with its caption and chevron) where they had ghost buttons, 0.1-0.2 KB each; /admin/tenants carries UbMenuList through its own menu and grew by the testId field. Raised by the measured + 0.5 rule: /parties/[id] route 105.1 -> 105.8; /library/copies/[copyId] route 72.6 -> 73.3; /lending/loans route 71.8 -> 72.4; /library/catalogue/[titleId] route 69.7 -> 70.4; /admin/tenants route 31 -> 31.7; /library/members/[membershipId] route 81.1 -> 81.6 and /library/catalogue 80.1 -> 80.6 (each measured a few bytes over)."
   ],
   "default": {
     "route": 56,
@@ -1502,7 +1503,7 @@
       "firstLoad": 325.0
     },
     "/parties/[id]": {
-      "route": 105.1,
+      "route": 105.8,
       "firstLoad": 344.2
     },
     "/parties/tags": {
@@ -1610,7 +1611,7 @@
       "firstLoad": 264.0
     },
     "/admin/tenants": {
-      "route": 31,
+      "route": 31.7,
       "firstLoad": 270.5
     },
     "/settings/data": {
@@ -1670,7 +1671,7 @@
       "firstLoad": 301.7
     },
     "/library/catalogue": {
-      "route": 80.1,
+      "route": 80.6,
       "firstLoad": 319.1
     },
     "/library/copies": {
@@ -1678,7 +1679,7 @@
       "firstLoad": 317.4
     },
     "/library/copies/[copyId]": {
-      "route": 72.6,
+      "route": 73.3,
       "firstLoad": 311.7
     },
     "/library/settings": {
@@ -1690,11 +1691,11 @@
       "firstLoad": 323.5
     },
     "/library/members/[membershipId]": {
-      "route": 81.1,
+      "route": 81.6,
       "firstLoad": 320.2
     },
     "/library/catalogue/[titleId]": {
-      "route": 69.7,
+      "route": 70.4,
       "firstLoad": 308.8
     },
     "/library/catalogue/categories": {
@@ -1782,7 +1783,7 @@
       "firstLoad": 306.4
     },
     "/lending/loans": {
-      "route": 71.8,
+      "route": 72.4,
       "firstLoad": 310.8
     },
     "/customers": {

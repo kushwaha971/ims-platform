@@ -4,7 +4,7 @@ import { useCallback, useMemo } from 'react';
 
 import { Ban, KeyRound, Pencil, ShieldCheck, UserMinus } from 'lucide-react';
 
-import { UbDialog, UbMenuList, type UbMenuListRow } from 'src/design-system';
+import { UbActionSheet, type UbMenuListRow } from 'src/design-system';
 import type { TranslateFn } from 'src/hooks/useTranslation';
 import { accountDisplayName } from 'src/utils/accountIdentity';
 
@@ -47,15 +47,13 @@ export function MemberActionsMenu({
   onRemove,
   onRegenerate,
 }: Readonly<MemberActionsMenuProps>): React.JSX.Element | null {
-  /* Close BEFORE acting: an item that opens a dialog while this sheet is still
-     mounted leaves two overlays, and Escape closes the wrong one. */
+  /* `UbActionSheet` closes the sheet before a row acts (WP-03 D-04a): the
+     dialog a row opens must not sit under a still-mounted sheet. */
   const run = useCallback(
     (action: (membershipId: string) => void) => {
-      if (!member) return;
-      onClose();
-      action(member.id);
+      if (member) action(member.id);
     },
-    [member, onClose]
+    [member]
   );
 
   const handleOpenChange = useCallback(
@@ -116,7 +114,7 @@ export function MemberActionsMenu({
   if (!member) return null;
 
   return (
-    <UbDialog
+    <UbActionSheet
       open
       onOpenChange={handleOpenChange}
       title={accountDisplayName({
@@ -125,8 +123,7 @@ export function MemberActionsMenu({
         mobile: member.mobile,
       })}
       closeLabel={t('common.action.close')}
-    >
-      <UbMenuList rows={rows} className="-mx-6" />
-    </UbDialog>
+      rows={rows}
+    />
   );
 }

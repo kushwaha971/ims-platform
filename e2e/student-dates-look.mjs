@@ -80,7 +80,7 @@ try {
     await page.goto(`${frontend}/library/members/${id}`, {
       waitUntil: "networkidle",
     });
-    await page.getByTestId("library-more").click();
+    await page.getByTestId("library-more").first().click(); // the header ⋯; charge rows have their own (15 Oct)
     await page.getByTestId("library-action-edit").click();
     await page.getByTestId("library-member-edit-save").waitFor();
     let documentLoads = 0;
