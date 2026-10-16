@@ -1,5 +1,6 @@
 {
   "//": [
+    "17 Oct 2026, WP-06 period chips (owner chose four presets): the reports catalogue gained the chips' thirteen strings and lost three, and /reports/profit, which loads that catalogue and sat on its ceiling, rounded over by 0.0 KB: route 103.8 -> 104.3 (measured + 0.5).",
     "17 Oct 2026, WP-06: UbListItemText gained `wrapPrimary` so the dashboard wraps a long customer name instead of cutting it mid-word. Two routes that use the component sat exactly on their ceiling and rounded over by 0.0 KB: /reports/gst-summary route 108.6 -> 109.1 and /payments/[id] route 63.3 -> 63.8 (measured + 0.5).",
     "17 Oct 2026, WP-06: the purchases list reads a due-date window from a dashboard link and shows it as one chip that drops it (UbFilterChip, its copy). /purchases/bills has room; its two siblings that share the list, /purchases/orders and /purchases/debit-notes, measured 77.1 KB route against 76.8 and are raised by the measured + 0.5 rule to 77.6. Nothing else changed.",
     "15 Oct 2026, Shop audit: /reports/aging reuses the exact ledger aging screen,",
@@ -1650,7 +1651,7 @@
       "firstLoad": 347.6
     },
     "/reports/profit": {
-      "route": 103.8,
+      "route": 104.3,
       "firstLoad": 342.8
     },
     "/reports/purchase-register": {

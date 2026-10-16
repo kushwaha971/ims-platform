@@ -70,6 +70,24 @@ it('carries the oldest overdue bill date for the link', async () => {
   });
 });
 
+it('carries the period figures with their dates, each half only when sent', async () => {
+  jest.mocked(api.get).mockResolvedValue(
+    body({
+      periods: {
+        week: {
+          from: '2026-10-12',
+          to: '2026-10-16',
+          sales: { amount: '5600.00', count: 3 },
+        },
+      },
+    })
+  );
+  const data = await getDashboard();
+  expect(data.tiles.periods).toEqual({
+    week: { from: '2026-10-12', to: '2026-10-16', sales: { amount: '5600.00', count: 3 } },
+  });
+});
+
 it('carries the day the drawer is counted from', async () => {
   jest
     .mocked(api.get)

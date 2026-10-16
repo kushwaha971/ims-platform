@@ -55,11 +55,26 @@ export interface DashboardTiles {
    * `oldestDays` is the oldest one's age and `firstBillDate` its date. Each is
    * present only for a reader who may open its list.
    */
+  /**
+   * WP-06 — net sales and money received for each period the chips offer, with
+   * the dates the server counted. A half is absent for a reader of neither list.
+   */
+  readonly periods?: Partial<Record<DashboardPeriod, PeriodFigures>>;
   readonly openOrders?: {
     readonly salesOrders?: AgedCountAmount;
     readonly challans?: AgedCountAmount;
     readonly purchaseOrders?: AgedCountAmount;
   };
+}
+
+/** WP-06 — the Shop home's period chips (owner, 16 Oct 2026: four presets). */
+export type DashboardPeriod = 'today' | 'yesterday' | 'week' | 'month';
+
+export interface PeriodFigures {
+  readonly from: string;
+  readonly to: string;
+  readonly sales?: CountAmount;
+  readonly received?: CountAmount;
 }
 
 /** A count and amount with the oldest one's days past due, when any has a due date. */

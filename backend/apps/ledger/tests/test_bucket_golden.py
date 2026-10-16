@@ -67,6 +67,7 @@ ADDED_SINCE_CAPTURE: frozenset[str] = frozenset(
         "shop_cash_in_hand",
         "business_date",
         "open_orders",
+        "periods",
     }
 )
 

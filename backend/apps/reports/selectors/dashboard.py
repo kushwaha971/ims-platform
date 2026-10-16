@@ -208,6 +208,56 @@ def money_received_today(*, tenant: Any, today: dt.date) -> dict[str, Any]:
     return {"amount": _money(row["amount"]), "count": row["count"]}
 
 
+def period_figures(*, tenant: Any, today: dt.date) -> dict[str, Any]:
+    """WP-06 — net sales and money received for Today, Yesterday, This week (from
+    Monday, as the lists count it) and This month, each with its own dates so the
+    list a figure opens is the same range. Sales net credit notes by the date
+    they were issued (BR-2); receipts are the Shop's own (DEC-019)."""
+    from apps.payments.models import Payment
+    from apps.sales.models import SalesDocument
+
+    yesterday = today - dt.timedelta(days=1)
+    ranges = {
+        "today": (today, today),
+        "yesterday": (yesterday, yesterday),
+        "week": (today - dt.timedelta(days=today.weekday()), today),
+        "month": (today.replace(day=1), today),
+    }
+    sale = Q(kind__in=SALE_KINDS) & ~Q(status__in=(DRAFT, VOID))
+    credit = Q(kind=CREDIT_NOTE_KIND, status__in=CREDIT_NOTE_LIVE_STATUSES)
+    sales_aggs: dict[str, Any] = {}
+    paid_aggs: dict[str, Any] = {}
+    for key, (lo, hi) in ranges.items():
+        within = Q(document_date__gte=lo, document_date__lte=hi)
+        sales_aggs[f"{key}_sales"] = _sum("grand_total", sale & within)
+        sales_aggs[f"{key}_bills"] = Count("id", filter=sale & within)
+        sales_aggs[f"{key}_credit"] = _sum("grand_total", credit & within)
+        paid = Q(payment_date__gte=lo, payment_date__lte=hi)
+        paid_aggs[f"{key}_amount"] = _sum("amount", paid)
+        paid_aggs[f"{key}_count"] = Count("id", filter=paid)
+    sales = SalesDocument.objects.filter(tenant=tenant).aggregate(**sales_aggs)
+    paid_row = (
+        Payment.objects.filter(tenant=tenant, bucket=LedgerBucket.SHOP, direction="in")
+        .exclude(status=VOID)
+        .aggregate(**paid_aggs)
+    )
+    return {
+        key: {
+            "from": lo.isoformat(),
+            "to": hi.isoformat(),
+            "sales": {
+                "amount": _money(sales[f"{key}_sales"] - sales[f"{key}_credit"]),
+                "count": sales[f"{key}_bills"],
+            },
+            "received": {
+                "amount": _money(paid_row[f"{key}_amount"]),
+                "count": paid_row[f"{key}_count"],
+            },
+        }
+        for key, (lo, hi) in ranges.items()
+    }
+
+
 def supplier_bills(*, tenant: Any, today: dt.date) -> dict[str, Any]:
     """WP-06 spec order 3 — the Suppliers panel's bills: overdue (the purchase
     list's own `overdue` tab, with the oldest's age) and those falling due in the
@@ -685,6 +735,7 @@ def build_dashboard(
         ("today_received", lambda: money_received_today(tenant=tenant, today=today)),
         ("supplier_bills", lambda: supplier_bills(tenant=tenant, today=today)),
         ("open_orders", lambda: open_orders(tenant=tenant, today=today)),
+        ("periods", lambda: period_figures(tenant=tenant, today=today)),
     ):
         value = part(key, failed, compute)
         if value is not None:
@@ -750,6 +801,17 @@ def _project_tiles(
         "low_stock": "inventory.stock.read" in granted,
     }
     tiles |= {key: dict(source[key]) for key, ok in allowed.items() if ok and key in source}
+    periods = {
+        key: {
+            "from": value["from"],
+            "to": value["to"],
+            **({"sales": dict(value["sales"])} if sales else {}),
+            **({"received": dict(value["received"])} if "payments.payment.read" in granted else {}),
+        }
+        for key, value in source.get("periods", {}).items()
+    }
+    if any({"sales", "received"} & set(value) for value in periods.values()):
+        tiles["periods"] = periods
     orders = {
         key: dict(value)
         for key, value in source.get("open_orders", {}).items()

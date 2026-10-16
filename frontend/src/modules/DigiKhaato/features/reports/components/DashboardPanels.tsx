@@ -1,6 +1,8 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
+import { useState } from 'react';
+
+import { useRouter, useSearchParams } from 'next/navigation';
 
 import {
   AlarmClock,
@@ -26,10 +28,11 @@ import {
   UbStatGrid,
   UbText,
   type UbAttentionItem,
+  UbChoiceChips,
 } from 'src/design-system';
 import type { TranslateFn } from 'src/hooks/useTranslation';
 import { partyPath, ROUTES } from 'src/routes';
-import { formatInr } from 'src/utils/money';
+import { formatInr, isNegativeAmount } from 'src/utils/money';
 
 import {
   advancesLine,
@@ -39,12 +42,16 @@ import {
   tabHref,
   shortInr,
   tileHref,
-  tileTone,
 } from '../view-model/dashboardDisplay';
 
 import { LowStockCard, RecentActivityList, TopDebtorsList } from './DashboardLists';
 
-import type { AgedCountAmount, DashboardData, TopCreditor } from '../types/reports.types';
+import type {
+  AgedCountAmount,
+  DashboardData,
+  DashboardPeriod,
+  TopCreditor,
+} from '../types/reports.types';
 
 /**
  * WP-06 — the owner's layout A (16 Oct 2026), "two books side by side":
@@ -102,7 +109,16 @@ const oldestLine = (bills: AgedCountAmount, t: TranslateFn): string | undefined 
     ? undefined
     : t('reports.dashboard.oldest', { days: bills.oldestDays });
 
-/** Net sales, money received and cash in hand — each says "today" and opens its records. */
+const PERIOD_KEYS: readonly DashboardPeriod[] = ['today', 'yesterday', 'week', 'month'];
+const isPeriod = (value: string | null): value is DashboardPeriod =>
+  !!value && (PERIOD_KEYS as readonly string[]).includes(value);
+
+/**
+ * Net sales, money received and cash in hand. The first two follow the period
+ * chips (owner, 16 Oct 2026: Today, Yesterday, This week, This month) and open
+ * their lists over the dates the server counted; Cash in hand is a balance and
+ * stays as of today. The chosen period is kept in the link (`?period=week`).
+ */
 export function DashboardTodayRow({
   data,
   onRetry,
@@ -113,6 +129,9 @@ export function DashboardTodayRow({
   t: TranslateFn;
 }>): React.JSX.Element | null {
   const router = useRouter();
+  const search = useSearchParams();
+  const asked = search?.get('period') ?? null;
+  const [period, setPeriod] = useState<DashboardPeriod>(isPeriod(asked) ? asked : 'today');
   const { tiles } = data;
   const units = {
     lakh: t('reports.dashboard.short.lakh'),
@@ -120,29 +139,60 @@ export function DashboardTodayRow({
   };
   const broken = failed(data, PARTS.today);
   const cash = tiles.cashInHand ? cashTile(tiles.cashInHand, t) : null;
-  if (!tiles.todaySales && !tiles.todayReceived && !cash && !broken) return null;
+  // An older server sends no periods: Today alone, as before.
+  const figures = tiles.periods?.[period];
+  const shown: DashboardPeriod = figures ? period : 'today';
+  const sales = figures ? figures.sales : tiles.todaySales;
+  const received = figures ? figures.received : tiles.todayReceived;
+  if (!sales && !received && !cash && !broken) return null;
+  const choose = (next: DashboardPeriod) => {
+    setPeriod(next);
+    router.replace(next === 'today' ? '?' : `?period=${next}`, { scroll: false });
+  };
+  const ranged = shown !== 'today' && figures;
   return (
     <UbStack gap={2}>
-      <UbStatGrid live label={t('reports.dashboard.today.title')}>
-        {tiles.todaySales && (
+      {tiles.periods && (
+        <UbChoiceChips<DashboardPeriod>
+          value={shown}
+          onChange={choose}
+          options={PERIOD_KEYS.map((value) => ({
+            value,
+            label: t(`reports.dashboard.period.${value}`),
+          }))}
+          ariaLabel={t('reports.dashboard.period.label')}
+        />
+      )}
+      <UbStatGrid live label={t(`reports.dashboard.period.${shown}`)}>
+        {sales && (
           <UbStatCard
             key="sales"
-            label={t('reports.dashboard.today.sales')}
-            value={shortInr(tiles.todaySales.amount, units).text}
-            subtext={t('reports.dashboard.today.salesCaption', { count: tiles.todaySales.count })}
-            tone={tileTone('todaySales', tiles) === 'danger' ? 'danger' : 'default'}
-            onClick={() => router.push(tileHref('todaySales', tiles))}
+            label={t(`reports.dashboard.period.sales.${shown}`)}
+            value={shortInr(sales.amount, units).text}
+            subtext={t('reports.dashboard.today.salesCaption', { count: sales.count })}
+            tone={isNegativeAmount(sales.amount) ? 'danger' : 'default'}
+            onClick={() =>
+              router.push(
+                ranged
+                  ? `${ROUTES.SALES_INVOICES}?from=${figures.from}&to=${figures.to}`
+                  : tileHref('todaySales', tiles)
+              )
+            }
           />
         )}
-        {tiles.todayReceived && (
+        {received && (
           <UbStatCard
             key="received"
-            label={t('reports.dashboard.today.received')}
-            value={shortInr(tiles.todayReceived.amount, units).text}
-            subtext={t('reports.dashboard.today.receivedCaption', {
-              count: tiles.todayReceived.count,
-            })}
-            onClick={() => router.push(RECEIVED_TODAY)}
+            label={t(`reports.dashboard.period.received.${shown}`)}
+            value={shortInr(received.amount, units).text}
+            subtext={t('reports.dashboard.today.receivedCaption', { count: received.count })}
+            onClick={() =>
+              router.push(
+                ranged
+                  ? `${ROUTES.PAYMENTS}?from=${figures.from}&to=${figures.to}&tab=in`
+                  : RECEIVED_TODAY
+              )
+            }
           />
         )}
         {cash && (

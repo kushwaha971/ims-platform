@@ -158,6 +158,19 @@ for (const [size, viewport] of WIDTHS) {
       const listed = (await api('GET', `${path}?${wire}`, null, T)).body.meta.totals;
       console.log(`   ${region} overdue ${tile?.count} · ${tile?.amount} vs list ${listed.count} · ${listed.amount_due} (${href})`);
     }
+    // The period chips: each period's figures equal the lists over its dates.
+    for (const [chip, key] of [['Yesterday', 'yesterday'], ['This week', 'week'], ['This month', 'month']]) {
+      const p = dash.periods?.[key];
+      const inv = (await api('GET', `/sales/invoices?date_from=${p.from}&date_to=${p.to}`, null, T)).body.meta?.totals;
+      const cn = (await api('GET', `/sales/credit-notes?date_from=${p.from}&date_to=${p.to}`, null, T)).body.meta?.totals;
+      const pay = (await api('GET', `/payments?date_from=${p.from}&date_to=${p.to}&direction=in`, null, T)).body.meta?.totals;
+      await page.getByRole('radio', { name: chip }).click();
+      await page.waitForTimeout(300);
+      const region = page.getByRole('region', { name: chip });
+      console.log(`   ${chip} ${p.from}..${p.to}: sales ${p.sales?.amount} (bills ${inv?.grand_total} − returns ${cn?.grand_total}), received ${p.received?.amount} (payments ${JSON.stringify(pay)}); screen "${(await region.innerText()).replace(/\s+/g, ' ').slice(0, 140)}"`);
+      if (key === 'week') await page.screenshot({ path: `${ROOT}/${size}-period-week.png` });
+    }
+    await page.getByRole('radio', { name: 'Today' }).click();
     // "Due this week" opens exactly the bills it counted.
     {
       const link = page.getByRole('region', { name: 'Suppliers' }).getByRole('link', { name: /due this week/ });

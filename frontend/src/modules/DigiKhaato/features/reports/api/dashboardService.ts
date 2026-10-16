@@ -5,6 +5,8 @@ import { toQueryString } from 'src/utils/queryString';
 import type {
   ActivityItem,
   AgedCountAmount,
+  DashboardPeriod,
+  PeriodFigures,
   CountAmount,
   DashboardData,
   DashboardSection,
@@ -49,6 +51,16 @@ interface DashboardWire {
       readonly shop_cash_in_hand?: { readonly amount: string; readonly since?: string | null };
       readonly today_received?: CountAmountWire;
       readonly supplier_bills?: { readonly overdue: AgedWire; readonly due_week: AgedWire };
+      /** WP-06 — the period chips' figures, keyed today/yesterday/week/month. */
+      readonly periods?: Record<
+        string,
+        {
+          readonly from: string;
+          readonly to: string;
+          readonly sales?: CountAmountWire;
+          readonly received?: CountAmountWire;
+        }
+      >;
       /** WP-06 — orders waiting on someone, each only for a reader of its list. */
       readonly open_orders?: {
         readonly sales_orders?: WaitingWire;
@@ -137,6 +149,23 @@ const openOrders = (wire: NonNullable<DashboardWire['data']['tiles']['open_order
   ...(wire.purchase_orders ? { purchaseOrders: waiting(wire.purchase_orders) } : {}),
 });
 
+const PERIODS: readonly DashboardPeriod[] = ['today', 'yesterday', 'week', 'month'];
+
+const periods = (wire: NonNullable<DashboardWire['data']['tiles']['periods']>) =>
+  Object.fromEntries(
+    PERIODS.flatMap((key) => {
+      const figure = wire[key];
+      if (!figure) return [];
+      const value: PeriodFigures = {
+        from: figure.from,
+        to: figure.to,
+        ...(figure.sales ? { sales: countAmount(figure.sales) } : {}),
+        ...(figure.received ? { received: countAmount(figure.received) } : {}),
+      };
+      return [[key, value] as const];
+    })
+  ) as Partial<Record<DashboardPeriod, PeriodFigures>>;
+
 const dues = (wire: { readonly amount: string; readonly advances?: string }) => ({
   amount: wire.amount,
   ...(wire.advances ? { advances: wire.advances } : {}),
@@ -191,6 +220,7 @@ const toTiles = (wire: DashboardWire['data']['tiles']): DashboardTiles => ({
       }
     : {}),
   ...(wire.open_orders ? { openOrders: openOrders(wire.open_orders) } : {}),
+  ...(wire.periods ? { periods: periods(wire.periods) } : {}),
   ...(wire.low_stock
     ? { lowStock: { count: wire.low_stock.count, outCount: wire.low_stock.out_count } }
     : {}),

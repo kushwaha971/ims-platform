@@ -269,6 +269,56 @@ it('wraps a long customer or supplier name instead of cutting it (WP-06)', async
   ).toBeNull();
 });
 
+it('shows sales and money received for Yesterday, This week or This month (WP-06)', async () => {
+  // The spec's header names a range and the home had only Today. Balances stay
+  // as of today; only the period figures follow the chips, and each opens its
+  // list over the same dates the server counted.
+  const period = (from: string, to: string, sales: string, received: string) => ({
+    from,
+    to,
+    sales: { amount: sales, count: 3 },
+    received: { amount: received, count: 2 },
+  });
+  const data = DATA();
+  service.getDashboard.mockResolvedValue({
+    ...data,
+    tiles: {
+      ...data.tiles,
+      periods: {
+        today: period('2026-09-18', '2026-09-18', '1200.00', '900.00'),
+        yesterday: period('2026-09-17', '2026-09-17', '450.00', '100.00'),
+        week: period('2026-09-14', '2026-09-18', '5600.00', '3100.00'),
+        month: period('2026-09-01', '2026-09-18', '41000.00', '27500.00'),
+      },
+    },
+  });
+  signIn(OWNER);
+  renderWithProviders(<DashboardPageContent />);
+  const chips = await screen.findByRole('radiogroup', { name: 'Show figures for' });
+  expect(within(chips).getByRole('radio', { name: 'Today' })).toBeChecked();
+  await userEvent.click(within(chips).getByRole('radio', { name: 'This week' }));
+  expect(mockReplace).toHaveBeenCalledWith('?period=week', { scroll: false });
+  const week = screen.getByRole('region', { name: 'This week' });
+  const sales = within(week).getByRole('button', { name: /Net sales this week/ });
+  expect(sales).toHaveTextContent('₹5,600.00');
+  await userEvent.click(sales);
+  expect(mockPush).toHaveBeenCalledWith('/sales/invoices?from=2026-09-14&to=2026-09-18');
+  const received = within(week).getByRole('button', { name: /Money received this week/ });
+  expect(received).toHaveTextContent('₹3,100.00');
+  await userEvent.click(received);
+  expect(mockPush).toHaveBeenCalledWith('/payments?from=2026-09-14&to=2026-09-18&tab=in');
+  // Cash in hand is a balance, not a period: it stays.
+  expect(within(week).getByText('Cash in hand')).toBeInTheDocument();
+});
+
+it("gives an older server's dashboard no period chips", async () => {
+  service.getDashboard.mockResolvedValue(DATA());
+  signIn(OWNER);
+  renderWithProviders(<DashboardPageContent />);
+  await screen.findByRole('region', { name: 'Today' });
+  expect(screen.queryByRole('radiogroup', { name: 'Show figures for' })).not.toBeInTheDocument();
+});
+
 it('gives customers and suppliers a panel each, every figure opening its own list', async () => {
   service.getDashboard.mockResolvedValue(DATA());
   signIn(OWNER);

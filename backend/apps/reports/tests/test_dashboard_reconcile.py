@@ -286,6 +286,7 @@ def test_project_omits_what_a_reader_may_not_see(tenant: Any) -> None:
         "today_received",
         "supplier_bills",
         "open_orders",
+        "periods",
         "low_stock",
     }
     assert full["tiles"]["overdue"]["invoices"] == {"count": 0, "amount": "0.00"}
@@ -715,3 +716,51 @@ def test_a_shop_with_no_orders_has_empty_order_rows(tenant: Any) -> None:
     payload = _dashboard(tenant)
     assert "unavailable" not in payload
     assert payload["tiles"]["open_orders"]["sales_orders"] == {"count": 0, "amount": "0.00"}
+
+
+def test_the_period_figures_cover_today_yesterday_this_week_and_this_month(tenant: Any) -> None:
+    """WP-06 — the spec's header names a date range and the home had only Today.
+    Net sales (credit notes netted) and the Shop's money received are sent for
+    four periods, each with its own dates so the list it opens is the same
+    range: the week from Monday (Indian shops count it so, as the lists do) and
+    the month from the 1st. Balances are not periods and stay as of today."""
+    ramesh = b.party(tenant)
+    monday = TODAY - dt.timedelta(days=TODAY.weekday())
+    b.sale(tenant, TODAY, 500, party=ramesh)
+    b.sale(tenant, TODAY - dt.timedelta(days=1), 300, party=ramesh)
+    b.sale(tenant, monday, 200, party=ramesh)
+    b.sale(tenant, TODAY.replace(day=1), 1000, party=ramesh)
+    b.sale(tenant, TODAY.replace(day=1) - dt.timedelta(days=1), 9000, party=ramesh)
+    b.credit_note(tenant, TODAY - dt.timedelta(days=1), 50, party=ramesh)
+    b.payment(tenant, TODAY - dt.timedelta(days=1), {"cash": 120}, party=ramesh)
+    b.payment(tenant, TODAY, {"upi": 80}, party=ramesh)
+    b.payment(tenant, TODAY, {"cash": 999}, party=ramesh, bucket=LedgerBucket.LOAN)
+
+    periods = _tiles(tenant)["periods"]
+    yesterday = (TODAY - dt.timedelta(days=1)).isoformat()
+    assert periods["today"] == {
+        "from": TODAY.isoformat(),
+        "to": TODAY.isoformat(),
+        "sales": {"amount": "500.00", "count": 1},
+        "received": {"amount": "80.00", "count": 1},
+    }
+    assert periods["yesterday"] == {
+        "from": yesterday,
+        "to": yesterday,
+        "sales": {"amount": "250.00", "count": 1},
+        "received": {"amount": "120.00", "count": 1},
+    }
+    week = periods["week"]
+    assert (week["from"], week["to"]) == (monday.isoformat(), TODAY.isoformat())
+    month = periods["month"]
+    assert (month["from"], month["to"]) == (TODAY.replace(day=1).isoformat(), TODAY.isoformat())
+    assert month["sales"] == {"amount": "1950.00", "count": 4}
+    assert month["received"] == {"amount": "200.00", "count": 2}
+    # Each half travels with the permission that reads its list.
+    payload = _dashboard(tenant)
+    cut = project(
+        payload,
+        granted=frozenset({"reports.basic.read", "sales.invoice.read"}),
+        modules=ALL_MODULES,
+    )
+    assert set(cut["tiles"]["periods"]["week"]) == {"from", "to", "sales"}
