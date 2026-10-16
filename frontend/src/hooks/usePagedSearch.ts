@@ -61,6 +61,12 @@ export interface UsePagedSearchResult<T> {
   readonly active: boolean;
   /** True once a search has answered and matched nothing — the "no match" row. */
   readonly isEmpty: boolean;
+  /**
+   * True while the rows on screen do not answer what is in the box: the term
+   * changed and its page is still debounced or in flight. An Enter then would
+   * take the OLD answer's top row (WP-05: K001 billed for K003).
+   */
+  readonly pending: boolean;
   readonly clear: () => void;
 }
 
@@ -78,6 +84,8 @@ export function usePagedSearch<T>({
   const [results, setResults] = useState<readonly T[]>([]);
   const [status, setStatus] = useState<PagedSearchStatus>('idle');
   const [hasMore, setHasMore] = useState(false);
+  /** The signature the rows in `results` answer, as state so `pending` renders. */
+  const [answered, setAnswered] = useState<string | null>(null);
   const page = useRef(0);
   const controller = useRef<AbortController | null>(null);
   /** The term (and key) the rows on screen answer — a stale page is dropped. */
@@ -103,6 +111,7 @@ export function usePagedSearch<T>({
           if (next.signal.aborted) return;
           page.current = nextPage;
           answering.current = forSignature;
+          setAnswered(forSignature);
           setHasMore(answer.hasMore);
           setResults((held) => {
             if (nextPage === 1) return answer.rows;
@@ -113,6 +122,7 @@ export function usePagedSearch<T>({
         })
         .catch(() => {
           if (next.signal.aborted) return;
+          setAnswered(forSignature);
           if (nextPage === 1) setResults([]);
           setHasMore(false);
           setStatus('failed');
@@ -151,6 +161,7 @@ export function usePagedSearch<T>({
     setActive(false);
     page.current = 0;
     answering.current = '';
+    setAnswered(null);
     setResults([]);
     setHasMore(false);
     setStatus('idle');
@@ -161,6 +172,7 @@ export function usePagedSearch<T>({
      are never shown for a box that is not running. */
   const shown = running ? results : (EMPTY as readonly T[]);
   const shownStatus: PagedSearchStatus = running ? status : 'idle';
+  const pending = running && (answered !== signature || status === 'loading');
 
   return useMemo(
     () => ({
@@ -173,9 +185,10 @@ export function usePagedSearch<T>({
       activate,
       active: running,
       isEmpty: running && shownStatus === 'succeeded' && shown.length === 0,
+      pending,
       clear,
     }),
-    [query, setQuery, shown, shownStatus, running, hasMore, loadMore, activate, clear]
+    [query, setQuery, shown, shownStatus, running, hasMore, loadMore, activate, clear, pending]
   );
 }
 

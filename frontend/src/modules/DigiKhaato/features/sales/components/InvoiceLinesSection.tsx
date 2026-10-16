@@ -5,7 +5,6 @@ import { useCallback, useMemo, useState } from 'react';
 import { useFieldArray, type UseFormReturn } from 'react-hook-form';
 
 import {
-  UbAsyncCombobox,
   UbCheckbox,
   UbLineItemsEditor,
   UbMoneyInput,
@@ -15,81 +14,19 @@ import {
   UbText,
   type UbLineItemsColumn,
 } from 'src/design-system';
-import { useAppDispatch } from 'src/hooks/useAppStore';
 import { useTranslation } from 'src/hooks/useTranslation';
-import { showSnackbar } from 'src/redux/slice/snackbarSlice';
 import { formatAmount, formatInr } from 'src/utils/money';
 import { exceedsQuantity, formatQuantity } from 'src/utils/quantity';
-import { comboPaging } from 'src/utils/searchPaging';
 
 import { getPartyRates } from '../../inventory/api/priceListService';
+import { ItemLineCell } from '../../inventory/components/ItemLineCell';
 import { LastRateNote } from '../../inventory/components/LastRateNote';
-import { useItemSearch } from '../../inventory/hooks/useItemSearch';
-import {
-  emptyLine,
-  ratePlaces,
-  type InvoiceFormValues,
-  type InvoiceLineForm,
-} from '../view-model/invoiceForm';
+import { emptyLine, ratePlaces, type InvoiceFormValues } from '../view-model/invoiceForm';
 
 import type { ItemListRow } from '../../inventory/types/item.types';
 import type { EngineResult } from '../view-model/taxEngine';
 
 const MAX_LINES = 100;
-
-/** The item cell — search by name/SKU, and the scanner path on Enter (FR-2, FR-18). */
-function ItemCell({
-  id,
-  label,
-  invalid,
-  line,
-  disabled,
-  onPick,
-}: Readonly<{
-  id: string;
-  label: string;
-  invalid: boolean;
-  line: InvoiceLineForm | undefined;
-  disabled: boolean;
-  onPick: (row: ItemListRow) => void;
-}>): React.JSX.Element {
-  const { t } = useTranslation();
-  const dispatch = useAppDispatch();
-  const search = useItemSearch();
-  return (
-    <UbAsyncCombobox
-      id={id}
-      aria-label={label}
-      value={line?.itemId ?? null}
-      selectedLabel={line?.description}
-      query={search.query}
-      onQueryChange={search.setQuery}
-      onOpen={search.activate}
-      paging={comboPaging(search, t)}
-      options={search.options}
-      loading={search.status === 'loading'}
-      disabled={disabled}
-      onSelect={(option) => {
-        const row = search.find(option.value);
-        if (row) onPick(row);
-      }}
-      onSubmitQuery={(code) => {
-        void search.lookup(code).then((row) => {
-          if (row) onPick(row);
-          else
-            dispatch(
-              showSnackbar({ severity: 'warning', id: 'items.scan.notFound', params: { code } })
-            );
-        });
-      }}
-      placeholder={t('sales.line.itemPlaceholder')}
-      searchPlaceholder={t('items.list.searchPlaceholder')}
-      emptyLabel={t('sales.line.itemEmpty')}
-      loadingLabel={t('common.loading')}
-      invalid={invalid}
-    />
-  );
-}
 
 /**
  * SAL-02 FR-2 / §7 — the line grid on `UbLineItemsEditor` (built to this
@@ -182,14 +119,17 @@ export function InvoiceLinesSection({
         field: 'itemId',
         track: 'minmax(9rem,2.6fr)',
         card: 'title',
-        render: ({ index, id, label, invalid }) => (
-          <ItemCell
+        render: ({ index, id, label, invalid, focusNext }) => (
+          <ItemLineCell
             id={id}
             label={label}
             invalid={invalid}
             line={lines?.[index]}
             disabled={disabled}
+            placeholder={t('sales.line.itemPlaceholder')}
+            emptyLabel={t('sales.line.itemEmpty')}
             onPick={(row) => pick(index, row)}
+            focusNext={focusNext}
           />
         ),
       },

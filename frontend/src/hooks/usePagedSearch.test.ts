@@ -90,3 +90,22 @@ it('lists nothing for a session that may not search', async () => {
   expect(fetchPage).not.toHaveBeenCalled();
   expect(result.current.active).toBe(false);
 });
+
+/**
+ * WP-05's timed counter run billed K001 for K003: the old term's rows stay on
+ * screen while the new term's page is debounced and fetched, and an Enter in
+ * that window took the top row of the OLD answer. `pending` says the rows do
+ * not answer what is in the box yet, so a picker can hold that Enter.
+ */
+it('says the rows are pending until they answer the term in the box', async () => {
+  const { hook } = setup(1);
+  act(() => hook.result.current.activate());
+  await waitFor(() => expect(hook.result.current.pending).toBe(false));
+
+  act(() => hook.result.current.setQuery('K003'));
+  expect(hook.result.current.pending).toBe(true);
+  expect(hook.result.current.results[0]?.id).toBe('r0'); // the old answer, still shown
+
+  await waitFor(() => expect(hook.result.current.pending).toBe(false));
+  expect(hook.result.current.results[0]?.id).toBe('K003r0');
+});

@@ -17,6 +17,7 @@ import { selectTenantTimezone } from 'src/redux/slice/sessionSlice';
 import type { ApiErrorShape } from 'src/types/api.types';
 import { todayInTenantTz } from 'src/utils/dates';
 import { formatAmount } from 'src/utils/money';
+import { hasReason } from 'src/utils/reason';
 
 import { openRecordsMessage } from '../view-model/partyRoleDisplay';
 
@@ -29,7 +30,6 @@ import type { PartyOpenRecords } from '../types/party.types';
 // with the screen that opens it (src/i18n/catalogueRegistry.ts).
 import 'src/i18n/catalogues/ledger';
 import 'src/i18n/catalogues/parties';
-import { hasReason } from 'src/utils/reason';
 
 /**
  * PTY-04's confirmation, and the state the server puts it in when the party

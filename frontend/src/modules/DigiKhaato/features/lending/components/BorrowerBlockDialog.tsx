@@ -7,6 +7,7 @@ import { UbButton, UbConfirmDialog, UbStack, UbText, UbTextInput } from 'src/des
 import { useAppDispatch } from 'src/hooks/useAppStore';
 import { useTranslation } from 'src/hooks/useTranslation';
 import { showSnackbar } from 'src/redux/slice/snackbarSlice';
+import { REASON_MAX_CHARS } from 'src/utils/reason';
 
 import { blockLendingBorrower, unblockLendingBorrower } from '../redux/lendingThunk';
 
@@ -14,7 +15,6 @@ import type { BorrowerRow } from '../types/lending.types';
 
 // Loaded with dynamic(), so its own words come with its own chunk.
 import 'src/i18n/catalogues/lending';
-import { REASON_MAX_CHARS } from 'src/utils/reason';
 
 /**
  * Block or unblock a borrower (owner, 12 Oct 2026; owner or admin only).

@@ -104,6 +104,7 @@ function ItemCell({
       paging={comboPaging(search, t)}
       options={search.options}
       loading={search.status === 'loading'}
+      pending={search.pending}
       onSelect={(option) => {
         const row = search.find(option.value);
         if (row) onPick(index, row);

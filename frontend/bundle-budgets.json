@@ -1369,7 +1369,8 @@
     "16 Oct 2026 (WP-04 M-11 follow-up): /payments/[id] route 63.2 -> 63.3 (measured 63.2, over by under 0.05 KB) — the shared message box now scrolls its blank-message reason into view, because in the UPI QR dialog on a phone it sat under the sticky footer. The receipt page renders the share sheet statically, so it carries those few bytes. A stable ref callback replaced the first version's effect to keep the cost to the minimum.",
     "16 Oct 2026 (WP-03 D-05): /d/[token] route 39.5 -> 39.7 (measured 39.6, a few bytes over 39.6) — the shared invoice print now adds and trims its quantities with sumQuantities / trimQuantity from utils/quantity, the one owner of quantity arithmetic, instead of a float reduce of its own. The float version rounded to three places so it printed correctly; the change is so the source-scan guard can forbid float quantity sums everywhere without an exception. The share page renders the print, so it carries the helpers. Every other route stayed inside its budget.",
     "16 Oct 2026 (WP-03 D-04b): /login/email route 58 -> 58.1 and /reset-password 52 -> 52.1 (each measured a few bytes over) — the central validator hook gained reasonText(), the one place a required reason's three-to-160-character rule lives, replacing eleven schemas and ten dialogs that wrote the numbers out. The hook ships on every form route, sign-in included; the constants live in the import-free utils/reason.ts so they add nothing else.",
-    "16 Oct 2026 (WP-05 layout A, owner's choice): the eight sales editor routes 152.1 -> 152.5 (measured 152.4 with the compact-context fold) — UbLineItemsEditor now measures its own width with a ResizeObserver and draws the table whenever every column's minimum fits, instead of only from a 1536 px screen, and the totals panel is right-aligned at a readable width under the lines. That is what turns a 1280 or 1440 laptop's 290 px phone card per line into a 61 px table row. The dock's breakpoint hook lives in src/hooks rather than the design-system motion module, because there it put 0.9 KB on the landing page."
+    "16 Oct 2026 (WP-05 layout A, owner's choice): the eight sales editor routes 152.1 -> 152.5 (measured 152.4 with the compact-context fold) — UbLineItemsEditor now measures its own width with a ResizeObserver and draws the table whenever every column's minimum fits, instead of only from a 1536 px screen, and the totals panel is right-aligned at a readable width under the lines. That is what turns a 1280 or 1440 laptop's 290 px phone card per line into a 61 px table row. The dock's breakpoint hook lives in src/hooks rather than the design-system motion module, because there it put 0.9 KB on the landing page.",
+    "16 Oct 2026 (WP-05, timed counter entry): the bill line's item cell, drawn twice word for word by the sales invoice and the purchase bill, is one shared ItemLineCell now, and UbAsyncCombobox gained afterPick so a pick sends the caret on to Qty instead of back to the item trigger, where the quantity typed next reopened the search. The eight sales editor routes measured 152.5 against 152.5 and the four purchase editor routes 151.8-151.9 against 151.3-151.4; raised by the measured + 0.5 rule: sales 152.5 -> 153, purchases -> 152.4. The search's `pending` (an Enter before the answer waits for it, and with no row highlighted takes the first, because the timed run billed K001 for K003) then put /purchases/bills/new and /purchases/orders/new a few bytes over their first-load ceiling of 390.3: 390.3 -> 390.8."
   ],
   "default": {
     "route": 56,
@@ -1397,11 +1398,11 @@
       "firstLoad": 319.6
     },
     "/sales/challans/new": {
-      "route": 152.5,
+      "route": 153,
       "firstLoad": 391.1
     },
     "/sales/challans/[id]/edit": {
-      "route": 152.5,
+      "route": 153,
       "firstLoad": 391.1
     },
     "/purchases/orders/[id]": {
@@ -1413,11 +1414,11 @@
       "firstLoad": 315.9
     },
     "/purchases/orders/new": {
-      "route": 151.3,
-      "firstLoad": 390.3
+      "route": 152.4,
+      "firstLoad": 390.8
     },
     "/purchases/orders/[id]/edit": {
-      "route": 151.4,
+      "route": 152.4,
       "firstLoad": 390.4
     },
     "/sales/orders/[id]": {
@@ -1429,11 +1430,11 @@
       "firstLoad": 319.6
     },
     "/sales/orders/new": {
-      "route": 152.5,
+      "route": 153,
       "firstLoad": 391.1
     },
     "/sales/orders/[id]/edit": {
-      "route": 152.5,
+      "route": 153,
       "firstLoad": 391.1
     },
     "/parties": {
@@ -1445,11 +1446,11 @@
       "firstLoad": 336
     },
     "/sales/invoices/new": {
-      "route": 152.5,
+      "route": 153,
       "firstLoad": 391.1
     },
     "/sales/invoices/[id]/edit": {
-      "route": 152.5,
+      "route": 153,
       "firstLoad": 391.1
     },
     "/sales/invoices": {
@@ -1465,11 +1466,11 @@
       "firstLoad": 356
     },
     "/sales/estimates/new": {
-      "route": 152.5,
+      "route": 153,
       "firstLoad": 400
     },
     "/sales/estimates/[id]/edit": {
-      "route": 152.5,
+      "route": 153,
       "firstLoad": 400
     },
     "/sales/estimates/[id]": {
@@ -1621,7 +1622,7 @@
       "firstLoad": 305.7
     },
     "/purchases/bills/[id]/edit": {
-      "route": 151.4,
+      "route": 152.4,
       "firstLoad": 390.4
     },
     "/purchases/bills": {
@@ -1629,8 +1630,8 @@
       "firstLoad": 330
     },
     "/purchases/bills/new": {
-      "route": 151.3,
-      "firstLoad": 390.3
+      "route": 152.4,
+      "firstLoad": 390.8
     },
     "/reports": {
       "route": 72,

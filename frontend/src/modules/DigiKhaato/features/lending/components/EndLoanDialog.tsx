@@ -17,6 +17,7 @@ import { useTranslation } from 'src/hooks/useTranslation';
 import { showSnackbar } from 'src/redux/slice/snackbarSlice';
 import type { ApiErrorShape } from 'src/types/api.types';
 import { formatInr } from 'src/utils/money';
+import { hasReason } from 'src/utils/reason';
 
 import { endLendingLoan } from '../redux/lendingThunk';
 
@@ -24,7 +25,6 @@ import type { LoanDetail } from '../types/lending.types';
 
 // Loaded with dynamic(), so its own words come with its own chunk.
 import 'src/i18n/catalogues/lending';
-import { hasReason } from 'src/utils/reason';
 
 const REASONS = ['cannot_trace', 'death', 'bad_debt', 'other'] as const;
 

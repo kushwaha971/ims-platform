@@ -5,7 +5,6 @@ import { useCallback, useMemo } from 'react';
 import { useFieldArray, type UseFormReturn } from 'react-hook-form';
 
 import {
-  UbAsyncCombobox,
   UbLineItemsEditor,
   UbMoneyInput,
   UbQuantityInput,
@@ -14,80 +13,22 @@ import {
   UbText,
   type UbLineItemsColumn,
 } from 'src/design-system';
-import { useAppDispatch } from 'src/hooks/useAppStore';
 import { useTranslation } from 'src/hooks/useTranslation';
-import { showSnackbar } from 'src/redux/slice/snackbarSlice';
 import { formatAmount } from 'src/utils/money';
-import { comboPaging } from 'src/utils/searchPaging';
 import { taxRateLabel } from 'src/utils/taxRateLabel';
 
+import { ItemLineCell } from '../../inventory/components/ItemLineCell';
 import { LastRateNote } from '../../inventory/components/LastRateNote';
-import { useItemSearch } from '../../inventory/hooks/useItemSearch';
 import { ratePlaces } from '../../sales/view-model/invoiceForm';
 import { PURCHASE_MAX_LINES } from '../constants/purchaseConstants';
 import {
   emptyPurchaseLine,
   lastCostChange,
   type PurchaseBillFormValues,
-  type PurchaseLineForm,
 } from '../view-model/purchaseBillForm';
 
 import type { ItemListRow } from '../../inventory/types/item.types';
 import type { EngineResult } from '../../sales/view-model/taxEngine';
-
-/** The item cell — search by name/SKU, and the scanner path on Enter (FR-3, AC-2). */
-function ItemCell({
-  id,
-  label,
-  invalid,
-  line,
-  disabled,
-  onPick,
-}: Readonly<{
-  id: string;
-  label: string;
-  invalid: boolean;
-  line: PurchaseLineForm | undefined;
-  disabled: boolean;
-  onPick: (row: ItemListRow) => void;
-}>): React.JSX.Element {
-  const { t } = useTranslation();
-  const dispatch = useAppDispatch();
-  const search = useItemSearch();
-  return (
-    <UbAsyncCombobox
-      id={id}
-      aria-label={label}
-      value={line?.itemId ?? null}
-      selectedLabel={line?.description}
-      query={search.query}
-      onQueryChange={search.setQuery}
-      onOpen={search.activate}
-      paging={comboPaging(search, t)}
-      options={search.options}
-      loading={search.status === 'loading'}
-      disabled={disabled}
-      onSelect={(option) => {
-        const row = search.find(option.value);
-        if (row) onPick(row);
-      }}
-      onSubmitQuery={(code) => {
-        void search.lookup(code).then((row) => {
-          if (row) onPick(row);
-          else
-            dispatch(
-              showSnackbar({ severity: 'warning', id: 'items.scan.notFound', params: { code } })
-            );
-        });
-      }}
-      placeholder={t('purchases.line.itemPlaceholder')}
-      searchPlaceholder={t('items.list.searchPlaceholder')}
-      emptyLabel={t('purchases.line.itemEmpty')}
-      loadingLabel={t('common.loading')}
-      invalid={invalid}
-    />
-  );
-}
 
 /**
  * PUR-01 FR-3 / §7 — the purchase-mode lines on `UbLineItemsEditor`, the same
@@ -154,14 +95,17 @@ export function PurchaseBillLinesSection({
         field: 'itemId',
         track: 'minmax(11rem,2.6fr)',
         card: 'title',
-        render: ({ index, id, label, invalid }) => (
-          <ItemCell
+        render: ({ index, id, label, invalid, focusNext }) => (
+          <ItemLineCell
             id={id}
             label={label}
             invalid={invalid}
             line={lines?.[index]}
             disabled={disabled}
+            placeholder={t('purchases.line.itemPlaceholder')}
+            emptyLabel={t('purchases.line.itemEmpty')}
             onPick={(row) => pick(index, row)}
+            focusNext={focusNext}
           />
         ),
       },

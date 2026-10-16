@@ -37,6 +37,8 @@ export interface UseItemSearchResult {
   readonly results: readonly ItemListRow[];
   readonly options: readonly UbAsyncComboboxOption[];
   readonly status: PagedSearchStatus;
+  /** The options on screen answer an earlier term (see `usePagedSearch`). */
+  readonly pending: boolean;
   readonly canSearch: boolean;
   /** Start listing — the picker's `onOpen`. */
   readonly activate: () => void;
@@ -105,6 +107,7 @@ export function useItemSearch(options: UseItemSearchOptions = {}): UseItemSearch
       results: visible,
       options: comboOptions,
       status: search.status,
+      pending: search.pending,
       canSearch,
       activate: search.activate,
       hasMore: search.hasMore,

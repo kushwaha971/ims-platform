@@ -1,6 +1,6 @@
 'use client';
 
-import { forwardRef, memo, useCallback, useState } from 'react';
+import { forwardRef, memo, useCallback, useEffect, useRef, useState } from 'react';
 
 import { ChevronDown } from 'lucide-react';
 
@@ -32,7 +32,15 @@ const panelModule = deferredModule(() => import('./UbAsyncComboboxPanel'));
  *   · Enter with NO option to pick calls `onSubmitQuery` — a HID barcode
  *     scanner types the code and presses Enter faster than any search answers,
  *     and that Enter is the caller's cue to do an exact lookup instead;
- *   · `onCreate` adds a "+ Create '<query>'" row (inline create, INV-01 FR-9).
+ *   · `onCreate` adds a "+ Create '<query>'" row (inline create, INV-01 FR-9);
+ *   · Enter while `pending` (the options still answer an earlier query) is
+ *     held, then taken by the first option of the answer for what was typed —
+ *     or by `onSubmitQuery` when that answer is empty; with no row highlighted
+ *     (the list was replaced under cmdk), Enter takes the first row. Taken at once, it billed
+ *     the old answer's top row: K001 for K003 (WP-05, the timed counter run);
+ *   · `afterPick` decides where the caret goes after a pick. Radix returns it
+ *     to the trigger, where the next digit typed reopens the search — on a bill
+ *     line that digit is the quantity (WP-05, found by the timed counter run).
  *
  * Owner, 5 Oct 2026 — it lists on OPEN, before anything is typed: `onOpen` is
  * the caller's cue to start its search (`usePagedSearch.activate`), and
@@ -54,6 +62,8 @@ export interface UbAsyncComboboxProps {
   readonly options: readonly UbAsyncComboboxOption[];
   readonly onSelect: (option: UbAsyncComboboxOption) => void;
   readonly loading?: boolean;
+  /** The options do not answer `query` yet — an Enter waits for the ones that do. */
+  readonly pending?: boolean;
   readonly placeholder?: string;
   readonly searchPlaceholder?: string;
   readonly emptyLabel?: string;
@@ -76,6 +86,12 @@ export interface UbAsyncComboboxProps {
   readonly onOpen?: () => void;
   /** The next page, when there is one. */
   readonly paging?: UbAsyncComboboxPaging;
+  /**
+   * Where the caret goes after an option is picked, in place of Radix's return
+   * to the trigger — a bill line's `focusNext`. Closing without a pick still
+   * returns to the trigger.
+   */
+  readonly afterPick?: () => void;
 }
 
 export interface UbAsyncComboboxPaging {
@@ -99,6 +115,7 @@ const UbAsyncComboboxInner = forwardRef<HTMLButtonElement, UbAsyncComboboxProps>
       options,
       onSelect,
       loading = false,
+      pending = false,
       placeholder,
       searchPlaceholder,
       emptyLabel,
@@ -114,6 +131,7 @@ const UbAsyncComboboxInner = forwardRef<HTMLButtonElement, UbAsyncComboboxProps>
       onKeyDown,
       onOpen,
       paging,
+      afterPick,
       name: _name,
       ...aria
     },
@@ -131,12 +149,24 @@ const UbAsyncComboboxInner = forwardRef<HTMLButtonElement, UbAsyncComboboxProps>
     const canCreate = Boolean(onCreate && createLabel && trimmed);
     const panel = useDeferredModule(panelModule, open);
 
+    const picked = useRef(false);
     const pick = useCallback(
       (option: UbAsyncComboboxOption) => {
+        picked.current = true;
         onSelect(option);
         setOpen(false);
       },
       [onSelect, setOpen]
+    );
+    const handleCloseFocus = useCallback(
+      (event: Event) => {
+        const wasPick = picked.current;
+        picked.current = false;
+        if (!wasPick || !afterPick) return;
+        event.preventDefault();
+        afterPick();
+      },
+      [afterPick]
     );
 
     const handleTriggerKey = useCallback(
@@ -155,6 +185,20 @@ const UbAsyncComboboxInner = forwardRef<HTMLButtonElement, UbAsyncComboboxProps>
       [disabled, onKeyDown, onQueryChange, setOpen]
     );
 
+    /* An Enter that arrived before the answer to what was typed. */
+    const heldEnter = useRef(false);
+    useEffect(() => {
+      if (!open) heldEnter.current = false;
+      if (!open || pending || !heldEnter.current) return;
+      heldEnter.current = false;
+      const first = options.find((option) => !option.disabled);
+      if (first) pick(first);
+      else if (trimmed && onSubmitQuery) {
+        onSubmitQuery(trimmed);
+        setOpen(false);
+      }
+    }, [open, pending, options, pick, trimmed, onSubmitQuery, setOpen]);
+
     const handleContentKey = useCallback(
       (event: React.KeyboardEvent<HTMLElement>) => {
         if (event.key === 'Escape') {
@@ -164,13 +208,32 @@ const UbAsyncComboboxInner = forwardRef<HTMLButtonElement, UbAsyncComboboxProps>
           setOpen(false);
           return;
         }
+        if (event.key === 'Enter' && pending) {
+          event.preventDefault();
+          event.stopPropagation();
+          heldEnter.current = true;
+          return;
+        }
+        // The list was replaced under cmdk and its highlight names a row that
+        // is gone, so its Enter would take nothing (line 31 of the timed run).
+        const first = options.find((option) => !option.disabled);
+        if (
+          event.key === 'Enter' &&
+          first &&
+          !event.currentTarget.querySelector('[cmdk-item][aria-selected="true"]')
+        ) {
+          event.preventDefault();
+          event.stopPropagation();
+          pick(first);
+          return;
+        }
         if (event.key === 'Enter' && options.length === 0 && trimmed && onSubmitQuery) {
           event.preventDefault();
           onSubmitQuery(trimmed);
           setOpen(false);
         }
       },
-      [options.length, trimmed, onSubmitQuery, setOpen]
+      [options, trimmed, onSubmitQuery, setOpen, pending, pick]
     );
 
     return (
@@ -204,6 +267,7 @@ const UbAsyncComboboxInner = forwardRef<HTMLButtonElement, UbAsyncComboboxProps>
         <MLPopoverContent
           align="start"
           onKeyDownCapture={handleContentKey}
+          onCloseAutoFocus={handleCloseFocus}
           className="w-[max(var(--radix-popover-trigger-width),18rem)] border-border-subtle bg-surface-card p-0"
         >
           {panel ? (

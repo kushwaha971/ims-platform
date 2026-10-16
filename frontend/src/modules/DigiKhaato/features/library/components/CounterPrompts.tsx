@@ -13,6 +13,7 @@ import {
 import { useEditableMessage } from 'src/hooks/useEditableMessage';
 import { useShareSheetLabels } from 'src/hooks/useShareSheetLabels';
 import { useTranslation } from 'src/hooks/useTranslation';
+import { hasReason } from 'src/utils/reason';
 
 import { issueSlip } from '../api/libraryCirculationService';
 import { blockParams } from '../view-model/memberDisplay';
@@ -23,7 +24,6 @@ import type { CounterMember, CounterPrompt } from '../types/counter.types';
 
 // Loaded with dynamic(), so its words come with its own chunk.
 import 'src/i18n/catalogues/library';
-import { hasReason } from 'src/utils/reason';
 
 /**
  * F05 (LIB-06 FR-4) — an overridable refusal: the blocks in words, a one-line
