@@ -176,9 +176,12 @@ the server-prepared reference.
    from/to from `oldest_bill_date`. Cash in hand, the day book and the
    cashbook are the Shop's money only (09e66a3); the dashboard sends
    `shop_cash_in_hand` and keeps `cash_in_hand` every-book for the golden
-   file, which must not be regenerated. Next, test-first, the rest of the list
-   at the end of that review: each dashboard section failing and retrying
-   alone; activity by record date; opening cash so the till is never negative.
+   file, which must not be regenerated. Each dashboard part fails alone (85a4e3a):
+   the server names it in `unavailable` and the panel built from it (see
+   `PARTS` in DashboardPanels.tsx) shows a line and Try again. Next,
+   test-first, the rest of the list at the end of that review: activity by
+   record date; opening cash so the till is never negative; promises due and
+   open orders in Needs attention.
 4. Still owed to WP-02, needing the owner or a device: a physical
    network-interruption check on a phone, and the owner's SH-011 release
    review in the tracker. Do not wait on these.

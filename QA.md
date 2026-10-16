@@ -573,3 +573,9 @@ Read this file, `git status`, current diff, root/frontend AGENTS, and the releva
 - The golden main-bucket file was not regenerated: `cash_in_hand` keeps its every-book value and the Shop reads the new `shop_cash_in_hand`.
 - Tests that changed meaning are listed in the commit message (cashbook receipts, has_any, the library's deposit cash).
 - Gates: backend reports, expenses, library, lending, imports, sales, payments, ledger, purchases and architecture tests pass; Jest reports 145/145 with the new service test; `tsc` clean; ESLint clean; build and bundle gate passed. Railway deployment and 9/10 readiness are NOT claimed.
+
+### 16 October 2026 — WP-06: each dashboard part fails alone (cloud session)
+
+- Fixed (85a4e3a): one failing figure was a 500 and a blank home screen. Each part is computed alone; a failed one is named in `unavailable`, every other figure still arrives, and the payload is not cached. Fail-before: selector, API and page tests.
+- Looked: `e2e/dashboard-review.mjs` stages a failed supplier-bills and activity part by rewriting the response. At 360 and 1280, three panels say "This section could not load." with Try again, "Nothing needs you" is not shown, and every other panel is intact (`360-part-failed.png`, `1280-part-failed.png`). Playwright's route needed `serviceWorkers: 'block'`: the app's service worker made the request invisible to it.
+- Gates: backend reports and golden tests pass; Jest reports 144/144; `tsc` clean; ESLint clean; build and bundle gate passed. Railway deployment and 9/10 readiness are NOT claimed.
