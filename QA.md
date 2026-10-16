@@ -605,3 +605,9 @@ Read this file, `git status`, current diff, root/frontend AGENTS, and the releva
 - Fixed (e7d85c6): "Suresh Kumar General Store, Station R" cut mid-word at 360 px. Names on the dashboard wrap to two lines. Fail-before: page test.
 - Looked: `e2e/dashboard-review.mjs` seeds a bill due in three days and one in ten; at 360 and 1280 the figure reads 1 · ₹210.00 and the list it opens reads 1 · ₹210.00 with the chip (`*-due-week-list.png`). The measuring check finds nothing cut at any of the eight widths.
 - Gates: backend reports, ledger, purchases and architecture tests pass; Jest 4228/4228; `tsc` clean; ESLint clean; i18n in step; build and bundle gate passed (four routes raised by measured + 0.5, noted). Railway deployment and 9/10 readiness are NOT claimed.
+
+### 17 October 2026 — WP-06: period chips on the Shop home (cloud session)
+
+- Built (72ceb6c, owner chose "Four presets"): Today, Yesterday, This week (from Monday) and This month switch net sales and money received; each opens the bill list or the payments list over the server's dates. Balances stay as of today. Fail-before: selector, service and page tests.
+- Looked: `e2e/dashboard-review.mjs` taps each chip at 360 and 1280 and compares with the lists: This week ₹1,276.00 sales = bills ₹1,276.00 − returns ₹0.00, ₹900.00 received = 2 payments in ₹900.00; This month ₹1,696.00 and ₹900.00, likewise. Nothing cut at any of the eight widths (`*-period-week.png`). On a 360 px phone the four chips wrap to two lines.
+- Gates: backend reports, ledger, purchases and architecture tests pass; Jest 4231/4231; `tsc` clean; ESLint clean; i18n in step; build and bundle gate passed (/reports/profit raised by measured + 0.5, noted). Railway deployment and 9/10 readiness are NOT claimed.
