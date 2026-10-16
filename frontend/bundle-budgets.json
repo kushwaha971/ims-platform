@@ -1,5 +1,6 @@
 {
   "//": [
+    "17 Oct 2026, WP-07 item pricing: the item picker's options now read the usual price, and for a member who may see costs the cost and the margin (itemPriceNote, with the margin arithmetic and three picker strings). Every bill and order editor that carries the picker, and the price list editor, grew by about 0.5 KB route and 0.3-0.8 KB first load; each raised by the measured + 0.5 rule. The form's own margin fields live in ItemFormDrawer, which is dynamic() and costs no route.",
     "17 Oct 2026, WP-06 period chips (owner chose four presets): the reports catalogue gained the chips' thirteen strings and lost three, and /reports/profit, which loads that catalogue and sat on its ceiling, rounded over by 0.0 KB: route 103.8 -> 104.3 (measured + 0.5).",
     "17 Oct 2026, WP-06: UbListItemText gained `wrapPrimary` so the dashboard wraps a long customer name instead of cutting it mid-word. Two routes that use the component sat exactly on their ceiling and rounded over by 0.0 KB: /reports/gst-summary route 108.6 -> 109.1 and /payments/[id] route 63.3 -> 63.8 (measured + 0.5).",
     "17 Oct 2026, WP-06: the purchases list reads a due-date window from a dashboard link and shows it as one chip that drops it (UbFilterChip, its copy). /purchases/bills has room; its two siblings that share the list, /purchases/orders and /purchases/debit-notes, measured 77.1 KB route against 76.8 and are raised by the measured + 0.5 rule to 77.6. Nothing else changed.",
@@ -1395,20 +1396,20 @@
       "firstLoad": 315.9
     },
     "/sales/challans/[id]": {
-      "route": 78.0,
-      "firstLoad": 317.0
+      "route": 78,
+      "firstLoad": 317
     },
     "/sales/challans": {
-      "route": 81.0,
+      "route": 81,
       "firstLoad": 319.6
     },
     "/sales/challans/new": {
-      "route": 153,
-      "firstLoad": 391.1
+      "route": 154,
+      "firstLoad": 392.3
     },
     "/sales/challans/[id]/edit": {
-      "route": 153,
-      "firstLoad": 391.1
+      "route": 154,
+      "firstLoad": 392.3
     },
     "/purchases/orders/[id]": {
       "route": 66.6,
@@ -1419,28 +1420,28 @@
       "firstLoad": 315.9
     },
     "/purchases/orders/new": {
-      "route": 152.4,
-      "firstLoad": 390.8
+      "route": 153.3,
+      "firstLoad": 391.6
     },
     "/purchases/orders/[id]/edit": {
-      "route": 152.4,
-      "firstLoad": 390.4
+      "route": 153.4,
+      "firstLoad": 391.7
     },
     "/sales/orders/[id]": {
       "route": 77.9,
-      "firstLoad": 317.0
+      "firstLoad": 317
     },
     "/sales/orders": {
-      "route": 81.0,
+      "route": 81,
       "firstLoad": 319.6
     },
     "/sales/orders/new": {
-      "route": 153,
-      "firstLoad": 391.1
+      "route": 154,
+      "firstLoad": 392.3
     },
     "/sales/orders/[id]/edit": {
-      "route": 153,
-      "firstLoad": 391.1
+      "route": 154,
+      "firstLoad": 392.3
     },
     "/parties": {
       "route": 109,
@@ -1451,12 +1452,12 @@
       "firstLoad": 336
     },
     "/sales/invoices/new": {
-      "route": 153,
-      "firstLoad": 391.1
+      "route": 154,
+      "firstLoad": 392.3
     },
     "/sales/invoices/[id]/edit": {
-      "route": 153,
-      "firstLoad": 391.1
+      "route": 154,
+      "firstLoad": 392.3
     },
     "/sales/invoices": {
       "route": 98,
@@ -1464,18 +1465,18 @@
     },
     "/sales/invoices/[id]": {
       "route": 77.9,
-      "firstLoad": 317.0
+      "firstLoad": 317
     },
     "/sales/estimates": {
       "route": 98,
       "firstLoad": 356
     },
     "/sales/estimates/new": {
-      "route": 153,
+      "route": 154,
       "firstLoad": 400
     },
     "/sales/estimates/[id]/edit": {
-      "route": 153,
+      "route": 154,
       "firstLoad": 400
     },
     "/sales/estimates/[id]": {
@@ -1504,7 +1505,7 @@
     },
     "/settings/team": {
       "route": 85.9,
-      "firstLoad": 325.0
+      "firstLoad": 325
     },
     "/parties/[id]": {
       "route": 105.8,
@@ -1563,12 +1564,12 @@
       "firstLoad": 344
     },
     "/items/[id]": {
-      "route": 103.0,
+      "route": 103,
       "firstLoad": 342.1
     },
     "/stock/low": {
-      "route": 67.0,
-      "firstLoad": 306.0
+      "route": 67,
+      "firstLoad": 306
     },
     "/expenses": {
       "route": 107,
@@ -1592,11 +1593,11 @@
     },
     "/imports": {
       "route": 51.9,
-      "firstLoad": 291.0
+      "firstLoad": 291
     },
     "/imports/[id]": {
       "route": 51.9,
-      "firstLoad": 291.0
+      "firstLoad": 291
     },
     "/admin": {
       "route": 11,
@@ -1612,7 +1613,7 @@
     },
     "/admin/tenants/[id]": {
       "route": 24.9,
-      "firstLoad": 264.0
+      "firstLoad": 264
     },
     "/admin/tenants": {
       "route": 31.7,
@@ -1627,16 +1628,16 @@
       "firstLoad": 305.7
     },
     "/purchases/bills/[id]/edit": {
-      "route": 152.4,
-      "firstLoad": 390.4
+      "route": 153.4,
+      "firstLoad": 391.6
     },
     "/purchases/bills": {
       "route": 95,
       "firstLoad": 330
     },
     "/purchases/bills/new": {
-      "route": 152.4,
-      "firstLoad": 390.8
+      "route": 153.3,
+      "firstLoad": 391.6
     },
     "/reports": {
       "route": 72,
@@ -1656,11 +1657,11 @@
     },
     "/reports/purchase-register": {
       "route": 108.9,
-      "firstLoad": 348.0
+      "firstLoad": 348
     },
     "/reports/sales-register": {
       "route": 108.9,
-      "firstLoad": 348.0
+      "firstLoad": 348
     },
     "/login": {
       "route": 57,
@@ -1799,7 +1800,7 @@
       "firstLoad": 344
     },
     "/items/price-lists/[id]": {
-      "route": 83.6,
+      "route": 84.6,
       "firstLoad": 322.7
     },
     "/lending/messages": {

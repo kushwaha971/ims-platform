@@ -34,6 +34,7 @@ import { formatQuantity } from 'src/utils/quantity';
 import { useItemDetail } from '../hooks/useItemDetail';
 import { useItemForm } from '../hooks/useItemForm';
 import { useStockAdjustment } from '../hooks/useStockAdjustment';
+import { isBelowCost, itemMargin } from '../view-model/itemPricing';
 
 import { ItemMovementList } from './ItemMovementList';
 import { StockBadge } from './StockBadge';
@@ -122,6 +123,7 @@ export function ItemDetailPageContent({ id }: Readonly<{ id: string }>): React.J
 
   const archived = item.status === 'archived';
   const tracked = item.trackStock && item.itemType === 'goods';
+  const margin = itemMargin(item);
   const stock = item.stock[0];
   const unit = item.unit.code;
 
@@ -325,6 +327,17 @@ export function ItemDetailPageContent({ id }: Readonly<{ id: string }>): React.J
                   <UbInfoRow
                     label={t('items.form.purchasePrice.label')}
                     value={formatInr(item.purchasePrice)}
+                  />
+                )}
+                {can.valuation && margin !== null && (
+                  <UbInfoRow
+                    label={t('items.detail.margin')}
+                    value={t(
+                      isBelowCost(margin)
+                        ? 'items.detail.marginBelowCost'
+                        : 'items.detail.marginValue',
+                      { margin }
+                    )}
                   />
                 )}
                 {item.mrp && (

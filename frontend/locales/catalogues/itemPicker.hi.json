@@ -4,6 +4,9 @@
   "items.lastRate.sold": "{party} को पिछली बार {date} को {rate} पर बेचा",
   "items.lastRate.use": "यही रेट लगाएँ",
   "items.list.searchPlaceholder": "नाम, SKU खोजें या बारकोड स्कैन करें",
+  "items.picker.cost": "लागत {amount}",
+  "items.picker.margin": "{margin}% मार्जिन",
+  "items.picker.usualPrice": "आम कीमत {amount}",
   "items.scan.create": "आइटम बनाएँ",
   "items.scan.notFound": "बारकोड {code} का कोई आइटम नहीं"
 }

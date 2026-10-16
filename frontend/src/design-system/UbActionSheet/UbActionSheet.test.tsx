@@ -1,7 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+
 
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { flushSync } from 'react-dom';
 
 import { UbButton } from 'src/design-system/UbButton';
 
@@ -16,7 +18,7 @@ describe('UbActionSheet close order', () => {
    * design-system sheet, which every page header's phone ⋯ uses, closed
    * AFTER the row's handler, on a timer.
    */
-  it('closes the sheet before the row acts', async () => {
+  it('closes the sheet in the same tap as the row acts, after it', async () => {
     const user = userEvent.setup();
     const order: string[] = [];
     function Harness(): React.JSX.Element {
@@ -37,7 +39,42 @@ describe('UbActionSheet close order', () => {
     }
     render(<Harness />);
     await user.click(screen.getByRole('button', { name: 'Edit' }));
-    expect(order).toEqual(['close', 'row']);
+    expect(order).toEqual(['row', 'close']);
+    expect(screen.queryByRole('dialog', { name: 'More actions' })).not.toBeInTheDocument();
+  });
+
+  /**
+   * WP-07, found by looking at a phone: Edit, Adjust stock and Archive in the
+   * item page's ⋯ sheet closed the sheet and did nothing. The sheet closed in
+   * the CAPTURE phase. React handles capture and bubble with two native
+   * listeners, and a real tap runs a microtask checkpoint between them, which
+   * flushed the close and unmounted the row before its onClick. A script
+   * dispatch (jsdom, `element.click()`) has no checkpoint, so this suite passed.
+   * The native listener on the row stands in for that checkpoint.
+   */
+  it('lets the row act when the close is flushed between capture and bubble', async () => {
+    const user = userEvent.setup();
+    const acted = jest.fn();
+    function Harness(): React.JSX.Element {
+      const [open, setOpen] = useState(true);
+      const row = useRef<HTMLButtonElement | null>(null);
+      useEffect(() => {
+        const node = row.current;
+        const checkpoint = () => flushSync(() => undefined);
+        node?.addEventListener('click', checkpoint);
+        return () => node?.removeEventListener('click', checkpoint);
+      }, [open]);
+      return (
+        <UbActionSheet open={open} onOpenChange={setOpen} title="More actions" closeLabel="Close">
+          <UbButton ref={row} onClick={acted}>
+            Edit
+          </UbButton>
+        </UbActionSheet>
+      );
+    }
+    render(<Harness />);
+    await user.click(screen.getByRole('button', { name: 'Edit' }));
+    expect(acted).toHaveBeenCalledTimes(1);
   });
 
   it('closes before acting for rows given as data too', async () => {

@@ -35,6 +35,11 @@ const SKU = /^[A-Za-z0-9._/-]+$/;
 const BARCODE = /^[A-Za-z0-9-]+$/;
 const QTY = (decimals: boolean) => (decimals ? /^\d+(\.\d{1,3})?$/ : /^\d+$/);
 const COST = /^\d+(\.\d{1,4})?$/;
+/**
+ * WP-07 — a margin to one decimal. No lower bound: a margin read from two
+ * prices can be any loss, and a figure the form computed must never block a save.
+ */
+const MARGIN = /^-?\d+(\.\d)?$/;
 
 export interface InventorySchemas {
   readonly itemSchema: Yup.ObjectSchema<ItemFormValues>;
@@ -84,6 +89,17 @@ export const useInventorySchemas = (units: readonly Unit[]): InventorySchemas =>
       taxInclusiveSelling: Yup.boolean().defined(),
       sellingPrice: v.optionalAmountValidation().defined().default(''),
       purchasePrice: v.optionalAmountValidation().defined().default(''),
+      margin: Yup.string()
+        .defined()
+        .default('')
+        .test('margin', function check(value) {
+          if (!value) return true;
+          if (!MARGIN.test(value))
+            return this.createError({ message: t('items.form.margin.format') });
+          return (
+            Number(value) < 100 || this.createError({ message: t('items.form.margin.tooHigh') })
+          );
+        }),
       mrp: v
         .optionalAmountValidation()
         .defined()

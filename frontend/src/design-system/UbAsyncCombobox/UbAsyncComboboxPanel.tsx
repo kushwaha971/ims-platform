@@ -89,6 +89,11 @@ export function UbAsyncComboboxPanel({
                   {option.description}
                 </span>
               )}
+              {option.detail && (
+                <span className="ds-body-s-regular w-full break-words text-text-tertiary">
+                  {option.detail}
+                </span>
+              )}
             </MLCommandItem>
           ))}
           {canCreate && (

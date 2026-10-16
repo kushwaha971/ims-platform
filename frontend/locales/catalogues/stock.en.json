@@ -52,7 +52,7 @@
   "stock.low.adjustItem": "Adjust stock for {name}",
   "stock.low.caption": "Items at or below their reorder point",
   "stock.low.col.actions": "Actions",
-  "stock.low.col.lastCost": "Last cost",
+  "stock.low.col.lastCost": "Purchase price",
   "stock.low.col.suggested": "Suggested qty",
   "stock.low.empty.body": "Nothing is at or below its reorder point.",
   "stock.low.empty.title": "All stocked up",

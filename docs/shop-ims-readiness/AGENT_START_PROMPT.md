@@ -190,11 +190,18 @@ the server-prepared reference.
    Period chips (Today, Yesterday, This week, This month; owner's choice)
    are in 72ceb6c, `period_figures` in dashboard.py. Next: the owner's
    acceptance review of WP-06; nothing on the review's list is open.
-   WP-07 began with item pricing: the review and the proposed contract are
-   14-item-pricing-design-review.md, with two questions for the owner
-   (which cost the margin is based on; whether staff keep seeing bill
-   costs). Build test-first once answered; the recommended answers are the
-   defaults.
+   WP-07 began with item pricing: the review, the contract and what was
+   built are 14-item-pricing-design-review.md. It is built on the recommended
+   answers (margin on the last purchase price; staff keep seeing bill costs);
+   the owner's two cards are still open, and the other options are small,
+   isolated changes. `priceAfterEdit` (inventory/view-model/itemPricing.ts)
+   decides which figure follows which; `itemPriceNote` is the picker's line.
+   `e2e/item-pricing-review.mjs` is the look. Two shared fixes came with it:
+   UbActionSheet closes in the bubble phase (capture lost the row's click on
+   a real tap), and UbAsyncCombobox options take a wrapping `detail` line.
+   The potential sale value of inclusive items waits on a Part 43 CR.
+   Next in WP-07: selected phone contacts for Customers, Suppliers and
+   Udhaar (never access phone contacts in QA), then the rest of its row.
 4. Still owed to WP-02, needing the owner or a device: a physical
    network-interruption check on a phone, and the owner's SH-011 release
    review in the tracker. Do not wait on these.

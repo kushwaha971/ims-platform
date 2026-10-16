@@ -1,5 +1,7 @@
 import Decimal from 'decimal.js-light';
 
+import { netOfInclusive } from 'src/utils/taxInclusive';
+
 /**
  * SAL-02 BR-1…BR-12 — the client MIRROR of `backend/apps/tax/services/
  * tax_engine.py`, for the totals a merchant watches change as they type.
@@ -118,11 +120,7 @@ export const computeDocumentTotals = (doc: EngineDocumentInput): EngineResult =>
     const gross = q2(dec(line.qty).times(dec(line.unitPrice)));
     const discount = discountOf(gross, line.discountType, line.discountValue);
     const net = gross.minus(discount);
-    const divisor = rate.plus(cess);
-    const taxableLine =
-      line.taxInclusive && !divisor.isZero()
-        ? q2(net.dividedBy(new Decimal(1).plus(divisor.dividedBy(HUNDRED))))
-        : net;
+    const taxableLine = line.taxInclusive ? netOfInclusive(net, rate, cess) : net;
     return { gross, discount, taxableLine, rate, cess };
   });
 

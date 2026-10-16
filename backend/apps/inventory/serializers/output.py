@@ -55,16 +55,24 @@ ITEM_COST_KEYS = ("purchase_price", "avg_cost", "stock_value")
 MOVEMENT_COST_KEYS = ("unit_cost", "value", "avg_cost_after")
 
 
-def item_row(item: Item, *, valuation: bool = True) -> dict:
+def item_row(
+    item: Item, *, valuation: bool = True, gst_percent: dict[str, str | None] | None = None
+) -> dict:
     """INV-02 §14 — one list row (also the lookup response).
 
     `valuation=False` OMITS the cost keys rather than nulling them, the same
     contract `/stock/summary` has, so a client cannot mistake "hidden" for zero.
+
+    `gst_percent` (WP-07) maps tax code → today's rate plus cess. Given, the row
+    carries its item's, so the picker can read the margin of a GST-inclusive
+    price; it is passed only to members who see costs, the margin's audience.
     """
     row = _item_row(item)
     if not valuation:
         for key in ITEM_COST_KEYS:
             row.pop(key, None)
+    if gst_percent is not None:
+        row["gst_percent"] = gst_percent.get(item.tax_code)
     return row
 
 

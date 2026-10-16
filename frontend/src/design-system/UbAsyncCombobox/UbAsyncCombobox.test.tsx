@@ -141,3 +141,36 @@ describe('UbAsyncCombobox when Enter beats the search', () => {
     expect(onSelect).toHaveBeenCalledWith(NEW[0]);
   });
 });
+
+describe('UbAsyncCombobox option detail', () => {
+  /**
+   * WP-07's look found the item picker's price line cut by an ellipsis on
+   * every width — "Usual price ₹59.00 · Cost ₹40.00 …" — so the margin it
+   * exists to show never appeared. The stock line may truncate; the detail
+   * line wraps, because no figure a merchant reads may be cut.
+   */
+  it('wraps the detail line instead of cutting it', async () => {
+    const user = userEvent.setup();
+    render(
+      <UbAsyncCombobox
+        aria-label="Item, line 1"
+        value={null}
+        query=""
+        onQueryChange={() => undefined}
+        options={[
+          {
+            value: 's1',
+            label: 'Lifebuoy Soap',
+            description: 'SOAP-001 · 3 NOS',
+            detail: 'Usual price ₹59.00 · Cost ₹40.00 · 20.0% margin',
+          },
+        ]}
+        onSelect={() => undefined}
+      />
+    );
+    await user.click(screen.getByRole('combobox', { name: 'Item, line 1' }));
+    const detail = await screen.findByText('Usual price ₹59.00 · Cost ₹40.00 · 20.0% margin');
+    expect(detail).not.toHaveClass('truncate');
+    expect(detail).toHaveClass('break-words');
+  });
+});

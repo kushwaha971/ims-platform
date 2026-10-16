@@ -611,3 +611,17 @@ Read this file, `git status`, current diff, root/frontend AGENTS, and the releva
 - Built (72ceb6c, owner chose "Four presets"): Today, Yesterday, This week (from Monday) and This month switch net sales and money received; each opens the bill list or the payments list over the server's dates. Balances stay as of today. Fail-before: selector, service and page tests.
 - Looked: `e2e/dashboard-review.mjs` taps each chip at 360 and 1280 and compares with the lists: This week ₹1,276.00 sales = bills ₹1,276.00 − returns ₹0.00, ₹900.00 received = 2 payments in ₹900.00; This month ₹1,696.00 and ₹900.00, likewise. Nothing cut at any of the eight widths (`*-period-week.png`). On a 360 px phone the four chips wrap to two lines.
 - Gates: backend reports, ledger, purchases and architecture tests pass; Jest 4231/4231; `tsc` clean; ESLint clean; i18n in step; build and bundle gate passed (/reports/profit raised by measured + 0.5, noted). Railway deployment and 9/10 readiness are NOT claimed.
+
+### 17 October 2026 — WP-07: item cost, selling price and margin (cloud session)
+
+- Built test-first on the recommended answers (margin on the last purchase price; staff keep seeing bill costs). The owner's two cards are still open. Details: docs/shop-ims-readiness/14-item-pricing-design-review.md, "Built".
+- Server: a member who cannot see costs can no longer set an item's purchase price (400); list and lookup rows carry `gst_percent` for those who see costs. Fail-before: two API tests. Customer bills are checked for any cost figure or cost/margin/profit key.
+- Item form: Purchase price and Margin % beside Selling price for members who see costs. Typing a margin sets the price, typing the price rereads the margin, and a new cost keeps a margin already held. "Selling below cost" is shown at a loss and 100% or more is refused. Create no longer sends a cost for members who cannot see costs. The item page shows the margin. The picker shows "Usual price · Cost · margin".
+- Found by testing the form: typing a cost "45" passed through "4", whose margin took hold and priced the item at ₹562.50. The cost box now uses the margin as it was when the merchant entered it.
+- Found by looking (`e2e/item-pricing-review.mjs`, 360/768/1280/1920):
+  - The item page had no margin row.
+  - The picker cut the price line before the margin.
+  - On a phone, every header action in a ⋯ sheet closed the sheet and did nothing: Edit, Adjust stock and Archive on the item page, and the same on 13 screens since ce30567. The shared sheet closed in the capture phase, which a real tap flushes before the button's handler. It now closes after the row acts. Fail-before: a unit test that stands in for the browser's checkpoint.
+- Not changed: the stock report's potential sale value for GST-inclusive prices. RPT-06 BR-10 defines it as quantity × selling price, so it needs a Part 43 change request first.
+- Gates: backend inventory, sales, reports, purchases and architecture tests pass; Jest 4264/4264; `tsc` clean; ESLint clean; i18n in step; build and bundle gate passed (the bill and order editors and the price list editor raised by measured + 0.5 for the picker's price line, noted). Railway deployment and 9/10 readiness are NOT claimed.
+

@@ -35,6 +35,9 @@ import { DEFAULT_TAX_CODE, DEFAULT_UNIT_CODE } from '../constants/inventoryConst
 import { useInventoryMasters } from '../hooks/useInventoryMasters';
 import { useInventorySchemas } from '../validation/inventorySchemas';
 import { looksLikeBarcode, skuPrefix } from '../view-model/itemDisplay';
+import { gstFor, marginOf } from '../view-model/itemPricing';
+
+import { ItemPriceFields } from './ItemPriceFields';
 
 import type { UseItemFormResult } from '../hooks/useItemForm';
 import type { HsnCode, ItemFormValues } from '../types/item.types';
@@ -73,6 +76,7 @@ export function ItemFormDrawer({
     isSaving,
     canWrite,
     canAdjust,
+    canSeeCost: mayReadCost,
     formErrors,
     staleVersion,
     close,
@@ -102,6 +106,12 @@ export function ItemFormDrawer({
       taxInclusiveSelling: editing?.taxInclusiveSelling ?? false,
       sellingPrice: editing?.sellingPrice ?? '',
       purchasePrice: editing?.purchasePrice ?? '',
+      margin:
+        marginOf({
+          sellingPrice: editing?.sellingPrice ?? '',
+          cost: editing?.purchasePrice ?? '',
+          ...gstFor(editing?.taxInclusiveSelling ?? false, editing?.taxRate),
+        }) ?? '',
       mrp: editing?.mrp ?? '',
       trackStock: editing?.trackStock ?? true,
       reorderPoint: editing?.reorderPoint ?? '',
@@ -128,7 +138,20 @@ export function ItemFormDrawer({
   const trackStock = useWatch({ control, name: 'trackStock' });
   const unitId = useWatch({ control, name: 'unitId' });
   const name = useWatch({ control, name: 'name' });
+  const taxCode = useWatch({ control, name: 'taxCode' });
+  const inclusive = useWatch({ control, name: 'taxInclusiveSelling' });
   const isService = itemType === 'service';
+  /* The cost is withheld from this member (INV-08 EC-4) — on an edit the item
+     arrives without it too, and an empty box would read as "no cost". */
+  const canSeeCost = mayReadCost && editing?.purchasePrice !== null;
+  const gst = useMemo(
+    () =>
+      gstFor(
+        inclusive,
+        masters.taxRates.find((row) => row.code === taxCode)
+      ),
+    [inclusive, masters.taxRates, taxCode]
+  );
   const unit = masters.units.find((row) => row.id === unitId);
   const decimals = unit?.allowDecimal ? 3 : 0;
   const showOpening =
@@ -328,13 +351,7 @@ export function ItemFormDrawer({
           )}
         </UbField>
 
-        <UbField
-          name="sellingPrice"
-          label={t('items.form.sellingPrice.label')}
-          placeholder={t('items.form.price.placeholder')}
-        >
-          {(field) => <UbMoneyInput {...field} />}
-        </UbField>
+        <ItemPriceFields canSeeCost={canSeeCost} gst={gst} />
 
         <UbField
           name="categoryId"
@@ -424,18 +441,6 @@ export function ItemFormDrawer({
         </UbDisclosure>
 
         <UbDisclosure label={t('items.form.section.pricing')}>
-          {/* Withheld from this member (INV-08 EC-4): an empty box would read
-              as "no purchase price" and the save leaves it untouched anyway. */}
-          {editing?.purchasePrice !== null && (
-            <UbField
-              name="purchasePrice"
-              label={t('items.form.purchasePrice.label')}
-              placeholder={t('items.form.price.placeholder')}
-              hint={t('items.form.purchasePrice.hint')}
-            >
-              {(field) => <UbMoneyInput {...field} />}
-            </UbField>
-          )}
           {!isService && (
             <UbField
               name="mrp"

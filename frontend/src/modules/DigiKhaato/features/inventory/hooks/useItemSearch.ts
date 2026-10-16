@@ -5,10 +5,12 @@ import { useCallback, useMemo } from 'react';
 import type { UbAsyncComboboxOption } from 'src/design-system';
 import { usePagedSearch, type PagedSearchStatus } from 'src/hooks/usePagedSearch';
 import { usePermissions } from 'src/hooks/usePermissions';
+import { useTranslation } from 'src/hooks/useTranslation';
 import { formatQuantity } from 'src/utils/quantity';
 
 import { lookupItemByBarcode, searchItems } from '../api/itemService';
 import { ITEM_SEARCH_DEBOUNCE_MS } from '../constants/inventoryConstants';
+import { itemPriceNote } from '../view-model/itemPriceNote';
 
 import type { ItemListRow } from '../types/item.types';
 
@@ -25,7 +27,9 @@ import type { ItemListRow } from '../types/item.types';
  *   request, `null` for "no such item" — a HID scanner types the code and
  *   presses Enter faster than any search can answer, and the Enter is the cue
  *   (`UbAsyncCombobox.onSubmitQuery`).
- * - `options` are ready for `UbAsyncCombobox`: name, then "SKU · on hand".
+ * - `options` are ready for `UbAsyncCombobox`: name, then "SKU · on hand",
+ *   and a wrapping line with the usual price — and cost and margin for whoever
+ *   may see costs (WP-07).
  */
 export interface UseItemSearchOptions {
   readonly trackedOnly?: boolean;
@@ -59,6 +63,7 @@ const itemId = (row: ItemListRow): string => row.id;
  */
 export function useItemSearch(options: UseItemSearchOptions = {}): UseItemSearchResult {
   const { can, hasModule } = usePermissions();
+  const { t } = useTranslation();
   const canSearch = hasModule('inventory') && can('inventory.item.read');
   const { trackedOnly = false } = options;
 
@@ -85,8 +90,10 @@ export function useItemSearch(options: UseItemSearchOptions = {}): UseItemSearch
           row.onHand !== null
             ? `${row.sku} · ${formatQuantity(row.onHand, row.unit.code)}`
             : row.sku,
+        // Its own wrapping line: cut by an ellipsis, the margin never showed.
+        detail: itemPriceNote(row, t) ?? undefined,
       })),
-    [visible]
+    [visible, t]
   );
 
   const find = useCallback((id: string) => visible.find((row) => row.id === id), [visible]);

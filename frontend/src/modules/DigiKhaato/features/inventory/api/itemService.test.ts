@@ -5,7 +5,13 @@ import { createItemColumns } from '../components/ItemListColumns';
 import { filtersFromQuery, queryFromFilters } from '../hooks/useItemList';
 import { toShortLines } from '../hooks/useStockAdjustment';
 
-import { listItems, lookupItemByBarcode, toItemBody, type ItemRowWire } from './itemService';
+import {
+  createItem,
+  listItems,
+  lookupItemByBarcode,
+  toItemBody,
+  type ItemRowWire,
+} from './itemService';
 import { toAdjustmentBody } from './stockService';
 
 import type { ItemFormValues } from '../types/item.types';
@@ -50,6 +56,7 @@ const FORM: ItemFormValues = {
   taxInclusiveSelling: false,
   sellingPrice: '60.00',
   purchasePrice: null,
+  margin: '',
   mrp: null,
   trackStock: true,
   reorderPoint: '10',
@@ -185,6 +192,33 @@ describe('toItemBody', () => {
     expect(body.reorder_point).toBeNull();
     expect(body.barcode).toBeNull();
     expect(body).not.toHaveProperty('opening_stock');
+  });
+});
+
+describe('createItem and the cost (WP-07)', () => {
+  afterEach(() => jest.restoreAllMocks());
+
+  it('sends no purchase price for a member who cannot see costs', async () => {
+    // The server now refuses a cost from someone who may not read one. Before
+    // this, create always sent `purchase_price: '0'`, so every item a member
+    // without financial access added would have been refused outright.
+    const post = jest.spyOn(api, 'post').mockResolvedValue({
+      data: {
+        data: { ...ROW, version: 1, created_at: ROW.updated_at, stock: [], movements_recent: [] },
+      },
+    });
+    await createItem(FORM, 'k1', { omitPurchasePrice: true });
+    expect(post.mock.calls[0]?.[1]).not.toHaveProperty('purchase_price');
+  });
+
+  it('still sends it for a member who can', async () => {
+    const post = jest.spyOn(api, 'post').mockResolvedValue({
+      data: {
+        data: { ...ROW, version: 1, created_at: ROW.updated_at, stock: [], movements_recent: [] },
+      },
+    });
+    await createItem({ ...FORM, purchasePrice: '40.00' }, 'k1');
+    expect(post.mock.calls[0]?.[1]).toHaveProperty('purchase_price', '40.00');
   });
 });
 

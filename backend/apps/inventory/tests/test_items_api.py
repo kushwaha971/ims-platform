@@ -380,3 +380,59 @@ def test_new_tracked_item_without_stock_does_not_alert(owner: Any, shelf: dict) 
 
     assert not LowStockAlert.objects.filter(item_id=shelf["empty"]["id"]).exists()
     assert ItemStock.objects.get(item_id=shelf["empty"]["id"]).alert_level == "out"
+
+
+def test_a_member_who_cannot_see_costs_cannot_set_one(owner: Any, api_as: Any, tenant: Any) -> None:
+    """WP-07 review — cost is hidden from anyone without `reports.financial.read`,
+    yet such a member holding `inventory.item.write` could still type a cost on a
+    new item, and the margin would then rest on a figure its author could never
+    see again. The cost is now refused from them, on create and on edit, and the
+    item they create carries none."""
+    from apps.attendance.tests.subject import grant
+
+    client, member = api_as(tenant, RoleCode.STAFF.value)
+    grant(member, "inventory.item.write")
+
+    refused = create(client, purchase_price="38")
+    assert refused.status_code == 400
+    assert "purchase_price" in refused.json()["error"]["details"]
+
+    made = create(client, name="Kept Without Cost", selling_price="50")
+    assert made.status_code == 201, made.json()
+    assert Item.objects.get(pk=made.json()["data"]["id"]).purchase_price == Decimal("0.00")
+
+    priced = create(owner, name="Priced By Owner", purchase_price="40").json()["data"]
+    version = priced["version"]
+    edit = client.patch(
+        item_url(priced["id"]), {"purchase_price": "1", "version": version}, format="json"
+    )
+    assert edit.status_code == 400
+    assert "purchase_price" in edit.json()["error"]["details"]
+    assert Item.objects.get(pk=priced["id"]).purchase_price == Decimal("40.00")
+    # The rest of an edit still works for them.
+    rename = client.patch(
+        item_url(priced["id"]), {"name": "Renamed", "version": version}, format="json"
+    )
+    assert rename.status_code == 200, rename.json()
+
+
+def test_a_picked_row_carries_its_gst_for_the_margin(
+    owner: Any, api_as: Any, tenant: Any, shelf: dict
+) -> None:
+    """WP-07 — the item picker shows "Usual price · Cost · margin", and the
+    margin of a GST-inclusive price is read without its GST. A list row named
+    the GST code and not its rate, so the picker could only have shown the
+    margin of an inclusive item wrong or not at all. The row now carries the
+    item's GST percent (rate plus cess, today's) for those who see costs, on
+    the list and on the scanner lookup alike; staff, who see no margin, get none."""
+    made = create(
+        owner, name="Soap", tax_code="GST18", selling_price="59", tax_inclusive_selling=True
+    )
+    assert made.status_code == 201, made.json()
+    rows = owner.get(reverse(ITEMS), {"q": "Soap"}).json()["data"]
+    assert rows[0]["gst_percent"] == "18.000"
+    lookup = owner.get(reverse("v1:item-lookup"), {"barcode": made.json()["data"]["sku"]})
+    assert lookup.json()["data"]["gst_percent"] == "18.000"
+
+    staff = api_as(tenant, RoleCode.STAFF.value)[0]
+    assert "gst_percent" not in staff.get(reverse(ITEMS), {"q": "Soap"}).json()["data"][0]

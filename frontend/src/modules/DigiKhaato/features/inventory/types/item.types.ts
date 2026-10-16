@@ -83,6 +83,8 @@ export interface ItemListRow {
   /** SAL-02 FR-2 — the invoice line's HSN and inclusive-price defaults. */
   readonly hsnSac?: string | null;
   readonly taxInclusiveSelling?: boolean;
+  /** WP-07 — today's GST plus cess, sent only with the cost; absent otherwise. */
+  readonly gstPercent?: string | null;
   readonly trackStock: boolean;
   readonly onHand: string | null;
   readonly avgCost: string | null;
@@ -211,6 +213,8 @@ export interface ItemFormValues {
   taxInclusiveSelling: boolean;
   sellingPrice: string | null;
   purchasePrice: string | null;
+  /** WP-07 — shown and edited, never sent: margin is read from the two prices. */
+  margin: string;
   mrp: string | null;
   trackStock: boolean;
   reorderPoint: string;

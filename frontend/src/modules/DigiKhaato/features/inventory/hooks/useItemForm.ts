@@ -39,6 +39,8 @@ export interface UseItemFormResult {
   readonly isSaving: boolean;
   readonly canWrite: boolean;
   readonly canAdjust: boolean;
+  /** WP-07 — `reports.financial.read`, the gate every cost on an item sits behind. */
+  readonly canSeeCost: boolean;
   readonly formErrors: readonly string[];
   readonly staleVersion: boolean;
   readonly openCreate: (prefill?: { barcode?: string; name?: string }) => void;
@@ -69,6 +71,7 @@ const rekey = (details: Record<string, unknown>): Record<string, unknown> => {
 export function useItemForm(): UseItemFormResult {
   const dispatch = useAppDispatch();
   const { can } = usePermissions();
+  const canSeeCost = can('reports.financial.read');
   const openFor = useAppSelector(selectItemFormOpenFor);
   const editing = useAppSelector(selectItemFormEditing);
   const status = useAppSelector(selectItemFormStatus);
@@ -113,6 +116,7 @@ export function useItemForm(): UseItemFormResult {
             item: editing,
             idempotencyKey: key,
             withOpening: !editing || turningOn,
+            canSeeCost,
           })
         ).unwrap();
         rotate();
@@ -154,7 +158,7 @@ export function useItemForm(): UseItemFormResult {
         return null;
       }
     },
-    [dispatch, editing, key, rotate]
+    [dispatch, editing, key, rotate, canSeeCost]
   );
 
   return useMemo(
@@ -167,6 +171,7 @@ export function useItemForm(): UseItemFormResult {
       isSaving: status === 'loading',
       canWrite: can('inventory.item.write'),
       canAdjust: can('inventory.stock.adjust'),
+      canSeeCost,
       formErrors,
       staleVersion,
       openCreate,
@@ -181,6 +186,7 @@ export function useItemForm(): UseItemFormResult {
       prefillName,
       status,
       can,
+      canSeeCost,
       formErrors,
       staleVersion,
       openCreate,

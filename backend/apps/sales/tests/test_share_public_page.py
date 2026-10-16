@@ -166,3 +166,35 @@ def test_the_logo_is_served_under_the_token_and_dies_with_it(
 
     owner.post(invoice_url(doc["id"], "share-links/revoke"), {}, format="json")
     assert anonymous_client.get(branding["logo_url"]).status_code == 404
+
+
+def test_a_customer_never_sees_what_the_shop_paid(
+    owner: Any, anonymous_client: Any, make_item: Any, make_party: Any
+) -> None:
+    """WP-07 — items now carry a cost and a margin the merchant edits on purpose,
+    and the one place that must never show either is the bill the customer
+    opens. The allow-list test above forbids new KEYS; this one looks for the
+    FIGURES — the item's purchase price, its stock cost, the sale line's frozen
+    cost — anywhere in the payload, under any name, and for any key that talks
+    about cost, margin or profit."""
+    import json
+
+    party = make_party(mobile=f"+91{next(_MOBILES)}")
+    item = make_item(name="Cost Probe", price="450.00", purchase_price="312.37")
+    doc = draft(owner, party_id=str(party.id), lines=[line(item)]).json()["data"]
+    assert issue(owner, doc["id"]).status_code == 200
+    body = _public(anonymous_client, _share(owner, doc["id"])).json()["data"]
+
+    text = json.dumps(body)
+    for figure in ("312.37", "380.00", "380.0000"):
+        assert figure not in text, figure
+
+    def keys(node: Any) -> set[str]:
+        if isinstance(node, dict):
+            return set(node) | {k for value in node.values() for k in keys(value)}
+        if isinstance(node, list):
+            return {k for value in node for k in keys(value)}
+        return set()
+
+    leaked = {k for k in keys(body) if any(w in k for w in ("cost", "margin", "profit", "purchase"))}
+    assert not leaked, leaked

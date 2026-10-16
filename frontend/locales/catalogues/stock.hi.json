@@ -52,7 +52,7 @@
   "stock.low.adjustItem": "{name} का स्टॉक बदलें",
   "stock.low.caption": "दोबारा मँगाने की सीमा पर या उससे नीचे के आइटम",
   "stock.low.col.actions": "कार्य",
-  "stock.low.col.lastCost": "पिछली लागत",
+  "stock.low.col.lastCost": "खरीद मूल्य",
   "stock.low.col.suggested": "सुझाई मात्रा",
   "stock.low.empty.body": "कुछ भी दोबारा मँगाने की सीमा पर नहीं है।",
   "stock.low.empty.title": "सब स्टॉक में है",

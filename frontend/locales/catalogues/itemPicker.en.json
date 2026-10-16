@@ -4,6 +4,9 @@
   "items.lastRate.sold": "Last sold to {party} at {rate} on {date}",
   "items.lastRate.use": "Use this rate",
   "items.list.searchPlaceholder": "Search name, SKU or scan barcode",
+  "items.picker.cost": "Cost {amount}",
+  "items.picker.margin": "{margin}% margin",
+  "items.picker.usualPrice": "Usual price {amount}",
   "items.scan.create": "Create item",
   "items.scan.notFound": "No item with barcode {code}"
 }

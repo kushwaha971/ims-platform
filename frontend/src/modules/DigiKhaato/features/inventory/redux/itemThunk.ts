@@ -74,20 +74,24 @@ export const saveItem = createAsyncThunk<
     readonly item: Item | null;
     readonly idempotencyKey: string;
     readonly withOpening: boolean;
+    /** WP-07 — without it the form never sends a cost (the server refuses one). */
+    readonly canSeeCost: boolean;
   },
   Reject
 >(
   'itemForm/saveItem',
-  async ({ values, item, idempotencyKey, withOpening }, { rejectWithValue }) => {
+  async ({ values, item, idempotencyKey, withOpening, canSeeCost }, { rejectWithValue }) => {
     try {
       return item
         ? await (
             await itemService()
           ).updateItem(item.id, values, item.version, {
             withOpening,
-            omitPurchasePrice: item.purchasePrice === null,
+            omitPurchasePrice: item.purchasePrice === null || !canSeeCost,
           })
-        : await (await itemService()).createItem(values, idempotencyKey);
+        : await (
+            await itemService()
+          ).createItem(values, idempotencyKey, { omitPurchasePrice: !canSeeCost });
     } catch (error) {
       return rejectWithValue(toApiError(error));
     }

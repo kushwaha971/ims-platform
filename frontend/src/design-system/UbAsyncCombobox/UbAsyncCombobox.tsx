@@ -49,7 +49,10 @@ const panelModule = deferredModule(() => import('./UbAsyncComboboxPanel'));
 export interface UbAsyncComboboxOption {
   readonly value: string;
   readonly label: string;
+  /** One quiet line under the label; cut with an ellipsis when long. */
   readonly description?: string;
+  /** A further line that WRAPS rather than cut — for figures (WP-07's prices). */
+  readonly detail?: string;
   readonly disabled?: boolean;
 }
 

@@ -18,12 +18,12 @@ import { UbActionPresentationContext } from './actionPresentation';
  * actions once and gets both shapes — and a new action added to a header later
  * appears in the phone's sheet without anyone remembering to add it there.
  *
- * Choosing a row closes the sheet BEFORE the row acts, as a menu does. A row
- * that opens a dialog while its sheet is still mounted leaves two overlays,
- * and Escape then closes the wrong one — the khata menu found that, and five
- * feature menus each re-solved it until they moved here (WP-03 D-04a). The
- * close is a state update, so the row's own handler still runs in the same
- * event, and its dialog opens in the render that removes the sheet. A row
+ * Choosing a row closes the sheet in the same event as the row acts, as a
+ * menu does. A row that opens a dialog while its sheet is still mounted leaves
+ * two overlays, and Escape then closes the wrong one — the khata menu found
+ * that, and five feature menus each re-solved it until they moved here (WP-03
+ * D-04a). The close is a state update made after the row's handler, so its
+ * dialog opens in the render that removes the sheet. A row
  * that opens a dialog receives `returnFocusRef` from its caller as usual.
  *
  * `rows` draws actions given as data (`UbMenuList` rows); `children` draws
@@ -79,14 +79,27 @@ function UbActionSheetBase({
       className={className}
     >
       <UbActionPresentationContext.Provider value="sheet">
-        {/* The body is padded 24 px; the rows run edge to edge like a menu. */}
+        {/* The body is padded 24 px; the rows run edge to edge like a menu.
+            The click listener only observes clicks on the buttons and links
+            inside, which Enter and Space already produce; it needs no key
+            handler of its own. */}
+        {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events */}
         <div
           role="group"
           aria-label={title}
           className="-mx-6 -my-3 flex flex-col"
-          onClickCapture={(event) => {
-            // Capture runs before the row's own handler, which still runs: the
-            // close is a state update and nothing unmounts mid-event.
+          onClick={(event) => {
+            /* The BUBBLE phase, after the row's own handler — never capture.
+               React listens for capture and bubble with two native listeners
+               on the root, and a real tap runs a microtask checkpoint between
+               them: a close made in capture was flushed there, the sheet
+               unmounted, and the row's onClick never ran. On a phone every
+               header action in a ⋯ sheet closed the sheet and did nothing
+               (the item page's Edit, Adjust stock and Archive, found by
+               WP-07's look). jsdom and `element.click()` dispatch from script,
+               where no checkpoint runs, so every unit test passed. Here the
+               row has acted and the close lands in the same render as its
+               dialog, as before. */
             const target = event.target as HTMLElement;
             if (target.closest('a, button') && !target.closest('[data-ub-sheet-rows]')) {
               onOpenChange(false);

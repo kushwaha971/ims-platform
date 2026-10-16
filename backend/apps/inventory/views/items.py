@@ -72,6 +72,28 @@ def _valuation_visible(request: Any) -> bool:
     return _has(request, "reports.financial.read")
 
 
+def _gst_percents(tenant: Any, items: Any) -> dict[str, str | None]:
+    """WP-07 — today's GST plus cess for each tax code on the page, one read per code."""
+    from apps.tax.selectors.rates import rate_for
+
+    today = tenant_today(tenant)
+    percents: dict[str, str | None] = {}
+    for code in {item.tax_code for item in items}:
+        row = rate_for(tenant=tenant, code=code, on_date=today)
+        percents[code] = str(row.rate + row.cess_rate) if row else None
+    return percents
+
+
+def _cost_settable(request: Any, payload: dict) -> dict:
+    """WP-07 — a cost may be set only by someone who may see one: a margin would
+    otherwise rest on a figure its author can never read back."""
+    if "purchase_price" in payload and not _valuation_visible(request):
+        raise ValidationFailed(
+            {"purchase_price": ["Only someone who can see costs can set an item's cost."]}
+        )
+    return payload
+
+
 def _date_param(request: Any, name: str, errors: dict) -> dt.date | None:
     raw = request.query_params.get(name)
     if not raw:
@@ -188,8 +210,9 @@ class ItemViewSet(CsvExportMixin, _InventoryView, viewsets.ViewSet):
         # Any item at all, archived included, whatever the filters: an empty
         # catalogue hides its search, tabs and ₹0 totals (approved designs).
         meta["has_any"] = bool(page) or Item.objects.filter(tenant=self.get_tenant()).exists()
+        gst = _gst_percents(self.get_tenant(), page) if valuation else None
         return StandardResponse.ok(
-            [item_row(item, valuation=valuation) for item in page], meta=meta
+            [item_row(item, valuation=valuation, gst_percent=gst) for item in page], meta=meta
         )
 
     def _detail(self, item_id: Any) -> dict:
@@ -227,7 +250,7 @@ class ItemViewSet(CsvExportMixin, _InventoryView, viewsets.ViewSet):
 
     @idempotent("item_create")
     def create(self, request: Any) -> Any:
-        result = create_item(ctx=self.ctx(), payload=_body(request))
+        result = create_item(ctx=self.ctx(), payload=_cost_settable(request, _body(request)))
         return StandardResponse.created(
             self._detail(result["item"].id), meta={"warnings": result["warnings"]}
         )
@@ -236,7 +259,7 @@ class ItemViewSet(CsvExportMixin, _InventoryView, viewsets.ViewSet):
         result = update_item(
             ctx=self.ctx(),
             item_id=pk,
-            payload=_body(request),
+            payload=_cost_settable(request, _body(request)),
             can_adjust_stock=_has(request, "inventory.stock.adjust"),
         )
         return StandardResponse.ok(
@@ -268,7 +291,9 @@ class ItemViewSet(CsvExportMixin, _InventoryView, viewsets.ViewSet):
         )
         if item is None:
             raise NotFound(f"No item with barcode {code}.")
-        return StandardResponse.ok(item_row(item, valuation=_valuation_visible(request)))
+        valuation = _valuation_visible(request)
+        gst = _gst_percents(self.get_tenant(), [item]) if valuation else None
+        return StandardResponse.ok(item_row(item, valuation=valuation, gst_percent=gst))
 
     @action(detail=True, methods=["get"], url_path="movements")
     def movements(self, request: Any, pk: Any = None) -> Any:

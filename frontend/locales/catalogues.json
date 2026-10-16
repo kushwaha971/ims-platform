@@ -80,6 +80,7 @@
     "inventory.movement.type.": "movement",
     "items.list.searchPlaceholder": "itemPicker",
     "items.lastRate.": "itemPicker",
+    "items.picker.": "itemPicker",
     "priceLists.": "priceLists",
     "items.scan.": "itemPicker",
     "ledger.entry.type.": "money",

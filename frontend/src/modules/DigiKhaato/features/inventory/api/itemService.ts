@@ -37,6 +37,8 @@ export interface ItemRowWire {
   readonly tax_code: string;
   readonly hsn_sac?: string | null;
   readonly tax_inclusive_selling?: boolean;
+  /** WP-07 — sent with the cost keys only: today's GST plus cess, for the margin. */
+  readonly gst_percent?: string | null;
   readonly track_stock: boolean;
   readonly on_hand: string | null;
   readonly avg_cost?: string | null;
@@ -127,6 +129,7 @@ export const toItemRow = (row: ItemRowWire): ItemListRow => ({
   taxCode: row.tax_code,
   hsnSac: row.hsn_sac ?? null,
   taxInclusiveSelling: row.tax_inclusive_selling ?? false,
+  gstPercent: row.gst_percent ?? null,
   trackStock: row.track_stock,
   onHand: row.on_hand,
   avgCost: row.avg_cost ?? null,
@@ -400,14 +403,19 @@ const toSaveResult = (body: SaveWire): ItemSaveResult => ({
   warnings: body.meta?.warnings ?? [],
 });
 
-/** POST /items. The caller mints the idempotency key once per logical save. */
+/**
+ * POST /items. The caller mints the idempotency key once per logical save.
+ * `omitPurchasePrice` for a member who cannot see costs (WP-07): the server
+ * refuses a cost from someone not allowed to read one.
+ */
 export const createItem = async (
   values: ItemFormValues,
-  idempotencyKey: string
+  idempotencyKey: string,
+  { omitPurchasePrice = false }: { omitPurchasePrice?: boolean } = {}
 ): Promise<ItemSaveResult> => {
   const response = await api.post<SaveWire>(
     API_PATHS.ITEMS,
-    toItemBody(values, { withOpening: true }),
+    toItemBody(values, { withOpening: true, omitPurchasePrice }),
     ubConfig({ headers: { 'Idempotency-Key': idempotencyKey } })
   );
   return toSaveResult(response.data);
