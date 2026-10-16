@@ -157,10 +157,12 @@ the server-prepared reference.
    (`e2e/counter-entry-timing.mjs`, exact at 1280 and 1536; see
    12-counter-editor-design-review.md). Item pickers pass `pending` and
    `afterPick`; never let an Enter take a row that does not answer what was
-   typed. Next: the WP-03 D-04 UI-composition consolidation (D-04a
-   UbActionSheet close order and the five hand-made menus, D-04c the
-   reason-taking void/cancel dialogs, D-04d), test-first, inventory in
-   10-reuse-inventory.md. D-05 is done (R-08).
+   typed. Next: the rest of the WP-03 D-04 UI-composition
+   consolidation, test-first, inventory in 10-reuse-inventory.md. D-04a is
+   done (R-11): a ⋯ sheet is `UbMoreActions` / `UbActionSheet` with `rows`,
+   which closes before a row acts; a guard fails on a hand-made one. Next is
+   D-04c (one reason-taking confirm shell for the eight void/cancel dialogs,
+   the consequences staying with each feature), then D-04d. D-05 is done (R-08).
 4. Still owed to WP-02, needing the owner or a device: a physical
    network-interruption check on a phone, and the owner's SH-011 release
    review in the tracker. Do not wait on these.

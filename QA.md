@@ -522,3 +522,11 @@ Read this file, `git status`, current diff, root/frontend AGENTS, and the releva
 - Lint: the R-09 commit had left `src/utils/reason` imports out of order in eleven files, which `npm run lint` refuses; fixed (11a16c9, and the rest in 1e35b8b).
 - Gates: Jest 4193 passed; `tsc` clean; ESLint clean on every file changed today (a whole-tree run exceeds the sandbox's time limit); build passed; the bundle gate passed after a measured raise noted in `bundle-budgets.json` (sales editor routes 153, purchase 152.4, two purchase first loads 390.8).
 - Not claimed: the purchase bill was not timed, and no person at a real counter was timed. Railway deployment and 9/10 readiness are NOT claimed.
+
+### 16 October 2026 — WP-03 D-04a: one ⋯ sheet that closes before a row acts (cloud session)
+
+- Fail-before: `UbActionSheet.test.tsx` "closes the sheet before the row acts". The design-system sheet, used by every page header's phone ⋯, closed AFTER the row's handler on a timer. So a header row that opened a dialog on a phone left two overlays, and Escape could close the wrong one. It now closes before the row acts.
+- Consolidated: the khata, borrower, catalogue, team member and ledger entry menus are `UbMoreActions` / `UbActionSheet` with rows as data. Their test ids are kept. A `sharedOwners` guard fails on a feature file that pairs `MoreHorizontal` with a dialog.
+- Browser (`e2e/action-sheet-look.mjs`, 360 and 1280): 14/14. The sheet sits inside the screen; after Edit or Correct exactly one overlay is open; after Escape none is. `e2e/ledger.mjs` 54/54. The library ⋯ → Edit path was seen in `date-picker-look`.
+- Found on the way: `date-picker-look` and `student-dates-look` had been failing since 15 Oct, because the charge rows' ⋯ has the same test id as the header's. They now take the header's.
+- Gates: Jest 4198 passed; `tsc` clean; ESLint clean on the changed files; build passed. The bundle gate passed after a measured raise noted in `bundle-budgets.json`: seven routes that draw a ⋯ grew 0.1–0.2 KB for `UbMenuList` rows. Railway deployment and 9/10 readiness are NOT claimed.
