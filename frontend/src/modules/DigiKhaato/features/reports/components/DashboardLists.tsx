@@ -18,14 +18,16 @@ import {
   UbStatusBadge,
   UbText,
 } from 'src/design-system';
+import { useAppSelector } from 'src/hooks/useAppStore';
 import type { TranslateFn } from 'src/hooks/useTranslation';
+import { selectTenantTimezone } from 'src/redux/slice/sessionSlice';
 import { itemPath, partyPath, ROUTES } from 'src/routes';
-import { formatBusinessDate, formatTimestamp } from 'src/utils/dates';
+import { formatBusinessDate } from 'src/utils/dates';
 import { formatInr } from 'src/utils/money';
 
 import { usePartyReminder } from 'modules/DigiKhaato/features/ledger/hooks/usePartyReminder';
 
-import { activityTitle } from '../view-model/dashboardDisplay';
+import { activityTitle, activityWhen } from '../view-model/dashboardDisplay';
 import { sourceHref } from '../view-model/drillThrough';
 
 import type { ActivityItem, FirstUse, LowStockRow, TopDebtor } from '../types/reports.types';
@@ -46,6 +48,7 @@ export function RecentActivityList({
   items,
   t,
 }: Readonly<{ items: readonly ActivityItem[]; t: TranslateFn }>): React.JSX.Element {
+  const timeZone = useAppSelector(selectTenantTimezone);
   return (
     <UbCard title={t('reports.dashboard.activity.title')} padded>
       {items.length === 0 ? (
@@ -77,7 +80,7 @@ export function RecentActivityList({
                       )
                     }
                     primaryVariant="body-sm-medium"
-                    secondary={formatTimestamp(item.at)}
+                    secondary={activityWhen(item, t, timeZone ?? undefined)}
                     secondaryVariant="caption"
                     secondaryTone="tertiary"
                   />

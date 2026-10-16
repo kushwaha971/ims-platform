@@ -342,11 +342,15 @@ def _event(
     direction: str | None = None,
     party: dict | None = None,
     party_id: Any = None,
+    on: dt.date | None = None,
 ) -> dict[str, Any]:
+    """`at` is when it was entered; `on` the day it belongs to (WP-06 Finding 5),
+    absent for a void, which is an act of its own moment."""
     return {
         "id": f"{type_}:{source_id}",
         "type": type_,
         "at": at.isoformat(),
+        **({"business_date": on.isoformat()} if on else {}),
         "number": number,
         "amount": _money(amount) if amount is not None else None,
         "direction": direction,
@@ -397,6 +401,7 @@ def recent_activity(*, tenant: Any) -> list[dict[str, Any]]:
             _event(
                 type_=entry.entry_type,
                 at=entry.created_at,
+                on=entry.entry_date,
                 kind="ledger_entry",
                 source_id=entry.id,
                 permission="ledger.entry.read",
@@ -415,6 +420,7 @@ def recent_activity(*, tenant: Any) -> list[dict[str, Any]]:
             _event(
                 type_="credit_note" if doc.kind == CREDIT_NOTE_KIND else "sale",
                 at=doc.issued_at or doc.created_at,
+                on=doc.document_date,
                 kind="sales_document",
                 source_id=doc.id,
                 permission="sales.invoice.read",
@@ -447,6 +453,7 @@ def recent_activity(*, tenant: Any) -> list[dict[str, Any]]:
             _event(
                 type_=f"payment_{payment.direction}",
                 at=payment.created_at,
+                on=payment.payment_date,
                 kind="payment",
                 source_id=payment.id,
                 permission="payments.payment.read",
@@ -479,6 +486,7 @@ def recent_activity(*, tenant: Any) -> list[dict[str, Any]]:
             _event(
                 type_="expense",
                 at=expense.created_at,
+                on=expense.expense_date,
                 kind="expense",
                 source_id=expense.id,
                 permission="expenses.expense.read",
@@ -511,6 +519,7 @@ def recent_activity(*, tenant: Any) -> list[dict[str, Any]]:
             _event(
                 type_="purchase",
                 at=bill.recorded_at or bill.created_at,
+                on=bill.document_date,
                 kind="purchase_document",
                 source_id=bill.id,
                 permission="purchases.bill.read",
@@ -528,6 +537,7 @@ def recent_activity(*, tenant: Any) -> list[dict[str, Any]]:
             _event(
                 type_="stock_adjustment",
                 at=adjustment.created_at,
+                on=adjustment.adjustment_date,
                 kind="stock_adjustment",
                 source_id=adjustment.id,
                 permission="inventory.stock.read",

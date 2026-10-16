@@ -76,6 +76,7 @@
   "reports.collections.title": "वसूली का रुझान",
   "reports.dashboard.activity.correction": "एंट्री सुधारी · {party}",
   "reports.dashboard.activity.credit_note": "क्रेडिट नोट {number} · {party}",
+  "reports.dashboard.activity.dated": "तारीख {date} · लिखा गया {at}",
   "reports.dashboard.activity.empty": "अभी कुछ दर्ज नहीं हुआ है।",
   "reports.dashboard.activity.expense": "खर्च {number}",
   "reports.dashboard.activity.manual_gave": "आपने दिए · {party}",

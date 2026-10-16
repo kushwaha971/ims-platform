@@ -80,6 +80,8 @@ export interface ActivityItem {
   /** `sale`, `sale_void`, `payment_in`, `manual_got`, `stock_adjustment`, … */
   readonly type: string;
   readonly at: string;
+  /** The day the record belongs to (ISO); absent for a void (WP-06 Finding 5). */
+  readonly businessDate?: string;
   readonly number: string | null;
   readonly amount: MoneyString | null;
   readonly direction: 'debit' | 'credit' | null;

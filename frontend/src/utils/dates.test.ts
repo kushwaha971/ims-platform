@@ -1,4 +1,5 @@
 import { addDaysIso, daysBetweenIso } from './dates';
+import { formatTimestampInTz } from './zonedTime';
 
 /**
  * WP-03 D-02 — whole calendar days between two business dates had ten
@@ -20,5 +21,16 @@ describe('addDaysIso', () => {
   it('moves along the calendar either way', () => {
     expect(addDaysIso('2026-10-01', -1)).toBe('2026-09-30');
     expect(addDaysIso('2026-12-31', 1)).toBe('2027-01-01');
+  });
+});
+
+describe('formatTimestampInTz', () => {
+  it("writes an instant on the tenant's clock, not the device's", () => {
+    // 18:41 UTC on 16 Oct is 00:11 on 17 Oct in India. A device set to UTC
+    // printed "16/10/2026, 18:41" beside a bill dated 17/10/2026 and the
+    // dashboard called the bill backdated (WP-06, found by looking).
+    expect(formatTimestampInTz('2026-10-16T18:41:00Z', 'Asia/Kolkata')).toBe('17/10/2026, 00:11');
+    expect(formatTimestampInTz('2026-10-16T18:41:00Z', 'UTC')).toBe('16/10/2026, 18:41');
+    expect(formatTimestampInTz(null, 'UTC')).toBe('—');
   });
 });

@@ -7,6 +7,7 @@ import { REPORT_CATALOGUE, visibleReports } from '../constants/reportCatalogue';
 import {
   activityLabelId,
   activityTitle,
+  activityWhen,
   isFirstUse,
   salesDelta,
   secondsSince,
@@ -391,5 +392,28 @@ describe('the reports hub catalogue', () => {
         (module) => module !== 'reports'
       )
     ).toEqual([]);
+  });
+});
+
+describe('activityWhen (WP-06 Finding 5)', () => {
+  const t = ((id: string, params?: Record<string, unknown>) =>
+    id === 'reports.dashboard.activity.dated'
+      ? `Dated ${String(params?.date)} · entered ${String(params?.at)}`
+      : id) as never;
+  const at = '2026-10-16T10:43:00Z'; // 16:13 in India
+
+  it("names the record's own date when it was entered on another day", () => {
+    // A bill dated 06/09/2026 typed in today read "16/10/2026, 16:13" alone,
+    // as though it were today's sale.
+    expect(activityWhen({ at, businessDate: '2026-09-06' } as never, t, 'Asia/Kolkata')).toBe(
+      'Dated 06/09/2026 · entered 16/10/2026, 16:13'
+    );
+  });
+
+  it('says only the time when it was entered on its own day, or for a void', () => {
+    expect(activityWhen({ at, businessDate: '2026-10-16' } as never, t, 'Asia/Kolkata')).toBe(
+      '16/10/2026, 16:13'
+    );
+    expect(activityWhen({ at } as never, t, 'Asia/Kolkata')).toBe('16/10/2026, 16:13');
   });
 });

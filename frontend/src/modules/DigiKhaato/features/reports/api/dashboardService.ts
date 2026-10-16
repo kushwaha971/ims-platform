@@ -50,6 +50,7 @@ interface DashboardWire {
       readonly id: string;
       readonly type: string;
       readonly at: string;
+      readonly business_date?: string;
       readonly number: string | null;
       readonly amount: string | null;
       readonly direction: 'debit' | 'credit' | null;
@@ -176,6 +177,7 @@ const toActivity = (row: DashboardWire['data']['recent_activity'][number]): Acti
   id: row.id,
   type: row.type,
   at: row.at,
+  ...(row.business_date ? { businessDate: row.business_date } : {}),
   number: row.number,
   amount: row.amount,
   direction: row.direction,

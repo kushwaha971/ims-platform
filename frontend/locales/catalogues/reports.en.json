@@ -76,6 +76,7 @@
   "reports.collections.title": "Collections over time",
   "reports.dashboard.activity.correction": "Entry corrected · {party}",
   "reports.dashboard.activity.credit_note": "Credit note {number} · {party}",
+  "reports.dashboard.activity.dated": "Dated {date} · entered {at}",
   "reports.dashboard.activity.empty": "Nothing recorded yet.",
   "reports.dashboard.activity.expense": "Expense {number}",
   "reports.dashboard.activity.manual_gave": "You gave · {party}",

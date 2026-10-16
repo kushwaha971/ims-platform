@@ -1,6 +1,8 @@
 import type { TranslateFn } from 'src/hooks/useTranslation';
 import { ROUTES } from 'src/routes';
+import { formatBusinessDate } from 'src/utils/dates';
 import { formatInr, isNegativeAmount, toDecimal, type MoneyString } from 'src/utils/money';
+import { formatTimestampInTz } from 'src/utils/zonedTime';
 
 import type { ActivityItem, AgedCountAmount, DashboardTiles } from '../types/reports.types';
 
@@ -186,6 +188,25 @@ const COUNTER_TYPES = ['sale', 'credit_note', 'payment_in', 'payment_out'];
  * separator. A counter document (bill, credit note, receipt) with no party
  * says "Walk-in", as the day book does; anything else drops the dangling " · ".
  */
+/**
+ * WP-06 Finding 5 — when a row happened. `at` is when it was entered; a bill
+ * dated 40 days ago and typed in today read "16/10/2026, 16:13" alone, as
+ * though it were today's sale. When its own date is another day, say both.
+ */
+export const activityWhen = (
+  item: Pick<ActivityItem, 'at' | 'businessDate'>,
+  t: TranslateFn,
+  timeZone?: string
+): string => {
+  // The shop's clock, as the business date is: a UTC device otherwise wrote a
+  // bill entered at 00:11 IST under the day before and called it backdated.
+  const entered = formatTimestampInTz(item.at, timeZone);
+  const own = item.businessDate ? formatBusinessDate(item.businessDate) : null;
+  return own && !entered.startsWith(own)
+    ? t('reports.dashboard.activity.dated', { date: own, at: entered })
+    : entered;
+};
+
 export const activityTitle = (
   item: ActivityItem,
   t: (id: string, values?: Record<string, string>) => string

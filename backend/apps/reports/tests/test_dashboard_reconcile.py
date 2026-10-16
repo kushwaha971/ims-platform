@@ -584,3 +584,24 @@ def test_a_whole_dashboard_names_nothing_unavailable(tenant: Any) -> None:
     payload = _dashboard(tenant)
     assert "unavailable" not in payload
     assert "unavailable" not in project(payload, granted=EVERYTHING, modules=ALL_MODULES)
+
+
+def test_recent_activity_says_each_records_own_date(tenant: Any) -> None:
+    """WP-06 Finding 5 — the feed showed only when a record was TYPED: a bill
+    dated 40 days ago and entered today read "16/10/2026, 16:13", as though it
+    were today's sale. Each event now also carries its business date (the bill's,
+    the payment's, the expense's) so the row can say which day it belongs to.
+    A void is an act of its own moment and carries none."""
+    ramesh = b.party(tenant)
+    old = TODAY - dt.timedelta(days=40)
+    bill = b.sale(tenant, old, 1800, party=ramesh)
+    received = b.payment(tenant, TODAY - dt.timedelta(days=2), {"cash": 200}, party=ramesh)
+    spent = b.expense(tenant, TODAY, 150)
+    b.sale(tenant, TODAY, 90, party=ramesh, status="void")
+    events = _dashboard(tenant)["recent_activity"]
+    feed = {event["source"]["id"]: event for event in events if not event["type"].endswith("_void")}
+    assert feed[str(bill.id)]["business_date"] == old.isoformat()
+    assert feed[str(received.id)]["business_date"] == (TODAY - dt.timedelta(days=2)).isoformat()
+    assert feed[str(spent.id)]["business_date"] == TODAY.isoformat()
+    voids = [event for event in events if event["type"].endswith("_void")]
+    assert voids and all("business_date" not in event for event in voids)
