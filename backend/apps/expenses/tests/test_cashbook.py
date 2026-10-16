@@ -47,6 +47,26 @@ def got(client: Any, party: Any, amount: str, entry_date: str, mode: str | None 
     return response.json()["data"]
 
 
+def received(client: Any, party: Any, amount: str, payment_date: str, mode: str = "cash") -> dict:
+    """Money the Shop received: a receipt through the real payments route. The
+    cashbook is the Shop's till (DEC-019), so this, not an Udhaar-book "You got",
+    is what puts money in it."""
+    response = client.post(
+        reverse("v1:payment-list"),
+        {
+            "direction": "in",
+            "party_id": str(party.id),
+            "payment_date": payment_date,
+            "amount": amount,
+            "mode_breakup": [{"mode": mode, "amount": amount}],
+        },
+        format="json",
+        HTTP_IDEMPOTENCY_KEY=str(uuid.uuid4()),
+    )
+    assert response.status_code == 201, response.json()
+    return response.json()["data"]
+
+
 def gave(client: Any, party: Any, amount: str, entry_date: str) -> None:
     response = client.post(
         reverse("v1:ledger-entry-list"),
@@ -69,14 +89,17 @@ def cashbook(client: Any, **params: Any) -> Any:
 def test_only_money_events_appear(tenant: Any, owner: Any, categories: dict) -> None:
     """T-EXP-03-1 / BR-4 / BR-5 / BR-6 / FR-12.
 
-    In: a paid expense (out), a "You got" with a mode (in). Out of the book: an
-    unpaid expense (nothing has moved yet), a voided expense (it never did), a
-    "You gave" (goods on credit), an opening balance and a reversed receipt.
+    In: a paid expense (out), a Shop receipt (in). Out of the book: an unpaid
+    expense (nothing has moved yet), a voided expense (it never did), a "You
+    gave" (goods on credit), an opening balance, a reversed receipt, and the
+    Udhaar book's own "You got ₹65, cash" — the cashbook is the Shop's till, and
+    another app's money is not in it (DEC-019, WP-06 Finding 4).
     """
     party = PartyFactory(tenant=tenant, balance="0.00")
     day = "2026-04-10"
     record(owner, categories["food"], amount="120", expense_date=day)
-    got(owner, party, "500.00", day)
+    received(owner, party, "500.00", day)
+    got(owner, party, "65.00", day)
     record(
         owner,
         categories["rent"],
@@ -120,7 +143,7 @@ def test_only_money_events_appear(tenant: Any, owner: Any, categories: dict) -> 
     kinds = sorted(
         (row["source_type"], row["direction"], row["amount"]) for row in only_day["rows"]
     )
-    assert kinds == [("expense", "out", "120.00"), ("ledger_entry", "in", "500.00")]
+    assert kinds == [("expense", "out", "120.00"), ("payment", "in", "500.00")]
     assert only_day["voided_count"] == 1
     assert body["range"]["in"] == {"cash": "500.00", "bank": "0.00", "total": "500.00"}
     assert body["range"]["out"] == {"cash": "120.00", "bank": "0.00", "total": "120.00"}
@@ -130,8 +153,8 @@ def test_cash_and_bank_are_kept_apart(tenant: Any, owner: Any, categories: dict)
     """FR-2 / US-EXP-03-2 — UPI money is not notes in the till."""
     party = PartyFactory(tenant=tenant)
     day = "2026-04-11"
-    got(owner, party, "700.00", day, mode="upi")
-    got(owner, party, "300.00", day, mode="cash")
+    received(owner, party, "700.00", day, mode="upi")
+    received(owner, party, "300.00", day, mode="cash")
     record(owner, categories["electricity"], amount="200", expense_date=day, mode="bank")
     rng = cashbook(owner, date_from=day, date_to=day).json()["data"]["range"]
     assert rng["in"] == {"cash": "300.00", "bank": "700.00", "total": "1000.00"}
@@ -148,9 +171,9 @@ def test_openings_chain_from_everything_before_the_range(
     zero-activity day in the middle is skipped without breaking the chain.
     """
     party = PartyFactory(tenant=tenant)
-    got(owner, party, "1000.00", "2026-04-01")
+    received(owner, party, "1000.00", "2026-04-01")
     record(owner, categories["food"], amount="150", expense_date="2026-04-02")
-    got(owner, party, "250.00", "2026-04-05")
+    received(owner, party, "250.00", "2026-04-05")
     record(owner, categories["transport"], amount="60", expense_date="2026-04-05")
 
     body = cashbook(owner, date_from="2026-04-02", date_to="2026-04-06").json()["data"]

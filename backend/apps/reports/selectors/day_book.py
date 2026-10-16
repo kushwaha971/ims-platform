@@ -61,6 +61,7 @@ from typing import Any
 
 from django.db import connection
 
+from apps.common.constants import LedgerBucket
 from apps.common.money import ZERO
 from apps.reports.constants import BANK_MODES, CREDIT_NOTE_KIND, DAY_BOOK_TYPES, SALE_KINDS
 
@@ -191,6 +192,7 @@ SELECT CASE WHEN p.direction = 'in' THEN 4 ELSE 5 END,
         FROM jsonb_array_elements(p.mode_breakup) AS m
   ) s
  WHERE p.tenant_id = %(tenant)s
+   AND (%(bucket)s::text IS NULL OR p.bucket = %(bucket)s)
    AND (%(include_void)s OR p.status <> 'void')
    AND p.payment_date BETWEEN %(lo)s AND %(hi)s
 """
@@ -252,6 +254,7 @@ SELECT 7,
   FROM ledger_entry l
   JOIN parties_party pp ON pp.id = l.party_id
  WHERE l.tenant_id = %(tenant)s
+   AND (%(bucket)s::text IS NULL OR l.bucket = %(bucket)s)
    AND l.source_type IN ('manual', 'ledger_entry')
    AND (%(include_void)s OR (l.status = 'posted' AND l.entry_type <> 'reversal'))
    AND l.entry_date BETWEEN %(lo)s AND %(hi)s
@@ -366,9 +369,19 @@ def _cte(sources: frozenset[str]) -> str:
     return f"rows({', '.join(_COLUMNS)}) AS (" + "\nUNION ALL\n".join(parts) + ")"
 
 
-def _base_params(tenant: Any, *, lo: dt.date, hi: dt.date, include_void: bool) -> dict:
+def _base_params(
+    tenant: Any,
+    *,
+    lo: dt.date,
+    hi: dt.date,
+    include_void: bool,
+    bucket: str | None = LedgerBucket.SHOP,
+) -> dict:
     return {
         "tenant": str(getattr(tenant, "id", tenant)),
+        # DEC-019 / WP-06 Finding 4 — the Shop's book: its own payments and
+        # khata lines, never the Udhaar book's or lending's. None is every book.
+        "bucket": None if bucket is None else str(bucket),
         "lo": lo,
         "hi": hi,
         "include_void": include_void,
@@ -394,17 +407,24 @@ def _fetch(sql: str, params: dict) -> list[tuple]:
 
 
 def money_position(
-    *, tenant: Any, before: dt.date, sources: frozenset[str] = ALL_SOURCES
+    *,
+    tenant: Any,
+    before: dt.date,
+    sources: frozenset[str] = ALL_SOURCES,
+    bucket: str | None = LedgerBucket.SHOP,
 ) -> dict[str, Decimal]:
     """BR-2 — `{cash, bank}`: every classified in minus out dated before `before`.
 
     Also the dashboard's Cash in hand (RPT-01 BR-3) with `before = today + 1`:
     one definition of the drawer, so the tile and the day book's closing cash
     can never disagree (asserted in the reconciliation suite).
+
+    The Shop's drawer by default (DEC-019): another app's money is not in it.
+    `bucket=None` sums every book, for a check that nothing moved anywhere.
     """
     sql = f"WITH {_cte(sources)} SELECT COALESCE(SUM(cash), 0), COALESCE(SUM(bank), 0) FROM rows"  # noqa: S608
     params = _base_params(
-        tenant, lo=_BEGINNING, hi=before - dt.timedelta(days=1), include_void=False
+        tenant, lo=_BEGINNING, hi=before - dt.timedelta(days=1), include_void=False, bucket=bucket
     )
     cash, bank = _fetch(sql, params)[0]
     return {"cash": cash or ZERO, "bank": bank or ZERO}
@@ -529,9 +549,7 @@ def _query_params(tenant: Any, query: DayBookQuery) -> dict:
 
 def count_rows(*, tenant: Any, query: DayBookQuery) -> int:
     """The filtered row count — the export's sync/async decision (RPT-08 BR-3)."""
-    sql = (
-        f"WITH {_cte(query.sources)} SELECT COUNT(*) FROM rows WHERE {_OUTER_FILTERS}"  # noqa: S608
-    )
+    sql = f"WITH {_cte(query.sources)} SELECT COUNT(*) FROM rows WHERE {_OUTER_FILTERS}"  # noqa: S608
     return int(_fetch(sql, _query_params(tenant, query))[0][0])
 
 

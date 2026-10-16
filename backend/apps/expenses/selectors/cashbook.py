@@ -49,7 +49,7 @@ from typing import Any, Protocol
 
 from django.db.models import Count, Sum
 
-from apps.common.constants import Direction, PaymentMode
+from apps.common.constants import Direction, LedgerBucket, PaymentMode
 from apps.common.money import ZERO
 from apps.expenses.constants import BANK_BUCKET, BUCKETS, CASH_BUCKET, ExpenseStatus
 from apps.expenses.models import Expense
@@ -175,8 +175,11 @@ class LedgerCashSource:
 
     @staticmethod
     def _base(tenant: Any) -> Any:
+        # DEC-019 / WP-06 Finding 4 — the Shop's till: the Shop's own khata
+        # lines, never the Udhaar book's "You got ₹300, cash".
         return LedgerEntry.objects.filter(
             tenant=tenant,
+            bucket=LedgerBucket.SHOP,
             status=EntryStatus.POSTED,
             entry_type__in=(EntryType.MANUAL_GOT, EntryType.MANUAL_GAVE),
             payment_mode__isnull=False,

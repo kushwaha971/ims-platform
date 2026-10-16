@@ -202,17 +202,23 @@ def supplier_bills(*, tenant: Any, today: dt.date) -> dict[str, Any]:
     }
 
 
-def cash_in_hand(*, tenant: Any, today: dt.date) -> Decimal:
+def cash_in_hand(*, tenant: Any, today: dt.date, bucket: str | None = LedgerBucket.SHOP) -> Decimal:
     """BR-3 — the drawer since the book began: the day book's closing cash for today.
 
     Payments in minus out by their cash shares, minus paid cash expenses, plus
     manual khata lines recorded as cash (EXP-03's rule). Opening cash is not
     modelled at MVP, which the tile's hint says in words.
+
+    The Shop's drawer by default (DEC-019, WP-06 Finding 4): the Udhaar book's
+    "You got ₹300, cash" and a lending collection are other apps' money.
+    `bucket=None` is every book, which is what the `cash_in_hand` key has
+    always sent and still sends (see `build_dashboard`).
     """
     return money_position(
         tenant=tenant,
         before=today + dt.timedelta(days=1),
         sources=frozenset({"payments", "expenses", "ledger"}),
+        bucket=bucket,
     )["cash"]
 
 
@@ -554,7 +560,13 @@ def build_dashboard(*, tenant: Any, today: dt.date) -> dict[str, Any]:
         **party_tiles(tenant=tenant, today=today),
         "today_sales": documents["today_sales"],
         "overdue_invoices": documents["overdue_invoices"],
-        "cash_in_hand": {"amount": _money(cash_in_hand(tenant=tenant, today=today))},
+        # The figure this key has always sent, every book's cash, kept as it was:
+        # `main_bucket_reads.json` pins it for an Udhaar-only business, and that
+        # file is never regenerated. The Shop's home reads `shop_cash_in_hand`.
+        "cash_in_hand": {"amount": _money(cash_in_hand(tenant=tenant, today=today, bucket=None))},
+        # WP-06 Finding 4 / DEC-019 — the Shop's own drawer: what the day book
+        # and the cashbook close on, and what the Shop's Today row shows.
+        "shop_cash_in_hand": {"amount": _money(cash_in_hand(tenant=tenant, today=today))},
         "today_received": money_received_today(tenant=tenant, today=today),
         "supplier_bills": supplier_bills(tenant=tenant, today=today),
         "low_stock": stock["tile"],
@@ -619,6 +631,8 @@ def project(
         }
     if "reports.financial.read" in granted and {"payments", "expenses"} <= modules:
         tiles["cash_in_hand"] = dict(source["cash_in_hand"])
+        if "shop_cash_in_hand" in source:
+            tiles["shop_cash_in_hand"] = dict(source["shop_cash_in_hand"])
     stock = "inventory.stock.read" in granted
     if stock:
         tiles["low_stock"] = dict(source["low_stock"])

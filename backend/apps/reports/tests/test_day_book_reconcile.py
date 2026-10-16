@@ -91,7 +91,7 @@ def test_voids_and_reversals_are_listed_only_on_request_and_never_move_the_drawe
     b.sale(tenant, TODAY, 400, party=ramesh, status="void")
     b.payment(tenant, TODAY, {"cash": 250}, party=ramesh, status="void")
     b.expense(tenant, TODAY, 90, status="void")
-    typo = b.khata(tenant, TODAY, 500, party=ramesh, mode="cash", note="typo")
+    typo = b.khata(tenant, TODAY, 500, party=ramesh, mode="cash", note="typo", bucket="shop")
     b.reverse(typo)
     b.payment(tenant, TODAY, {"cash": 100}, party=ramesh)
 
@@ -158,7 +158,7 @@ def test_a_backdated_line_sits_on_its_business_date(tenant: Any) -> None:
     """EC-2 — entered today for last week, it is on last week's page."""
     ramesh = b.party(tenant)
     last_week = TODAY - dt.timedelta(days=7)
-    b.khata(tenant, last_week, 300, party=ramesh, mode="upi")
+    b.khata(tenant, last_week, 300, party=ramesh, mode="upi", bucket="shop")
     assert _book(tenant).rows == []
     (row,) = _book(tenant, date_from=last_week, date_to=last_week).rows
     assert row.date == last_week and row.bank == Decimal("300.00")
@@ -214,6 +214,8 @@ def _fuzzed_book(tenant: Any, seed: int) -> dict:
                 party=who,
                 direction=rng.choice(["in", "out"]),
                 status=rng.choice(["recorded", "recorded", "void"]),
+                # DEC-019 — another app's money is in the table and not in the drawer.
+                bucket=rng.choice(["shop", "shop", "loan"]),
             )
         elif pick == 5:
             paid = rng.random() < 0.7
@@ -234,6 +236,7 @@ def _fuzzed_book(tenant: Any, seed: int) -> dict:
                 party=who,
                 got=rng.random() < 0.6,
                 mode=rng.choice([None, "cash", "upi", "other"]),
+                bucket=rng.choice(["shop", "shop", "main"]),
             )
             if rng.random() < 0.2:
                 b.reverse(entry)
@@ -249,7 +252,10 @@ def _naive_cash_bank(tenant: Any, *, upto: dt.date) -> dict[str, Decimal]:
     from apps.payments.models import Payment
 
     cash = bank = Decimal("0")
-    for p in Payment.objects.filter(tenant=tenant, status="recorded", payment_date__lte=upto):
+    # The Shop's drawer (DEC-019): its own payments and khata lines only.
+    for p in Payment.objects.filter(
+        tenant=tenant, bucket="shop", status="recorded", payment_date__lte=upto
+    ):
         sign = 1 if p.direction == "in" else -1
         for part in p.mode_breakup:
             if part["mode"] == "cash":
@@ -265,6 +271,7 @@ def _naive_cash_bank(tenant: Any, *, upto: dt.date) -> dict[str, Decimal]:
             bank -= e.amount
     for entry in LedgerEntry.objects.filter(
         tenant=tenant,
+        bucket="shop",
         status="posted",
         entry_type__in=("manual_got", "manual_gave"),
         payment_mode__isnull=False,
@@ -299,6 +306,7 @@ def _naive_counts(tenant: Any, lo: dt.date, hi: dt.date) -> dict[str, int]:
         .count(),
         "payment_in": Payment.objects.filter(
             tenant=tenant,
+            bucket="shop",
             direction="in",
             status="recorded",
             payment_date__gte=lo,
@@ -306,6 +314,7 @@ def _naive_counts(tenant: Any, lo: dt.date, hi: dt.date) -> dict[str, int]:
         ).count(),
         "payment_out": Payment.objects.filter(
             tenant=tenant,
+            bucket="shop",
             direction="out",
             status="recorded",
             payment_date__gte=lo,
@@ -316,6 +325,7 @@ def _naive_counts(tenant: Any, lo: dt.date, hi: dt.date) -> dict[str, int]:
         ).count(),
         "khata": LedgerEntry.objects.filter(
             tenant=tenant,
+            bucket="shop",
             status="posted",
             source_type="manual",
             entry_date__gte=lo,
@@ -363,7 +373,11 @@ def test_a_fuzzed_book_reconciles_row_by_row_and_figure_by_figure(tenant: Any, s
         assert book.total == len(book.rows) == sum(got.values())
 
         payments = Payment.objects.filter(
-            tenant=tenant, status="recorded", payment_date__gte=lo, payment_date__lte=hi
+            tenant=tenant,
+            bucket="shop",
+            status="recorded",
+            payment_date__gte=lo,
+            payment_date__lte=hi,
         )
         paid_out = Expense.objects.filter(
             tenant=tenant, status="recorded", paid=True, expense_date__gte=lo, expense_date__lte=hi
@@ -388,6 +402,7 @@ def test_a_fuzzed_book_reconciles_row_by_row_and_figure_by_figure(tenant: Any, s
 
         moved = LedgerEntry.objects.filter(
             tenant=tenant,
+            bucket="shop",
             status="posted",
             entry_type__in=("manual_got", "manual_gave"),
             payment_mode__isnull=False,

@@ -30,7 +30,7 @@ from typing import Any
 
 from django.db import connection
 
-from apps.common.constants import PaymentMode
+from apps.common.constants import LedgerBucket, PaymentMode
 from apps.common.money import ZERO
 from apps.expenses.selectors.cashbook import IN, OUT, CashRow, bucket_of
 
@@ -39,6 +39,7 @@ SELECT m ->> 'mode' AS mode, p.direction, SUM((m ->> 'amount')::numeric)
   FROM payments_payment p
   CROSS JOIN LATERAL jsonb_array_elements(p.mode_breakup) AS m
  WHERE p.tenant_id = %(tenant)s AND p.status = 'recorded' AND p.payment_date < %(before)s
+   AND p.bucket = %(bucket)s
    AND m ->> 'mode' <> %(adjustment)s
  GROUP BY 1, 2
 """
@@ -50,6 +51,7 @@ SELECT EXISTS (
     FROM payments_payment p
     CROSS JOIN LATERAL jsonb_array_elements(p.mode_breakup) AS m
    WHERE p.tenant_id = %(tenant)s AND p.status = 'recorded'
+     AND p.bucket = %(bucket)s
      AND m ->> 'mode' <> %(adjustment)s
 )
 """
@@ -69,6 +71,7 @@ class PaymentCashSource:
                 {
                     "tenant": str(getattr(tenant, "id", tenant)),
                     "adjustment": PaymentMode.ADJUSTMENT.value,
+                    "bucket": LedgerBucket.SHOP.value,
                 },
             )
             (found,) = cursor.fetchone()
@@ -79,6 +82,8 @@ class PaymentCashSource:
 
         queryset = Payment.objects.filter(
             tenant=tenant,
+            # DEC-019 / WP-06 Finding 4 — the Shop's till: its own payments only.
+            bucket=LedgerBucket.SHOP,
             status="recorded",
             payment_date__gte=date_from,
             payment_date__lte=date_to,
@@ -126,6 +131,7 @@ class PaymentCashSource:
                     "tenant": str(getattr(tenant, "id", tenant)),
                     "before": before,
                     "adjustment": PaymentMode.ADJUSTMENT.value,
+                    "bucket": LedgerBucket.SHOP.value,
                 },
             )
             for mode, direction, total in cursor.fetchall():

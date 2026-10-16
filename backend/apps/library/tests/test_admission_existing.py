@@ -33,9 +33,9 @@ D = Decimal
 
 
 def _cash_in_hand(tenant: Any) -> Decimal:
-    return money_position(tenant=tenant, before=tenant_today(tenant) + dt.timedelta(days=1))[
-        "cash"
-    ]
+    return money_position(
+        tenant=tenant, before=tenant_today(tenant) + dt.timedelta(days=1), bucket=None
+    )["cash"]
 
 
 def test_an_existing_student_paid_till_a_date_has_no_due_no_receipt_and_no_cash(

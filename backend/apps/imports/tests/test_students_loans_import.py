@@ -26,7 +26,9 @@ D = Decimal
 
 
 def _cash(tenant: Any) -> Decimal:
-    return money_position(tenant=tenant, before=tenant_today(tenant) + dt.timedelta(days=1))["cash"]
+    return money_position(
+        tenant=tenant, before=tenant_today(tenant) + dt.timedelta(days=1), bucket=None
+    )["cash"]
 
 
 def _commit(client: Any, job_id: str, capture: Any, **body: Any) -> Any:

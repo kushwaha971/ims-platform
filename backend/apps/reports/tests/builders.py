@@ -112,8 +112,10 @@ def payment(
     direction: str = "in",
     party: Any = None,
     status: str = "recorded",
+    bucket: str = "shop",
 ) -> Any:
-    """`modes={"cash": 1000, "upi": 772}` — one row, split across modes (EC-1)."""
+    """`modes={"cash": 1000, "upi": 772}` — one row, split across modes (EC-1).
+    `bucket` is the app whose money it is (DEC-019): the Shop's by default."""
     from django.utils import timezone
 
     from apps.payments.models import Payment
@@ -133,6 +135,7 @@ def payment(
         voided_at=timezone.now() if status == "void" else None,
         void_reason="Wrong party" if status == "void" else None,
         unallocated_amount=0 if status == "void" else total,
+        bucket=bucket,
     )
 
 
@@ -185,8 +188,10 @@ def khata(
     entry_type: str | None = None,
     source_type: str = "manual",
     note: str = "",
+    bucket: str = "main",
 ) -> Any:
-    """A khata line: "You got ₹500, cash" by default."""
+    """A khata line: "You got ₹500, cash" by default, in the Udhaar book (`main`)
+    unless `bucket` says whose money it is (DEC-019)."""
     from apps.ledger.models import LedgerEntry
 
     return LedgerEntry.objects.create(
@@ -199,6 +204,7 @@ def khata(
         source_type=source_type,
         payment_mode=mode if got else None,
         note=note,
+        bucket=bucket,
     )
 
 
@@ -213,6 +219,7 @@ def reverse(entry: Any, reason: str = "Typed twice") -> Any:
         amount=entry.amount,
         entry_date=entry.entry_date,
         entry_type="reversal",
+        bucket=entry.bucket,
         source_type="ledger_entry",
         source_id=entry.id,
         reverses=entry,

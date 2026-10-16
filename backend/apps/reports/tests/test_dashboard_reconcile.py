@@ -211,10 +211,12 @@ def test_every_tile_equals_a_naive_recount_of_a_fuzzed_book(tenant: Any) -> None
         page=1,
         page_size=10,
     )
-    assert tiles["cash_in_hand"]["amount"] == money(book.closing["cash"])
+    assert tiles["shop_cash_in_hand"]["amount"] == money(book.closing["cash"])
     from apps.reports.tests.test_day_book_reconcile import _naive_cash_bank
 
-    assert tiles["cash_in_hand"]["amount"] == money(_naive_cash_bank(tenant, upto=TODAY)["cash"])
+    assert tiles["shop_cash_in_hand"]["amount"] == money(
+        _naive_cash_bank(tenant, upto=TODAY)["cash"]
+    )
 
 
 def test_today_is_the_shops_date_not_the_servers(tenant: Any) -> None:
@@ -279,6 +281,7 @@ def test_project_omits_what_a_reader_may_not_see(tenant: Any) -> None:
         "overdue",
         "today_sales",
         "cash_in_hand",
+        "shop_cash_in_hand",
         "today_received",
         "supplier_bills",
         "low_stock",
@@ -290,7 +293,7 @@ def test_project_omits_what_a_reader_may_not_see(tenant: Any) -> None:
 
     staff = EVERYTHING - {"reports.financial.read", "purchases.bill.read", "ledger.reminder.write"}
     cut = project(payload, granted=staff, modules=ALL_MODULES)
-    assert "cash_in_hand" not in cut["tiles"]
+    assert "cash_in_hand" not in cut["tiles"] and "shop_cash_in_hand" not in cut["tiles"]
     assert {event["type"] for event in cut["recent_activity"]} == {"payment_in"}
     assert cut["top_debtors"][0]["mobile"] is None
 
@@ -301,6 +304,7 @@ def test_project_omits_what_a_reader_may_not_see(tenant: Any) -> None:
 
     no_expenses = project(payload, granted=EVERYTHING, modules=ALL_MODULES - {"expenses"})
     assert "cash_in_hand" not in no_expenses["tiles"]
+    assert "shop_cash_in_hand" not in no_expenses["tiles"]
 
     no_sales = project(payload, granted=EVERYTHING - {"sales.invoice.read"}, modules=ALL_MODULES)
     assert "today_sales" not in no_sales["tiles"]
@@ -350,7 +354,7 @@ def test_the_cashbook_the_day_book_and_the_tile_agree_on_the_drawer(tenant: Any)
     book = day_book(
         tenant=tenant, query=DayBookQuery(date_from=start, date_to=TODAY), page=1, page_size=5
     )
-    tile = build_dashboard(tenant=tenant, today=TODAY)["tiles"]["cash_in_hand"]["amount"]
+    tile = build_dashboard(tenant=tenant, today=TODAY)["tiles"]["shop_cash_in_hand"]["amount"]
     closing = str(book.closing["cash"].quantize(Decimal("0.01")))
     assert cashbook["range"]["closing"]["cash"] == closing == tile
     assert "payment" in cashbook["sources"]
@@ -492,3 +496,33 @@ def test_a_bill_past_its_due_date_is_overdue_today_not_after_tonights_job(tenant
         "oldest_days_late": 1,
         "oldest_bill_date": (TODAY - dt.timedelta(days=20)).isoformat(),
     }
+
+
+def test_cash_in_hand_is_the_shops_drawer_alone(tenant: Any) -> None:
+    """WP-06 Finding 4 / DEC-019 — Cash in hand added cash across every book: a
+    "You got ₹300, cash" in the Udhaar book and a lending collection moved the
+    Shop's drawer, which is another app's figure on the Shop's home. Only the
+    Shop's own money counts: its payments, its expenses, and its own khata lines.
+    The day book and the cashbook, which the tile must equal, read the same."""
+    from apps.common.constants import LedgerBucket
+    from apps.expenses.selectors.cashbook import build_cashbook
+
+    ramesh = b.party(tenant)
+    b.payment(tenant, TODAY, {"cash": 500}, party=ramesh)
+    b.expense(tenant, TODAY, 150)
+    b.khata(tenant, TODAY, 40, party=ramesh, mode="cash", bucket=LedgerBucket.SHOP)
+    b.khata(tenant, TODAY, 300, party=ramesh, mode="cash")  # the Udhaar book's
+    b.payment(tenant, TODAY, {"cash": 1000}, party=ramesh, bucket=LedgerBucket.LOAN)
+    b.payment(tenant, TODAY, {"cash": 250}, party=ramesh, bucket=LedgerBucket.LIBRARY)
+
+    tiles = _tiles(tenant)
+    assert tiles["shop_cash_in_hand"]["amount"] == "390.00"
+    # The older key keeps sending every book's cash, as the golden file pins it.
+    assert tiles["cash_in_hand"]["amount"] == "1940.00"
+    book = day_book(
+        tenant=tenant, query=DayBookQuery(date_from=TODAY, date_to=TODAY), page=1, page_size=20
+    )
+    assert book.closing["cash"] == Decimal("390.00")
+    assert len(book.rows) == 3
+    cashbook = build_cashbook(tenant=tenant, date_from=TODAY, date_to=TODAY)
+    assert cashbook["range"]["closing"]["cash"] == "390.00"

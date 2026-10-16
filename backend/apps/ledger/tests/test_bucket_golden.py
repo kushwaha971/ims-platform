@@ -49,7 +49,8 @@ CAPTURED_ON = dt.date(2026, 9, 30)
 #: `shop_balance` (DEC-019, the party detail's Shop figure, sent while the Shop is on), and
 #: WP-06's layout A on the dashboard (16 Oct 2026): `advances` beside To collect / To pay,
 #: `today_received`, `supplier_bills`, `top_creditors`, and an overdue line's
-#: `oldest_days_late` and `oldest_bill_date`.
+#: `oldest_days_late` and `oldest_bill_date`; and `shop_cash_in_hand`, the Shop's own
+#: drawer, beside `cash_in_hand`, which keeps its every-book figure for this file.
 ADDED_SINCE_CAPTURE: frozenset[str] = frozenset(
     {
         "bucket",
@@ -62,6 +63,7 @@ ADDED_SINCE_CAPTURE: frozenset[str] = frozenset(
         "top_creditors",
         "oldest_days_late",
         "oldest_bill_date",
+        "shop_cash_in_hand",
     }
 )
 

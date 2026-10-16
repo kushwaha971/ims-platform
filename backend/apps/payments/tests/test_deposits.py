@@ -393,11 +393,15 @@ def test_an_auto_payment_never_touches_a_deposit(ctx: Ctx, make_party: Any) -> N
 # ── T-PLT-X02-8: the cashbook ─────────────────────────────────────────────────
 
 
-def test_the_cashbook_shows_deposit_cash_and_never_an_adjustment(
+def test_deposit_cash_is_the_librarys_and_not_in_the_shops_cashbook(
     ctx: Ctx, make_party: Any, invoice_for: Any
 ) -> None:
-    """R4: +500 cash in, −380 bank out; the two adjustment payments absent,
-    both from the day's rows and from the opening brought forward."""
+    """DEC-019 / WP-06 Finding 4 — a held security deposit is the library's money
+    (the deposit panel shows only in the library), and the cashbook is the
+    Shop's till. So none of the deposit's payments, the +500 cash in, the −380
+    bank refund or the two adjustments, is a row in the Shop's cashbook or in
+    the opening it carries forward. Before WP-06 they all moved the Shop's
+    drawer, which is the cross-app figure DEC-019 ended."""
     deposit, receipt, _fine, applied = _held_with_application(ctx, make_party, invoice_for)
     refund = deposits.refund_deposit(
         ctx=ctx, deposit_id=deposit.id, amount="380.00", mode_breakup=upi("380.00"), reason="Closed"
@@ -405,13 +409,12 @@ def test_the_cashbook_shows_deposit_cash_and_never_an_adjustment(
     today = receipt.payment_date
     book = build_cashbook(tenant=ctx.tenant, date_from=today, date_to=today)
     numbers = {row["number"] for day in book["days"] for row in day["rows"]}
-    assert receipt.number in numbers and refund.number in numbers
-    assert applied["refund_payment"].number not in numbers
-    assert applied["settle_payment"].number not in numbers
+    for payment in (receipt, refund, applied["refund_payment"], applied["settle_payment"]):
+        assert payment.number not in numbers
     tomorrow = today.replace(year=today.year + 1)
     carried = build_cashbook(tenant=ctx.tenant, date_from=tomorrow, date_to=tomorrow)
     opening = carried["range"]["opening"]
-    assert (_d(opening["cash"]), _d(opening["bank"])) == (_d("500.00"), _d("-380.00"))
+    assert (_d(opening["cash"]), _d(opening["bank"])) == (_d("0.00"), _d("0.00"))
 
 
 # ── T-PLT-X02-9: concurrency ──────────────────────────────────────────────────

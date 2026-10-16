@@ -60,10 +60,13 @@ def test_a_quiet_today_in_a_book_with_an_old_expense_keeps_its_controls(
     assert body["data"]["days"] == [] and body["meta"]["has_any"] is True
 
 
-def test_a_you_got_with_a_mode_counts(tenant: Any, owner: Any) -> None:
+def test_the_udhaar_books_you_got_is_not_the_shops_cash(tenant: Any, owner: Any) -> None:
+    """DEC-019 / WP-06 Finding 4 — the cashbook is the Shop's till. An Udhaar-book
+    "You got ₹250, cash" is that app's money, so it neither appears here nor
+    makes the Shop's book look non-empty."""
     party = PartyFactory(tenant=tenant, balance="0.00")
     got(owner, party, "250.00", "2026-04-02")
-    assert meta(owner)["meta"]["has_any"] is True
+    assert meta(owner)["meta"]["has_any"] is False
 
 
 def test_a_payment_counts_through_the_registered_source(tenant: Any, owner: Any) -> None:

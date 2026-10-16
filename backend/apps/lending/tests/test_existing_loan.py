@@ -36,7 +36,9 @@ def office(api_as: Any, lending_on: Any) -> dict:
 
 
 def _cash(tenant: Any) -> Decimal:
-    return money_position(tenant=tenant, before=tenant_today(tenant) + dt.timedelta(days=1))["cash"]
+    return money_position(
+        tenant=tenant, before=tenant_today(tenant) + dt.timedelta(days=1), bucket=None
+    )["cash"]
 
 
 def _given(today: dt.date) -> dt.date:

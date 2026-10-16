@@ -74,6 +74,9 @@ const agro = await must('POST', '/parties', { name: 'Agro Traders', is_supplier:
 await must('POST', '/payments', { direction: 'out', party_id: agro.id, payment_date: iso(0), amount: '300.00', mode_breakup: [{ mode: 'cash', amount: '300.00' }] }, T);
 const bill = await api('POST', '/purchases/bills?record=true', { party_id: gupta.id, supplier_invoice_number: `GW-${Date.now() % 10000}`, supplier_invoice_date: iso(12), document_date: iso(12), due_on: iso(2), lines: [{ item_id: rice.id, qty: '10', unit_cost: '300.00', tax_code: 'GST5' }] }, T);
 console.log('purchase bill', bill.status);
+// The Udhaar book's own "You got ₹300, cash": that app's money, which the
+// Shop's Cash in hand, day book and cashbook must not count (DEC-019).
+console.log('udhaar got', (await api('POST', '/ledger-entries', { party_id: ramesh.id, direction: 'credit', amount: '300.00', entry_date: iso(0), payment_mode: 'cash' }, T)).status);
 const cats = await api('GET', '/expense-categories', null, T);
 const catList = cats.body.data?.results ?? cats.body.data ?? [];
 if (catList.length) console.log('expense', (await api('POST', '/expenses', { amount: '150', category_id: catList[0].id, expense_date: iso(0), mode: 'cash', note: 'Tea for staff' }, T)).status);
@@ -125,6 +128,9 @@ for (const [size, viewport] of WIDTHS) {
     report[size].dues = { toCollect: dash.to_collect, customers: owe.receivable, toPay: dash.to_pay, suppliers: due.payable };
     console.log(`${size}: To collect ${dash.to_collect.amount} vs customers ${owe.receivable}; To pay ${dash.to_pay.amount} vs suppliers ${due.payable}; advances ${dash.to_collect.advances} / ${dash.to_pay.advances}`);
     console.log(`   texts: ${JSON.stringify(await page.locator('text=/paid .* ahead/').allInnerTexts())}`);
+    // Cash in hand is the Shop's drawer: the cashbook's closing cash for today.
+    const cb = (await api('GET', `/cashbook?date_from=${iso(0)}&date_to=${iso(0)}`, null, T)).body.data;
+    console.log(`   Cash in hand ${dash.shop_cash_in_hand?.amount} vs cashbook ${cb.range.closing.cash} (every book ${dash.cash_in_hand?.amount})`);
     // Overdue is decided on the day, and its link opens a list holding every one.
     for (const [region, rx, path, tile] of [
       ['Customers', /bills? overdue/, '/sales/invoices', dash.overdue?.invoices],
