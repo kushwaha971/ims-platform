@@ -108,14 +108,15 @@ Shared owners (WP-03 — reuse these, do not copy them):
   teardown) and `src/utils/draftCreation.ts` (`draftReplyOutcome`,
   `draftSnapshot`, `settleAutosave`); adapters `salesDraftReply`
   (invoiceEditorSlice) and `purchaseDraftReply` (purchaseBillEditorSlice).
-- browser check: `node e2e/purchase-recovery-look.mjs` on a live stack.
+- browser checks: `node e2e/purchase-recovery-look.mjs` (save + Record after a
+  lost reply) and `node e2e/sales-recovery-look.mjs`, on a live stack.
 
 **Next, in order:**
-1. Remaining WP-02 evidence: a lost-reply browser check for a sales editor
-   (mirror `e2e/purchase-recovery-look.mjs` on `/sales/invoices/new`), the
-   purchase Record-after-lost-reply path in a browser, and physical-device /
-   real network interruption when a device is available. Then mark SH-011's
-   release review in 08-acceptance-and-evidence-tracker.md.
+1. WP-02 is implemented with simulated lost-reply browser evidence
+   (`node e2e/purchase-recovery-look.mjs`, `node e2e/sales-recovery-look.mjs`
+   on a live stack). What is left needs the owner or a device: physical
+   network interruption on a real phone, and the owner's SH-011 release review
+   in 08-acceptance-and-evidence-tracker.md. Do not wait on these.
 2. WP-03 reuse inventory: continue from the shared owners above; list other
    duplicated editor lifecycle code (sales vs purchases autosave hooks still
    differ: sales has device copies, purchases do not) and record intentional

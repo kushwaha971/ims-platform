@@ -5,7 +5,10 @@
 //     server has a draft the browser never heard about;
 //   * presses Save draft — the retry carries the same creation key, gets the
 //     original draft back, and saves today's typing onto it;
-//   * reads the SERVER: exactly one purchase draft, with this supplier.
+//   * reads the SERVER: exactly one purchase draft, with this supplier;
+//   * then (second editor) loses the first save's reply again, adds a line and
+//     presses Record straight away — the save before Record must adopt the
+//     original draft, so the server ends with ONE recorded bill and no draft.
 // Every screen is measured and photographed into /tmp/e2e-shots/purchase-recovery.
 //
 //   node e2e/purchase-recovery-look.mjs   (PW_CHROMIUM=<path> to use an installed Chromium)
@@ -36,6 +39,10 @@ for (const [size, viewport] of [['desktop', { width: 1280, height: 860 }], ['pho
   tok = ten.access_token ?? tok;
   for (const step of [2, 3, 4]) await must('PATCH', '/tenants/current', { onboarding_step: step }, tok);
   await must('POST', '/parties', { name: 'Agro Wholesale', is_supplier: true, is_customer: false, state_code: '27' }, tok);
+  const nos = (await must('GET', '/units', null, tok)).find((u) => u.code === 'NOS');
+  await must('POST', '/items', {
+    name: 'Basmati Rice 5kg', unit_id: nos.id, selling_price: '450.00', purchase_price: '300.00', tax_code: 'GST0',
+  }, tok);
 
   const ctx = await browser.newContext({ viewport, locale: 'en-IN' });
   const page = await ctx.newPage();
@@ -91,6 +98,39 @@ for (const [size, viewport] of [['desktop', { width: 1280, height: 860 }], ['pho
   const rows = drafts.body.data ?? [];
   check(`${size}: the server holds ONE draft bill`, rows.length === 1, `${rows.length}`);
   check(`${size}: it is this supplier's`, rows[0]?.party?.name === 'Agro Wholesale' || JSON.stringify(rows[0] ?? {}).includes('Agro Wholesale'));
+
+  // Record after a lost first save: delete the first scenario's draft so the
+  // books start empty, then a fresh editor.
+  await must('DELETE', `/purchases/bills/${rows[0].id}`, null, tok).catch(() => {});
+  posts.length = 0;
+  dropped = false;
+  await page.goto(`${FE}/purchases/bills/new`, { waitUntil: 'domcontentloaded' });
+  await supplier.waitFor({ timeout: 30000 });
+  await supplier.click();
+  await page.getByRole('option', { name: /Agro Wholesale/ }).first().click();
+  await page.waitForTimeout(2500);
+  check(`${size} record: first save sent and its reply lost`, posts.length === 1 && dropped, `${posts.length}`);
+  await page.getByPlaceholder(/supplier's bill number/i).filter({ visible: true }).first().fill(`AT/${uniq().slice(0, 6)}`).catch(() => {});
+  const itemBox = page.locator('main').getByText('Search or scan an item').first();
+  await itemBox.click();
+  await page.keyboard.type('Basmati');
+  await page.waitForTimeout(1500);
+  await page.getByRole('option', { name: /Basmati Rice/ }).first().click();
+  await page.getByPlaceholder('Before GST').first().fill('300');
+  await look('record-filled');
+  await page.getByRole('button', { name: /^Record$/ }).filter({ visible: true }).first().click();
+  const later = page.getByTestId('purchase-pay-later');
+  if (await later.waitFor({ timeout: 5000 }).then(() => true, () => false)) await later.click();
+  const billPage = (u) => /\/purchases\/bills\/[0-9a-f-]{36}$/.test(u.pathname);
+  await page.waitForURL(billPage, { timeout: 20000 }).catch(() => {});
+  check(`${size} record: opens the recorded bill`, billPage(new URL(page.url())), page.url());
+  await look('recorded');
+  const keys = posts.map((p) => p.client_draft_key);
+  check(`${size} record: every create retry carried the same key`, keys.length >= 2 && keys.every((k) => k && k === keys[0]), JSON.stringify(keys));
+  const all = (await api('GET', '/purchases/bills?tab=all', null, tok)).body.data ?? [];
+  const left = (await api('GET', '/purchases/bills?tab=draft', null, tok)).body.data ?? [];
+  check(`${size} record: ONE bill on the server, recorded`, all.length === 1 && all[0]?.status !== 'draft', JSON.stringify(all.map((b) => b.status)));
+  check(`${size} record: no draft left behind`, left.length === 0, `${left.length}`);
   check(`${size}: no page errors`, errors.length === 0, errors.join(' | '));
   await ctx.close();
 }
