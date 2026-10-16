@@ -7,6 +7,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useForm, useWatch } from 'react-hook-form';
 
+import { PhoneContactButton } from 'src/components/contacts/PhoneContactButton';
 import { CompactCard } from 'src/components/records/CompactCard';
 import {
   UbButton,
@@ -29,7 +30,6 @@ import {
 import { useAppDispatch, useAppSelector } from 'src/hooks/useAppStore';
 import { useIdempotencyKey } from 'src/hooks/useIdempotencyKey';
 import { usePermissions } from 'src/hooks/usePermissions';
-import { usePhoneContactPicker } from 'src/hooks/usePhoneContactPicker';
 import { useTranslation } from 'src/hooks/useTranslation';
 import { selectTenantTimezone } from 'src/redux/slice/sessionSlice';
 import { showSnackbar } from 'src/redux/slice/snackbarSlice';
@@ -168,10 +168,6 @@ export function NewLoanPageContent(): React.JSX.Element {
       collectedAmount: '',
     },
   });
-  const phoneContact = usePhoneContactPicker((contact) => {
-    form.setValue('name', contact.name, { shouldDirty: true, shouldValidate: true });
-    form.setValue('mobile', contact.mobile, { shouldDirty: true, shouldValidate: true });
-  }, t('lending.form.phoneContact.error'));
   const values = useWatch({ control: form.control }) as LoanFormValues;
   const plan = values.planType;
 
@@ -317,19 +313,19 @@ export function NewLoanPageContent(): React.JSX.Element {
               </UbField>
               {values.borrowerMode === 'new' ? (
                 <>
-                  <UbButton
-                    variant="outlineNeutral"
-                    onClick={phoneContact.choose}
-                    disabled={saving || !phoneContact.supported}
-                    busy={phoneContact.busy}
-                  >
-                    {t('lending.form.phoneContact.choose')}
-                  </UbButton>
-                  {!phoneContact.supported && (
-                    <UbText variant="caption" tone="secondary">
-                      {t('lending.form.phoneContact.unsupported')}
-                    </UbText>
-                  )}
+                  <PhoneContactButton
+                    onPick={(contact) => {
+                      form.setValue('name', contact.name, { shouldDirty: true, shouldValidate: true });
+                      form.setValue('mobile', contact.mobile, {
+                        shouldDirty: true,
+                        shouldValidate: true,
+                      });
+                    }}
+                    label={t('lending.form.phoneContact.choose')}
+                    errorMessage={t('lending.form.phoneContact.error')}
+                    unsupportedNote={t('lending.form.phoneContact.unsupported')}
+                    disabled={saving}
+                  />
                   <UbField
                     name="name"
                     label={t('lending.form.name')}

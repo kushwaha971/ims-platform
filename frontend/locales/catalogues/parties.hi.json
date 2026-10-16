@@ -128,6 +128,8 @@
   "parties.form.opening.postedOnSave": "सेव करने पर यह खाते की पहली एंट्री बन जाएगा।",
   "parties.form.opening.quickDates": "आम तारीख़ें",
   "parties.form.opening.today": "आज",
+  "parties.form.phoneContact.choose": "फ़ोन संपर्क से चुनें",
+  "parties.form.phoneContact.error": "फ़ोन संपर्क नहीं खुल सके। नीचे नाम और नंबर भरें।",
   "parties.form.readOnly": "आपके पास सिर्फ़ देखने की पहुँच है। बदलाव के लिए मालिक या एडमिन से कहें।",
   "parties.form.saved": "{name} सेव हो गया",
   "parties.form.section.credit": "उधार",

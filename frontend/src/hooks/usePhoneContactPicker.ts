@@ -3,16 +3,20 @@
 import { useState, useSyncExternalStore } from 'react';
 
 import { showSnackbar } from 'src/redux/slice/snackbarSlice';
-import { phoneContactsSupported, pickPhoneContact } from 'src/utils/phoneContacts';
+import {
+  phoneContactsSupported,
+  pickPhoneContact,
+  type PickedPhoneContact,
+} from 'src/utils/phoneContacts';
 
 import { useAppDispatch } from './useAppStore';
 
 const subscribe = () => () => {};
 const serverSupport = () => false;
 
-/** Explicit, one-contact prefill shared by admission and borrower onboarding. */
+/** Explicit, one-contact prefill; `PhoneContactButton` is its one caller's shape. */
 export function usePhoneContactPicker(
-  onPick: (contact: NonNullable<Awaited<ReturnType<typeof pickPhoneContact>>>) => void,
+  onPick: (contact: PickedPhoneContact) => void,
   errorMessage: string
 ): { supported: boolean; busy: boolean; choose: () => Promise<void> } {
   const supported = useSyncExternalStore(subscribe, phoneContactsSupported, serverSupport);

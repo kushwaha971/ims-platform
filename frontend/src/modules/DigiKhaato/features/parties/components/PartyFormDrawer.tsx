@@ -5,6 +5,7 @@ import { useCallback, useEffect, useId, useMemo, type RefObject } from 'react';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useForm, useWatch } from 'react-hook-form';
 
+import { PhoneContactButton } from 'src/components/contacts/PhoneContactButton';
 import { CompactDrawer as UbDrawer } from 'src/components/records/CompactOverlays';
 import {
   UbButton,
@@ -284,6 +285,21 @@ export function PartyFormDrawer({
         )}
 
         {/* ── The fifteen-second path ─────────────────────────────────────── */}
+        {/* One contact from the phone fills Name and Mobile, and saves nothing:
+            Save does, and the server's duplicate check still decides (PTY-07
+            FR-10). A new party only, and nothing at all where the browser
+            cannot pick contacts — no dead button on every desktop (FR-14). */}
+        {!isEdit && canWrite && (
+          <PhoneContactButton
+            onPick={(contact) => {
+              form.setValue('name', contact.name, { shouldDirty: true, shouldValidate: true });
+              form.setValue('mobile', contact.mobile, { shouldDirty: true, shouldValidate: true });
+            }}
+            label={t('parties.form.phoneContact.choose')}
+            errorMessage={t('parties.form.phoneContact.error')}
+            disabled={isSaving}
+          />
+        )}
         <UbField
           name="name"
           label={t('parties.form.name.label')}

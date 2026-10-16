@@ -497,3 +497,65 @@ describe('PTY-06 — the credit limit on the form', () => {
     expect(await screen.findByText(/already crossed/)).toBeInTheDocument();
   });
 });
+
+describe('a phone contact fills a new party (WP-07, PTY-07 FR-10)', () => {
+  /**
+   * The owner asked for the selected-contact prefill Library and Lending
+   * already have on Customers, Suppliers and the Udhaar book, which share this
+   * form. One contact fills Name and Mobile and nothing more: nothing is saved
+   * until Save, and the server's duplicate check still decides. Where the
+   * browser cannot pick contacts the entry point is absent rather than
+   * disabled (PTY-07 FR-14) — a dead button on every desktop is clutter on
+   * the fifteen-second path.
+   */
+  const supportContacts = (select: jest.Mock) => {
+    Object.defineProperty(window, 'isSecureContext', { configurable: true, value: true });
+    Object.defineProperty(navigator, 'contacts', { configurable: true, value: { select } });
+  };
+  afterEach(() => {
+    Reflect.deleteProperty(navigator, 'contacts');
+    Reflect.deleteProperty(window, 'isSecureContext');
+  });
+
+  it('fills name and mobile from one chosen contact, and saves nothing', async () => {
+    const select = jest.fn().mockResolvedValue([{ name: ['Asha Devi'], tel: ['098765 43210'] }]);
+    supportContacts(select);
+    const user = userEvent.setup();
+    const drawer = await openForm(user);
+
+    await user.click(within(drawer).getByRole('button', { name: 'Choose from phone contacts' }));
+
+    await waitFor(() => expect(within(drawer).getByLabelText('Name')).toHaveValue('Asha Devi'));
+    expect(within(drawer).getByLabelText('Mobile number')).toHaveValue('9876543210');
+    expect(select).toHaveBeenCalledWith(['name', 'tel'], { multiple: false });
+    expect(partyService.createParty).not.toHaveBeenCalled();
+  });
+
+  it('leaves the form as it was when the merchant cancels the picker', async () => {
+    supportContacts(jest.fn().mockResolvedValue([]));
+    const user = userEvent.setup();
+    const drawer = await openForm(user);
+    await user.type(within(drawer).getByLabelText('Name'), 'Typed by hand');
+
+    await user.click(within(drawer).getByRole('button', { name: 'Choose from phone contacts' }));
+
+    expect(within(drawer).getByLabelText('Name')).toHaveValue('Typed by hand');
+  });
+
+  it('is absent where the browser cannot pick contacts, and when editing', async () => {
+    const user = userEvent.setup();
+    const drawer = await openForm(user);
+    expect(
+      within(drawer).queryByRole('button', { name: 'Choose from phone contacts' })
+    ).not.toBeInTheDocument();
+    await user.click(within(drawer).getByRole('button', { name: 'Cancel' }));
+
+    supportContacts(jest.fn());
+    store.dispatch(partyEditOpened(SAVED.party));
+    renderWithProviders(<PartyListPageContent />);
+    await screen.findAllByRole('button', { name: 'Save changes' });
+    expect(
+      screen.queryByRole('button', { name: 'Choose from phone contacts' })
+    ).not.toBeInTheDocument();
+  });
+});

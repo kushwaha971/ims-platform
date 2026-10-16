@@ -17,7 +17,12 @@ export function phoneContactsSupported(): boolean {
     typeof (navigator as ContactNavigator).contacts?.select === 'function'
   );
 }
-export async function pickPhoneContact(): Promise<{ name: string; mobile: string } | null> {
+export interface PickedPhoneContact {
+  readonly name: string;
+  readonly mobile: string;
+}
+
+export async function pickPhoneContact(): Promise<PickedPhoneContact | null> {
   const picker = (navigator as ContactNavigator).contacts;
   if (!picker || !phoneContactsSupported()) return null;
   const [contact] = await picker.select(['name', 'tel'], { multiple: false });
@@ -33,5 +38,6 @@ export async function pickPhoneContact(): Promise<{ name: string; mobile: string
         : digits.length === 12 && digits.startsWith('91')
           ? `+${digits}`
           : `${IN_DIAL_CODE}${digits.length === 11 && digits.startsWith('0') ? digits.slice(1) : digits}`;
-  return { name: contact.name?.[0] ?? '', mobile };
+  // A phone book keeps stray and doubled spaces, and the form would save them.
+  return { name: (contact.name?.[0] ?? '').replace(/\s+/g, ' ').trim(), mobile };
 }

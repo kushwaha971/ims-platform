@@ -25,3 +25,8 @@ it('does not fill fields when no contact was selected', async () => {
   setup([]);
   expect(await pickPhoneContact()).toBeNull();
 });
+it('tidies the name a phone book stores (PTY-07 FR-5)', async () => {
+  // Phone books keep stray spaces and doubled gaps; the form would save them.
+  setup([{ name: ['  Ramesh   Kirana  '], tel: ['9876543210'] }]);
+  expect(await pickPhoneContact()).toEqual({ name: 'Ramesh Kirana', mobile: '+919876543210' });
+});

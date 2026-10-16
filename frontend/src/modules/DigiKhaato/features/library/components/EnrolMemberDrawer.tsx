@@ -5,6 +5,7 @@ import { useEffect, useId, useMemo, useState } from 'react';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useForm, useWatch, type UseFormReturn } from 'react-hook-form';
 
+import { PhoneContactButton } from 'src/components/contacts/PhoneContactButton';
 import {
   UbButton,
   UbChoiceChips,
@@ -20,7 +21,6 @@ import {
   UbText,
   UbTextInput,
 } from 'src/design-system';
-import { usePhoneContactPicker } from 'src/hooks/usePhoneContactPicker';
 import { useTranslation } from 'src/hooks/useTranslation';
 import { formatInr } from 'src/utils/money';
 
@@ -144,14 +144,6 @@ export function EnrolMemberDrawer({
   const hasSeats = seating.seats.length > 0;
   const type = active.find((row) => row.id === typeId);
   const cost = enrolCost(type);
-  const {
-    supported: contactSupported,
-    busy: pickingContact,
-    choose: chooseContact,
-  } = usePhoneContactPicker((contact) => {
-    form.setValue('name', contact.name, { shouldDirty: true, shouldValidate: true });
-    form.setValue('mobile', contact.mobile, { shouldDirty: true, shouldValidate: true });
-  }, t('library.enrol.phoneContact.error'));
   const asksMoney = isNonZero(cost.fees) || isNonZero(cost.deposit);
   const payWay: PayWay = existingStudent
     ? 'already'
@@ -197,21 +189,16 @@ export function EnrolMemberDrawer({
     >
       <UbForm id={formId} form={form} onSubmit={(values) => onSubmit(values, form.setError)}>
         <UbText variant="label">{t('library.enrol.section.student')}</UbText>
-        <UbStack gap={2}>
-          <UbButton
-            variant="outlineNeutral"
-            disabled={busy || !contactSupported}
-            busy={pickingContact}
-            onClick={chooseContact}
-          >
-            {t('library.enrol.phoneContact.choose')}
-          </UbButton>
-          {!contactSupported && (
-            <UbText variant="caption" tone="secondary">
-              {t('library.enrol.phoneContact.unsupported')}
-            </UbText>
-          )}
-        </UbStack>
+        <PhoneContactButton
+          onPick={(contact) => {
+            form.setValue('name', contact.name, { shouldDirty: true, shouldValidate: true });
+            form.setValue('mobile', contact.mobile, { shouldDirty: true, shouldValidate: true });
+          }}
+          label={t('library.enrol.phoneContact.choose')}
+          errorMessage={t('library.enrol.phoneContact.error')}
+          unsupportedNote={t('library.enrol.phoneContact.unsupported')}
+          disabled={busy}
+        />
         <UbField
           name="name"
           label={t('library.enrol.name')}

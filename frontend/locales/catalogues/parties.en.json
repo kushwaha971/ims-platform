@@ -128,6 +128,8 @@
   "parties.form.opening.postedOnSave": "It goes into the khata as the first entry when you save.",
   "parties.form.opening.quickDates": "Common dates",
   "parties.form.opening.today": "Today",
+  "parties.form.phoneContact.choose": "Choose from phone contacts",
+  "parties.form.phoneContact.error": "Could not open phone contacts. Enter the name and number below.",
   "parties.form.readOnly": "You have view-only access. Ask an owner or admin to make changes.",
   "parties.form.saved": "Saved {name}",
   "parties.form.section.credit": "Credit",
