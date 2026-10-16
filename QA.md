@@ -550,3 +550,12 @@ Read this file, `git status`, current diff, root/frontend AGENTS, and the releva
 - New `e2e/dashboard-review.mjs` measured `/dashboard` at 360 to 1920 px with a synthetic kirana. Nothing overflows; one long name is cut with an ellipsis at 360. Findings and three arrangements are in `docs/shop-ims-readiness/13-shop-dashboard-design-review.md`.
 - Checked on the live server: "To collect ₹2,100 from all your customers" opens a ₹1,800 list (a supplier paid ahead was counted), and "To pay ₹700 to all your suppliers" opens an empty one (it was a customer's advance). Overdue reads a status set nightly, so a bill entered today with a past due date is not counted until 00:15, and its list defaults to this financial year.
 - The owner is asked to choose A, B or C. Nothing is built yet. Railway deployment and 9/10 readiness are NOT claimed.
+
+### 16 October 2026 — WP-06: the Shop dashboard as two books side by side (cloud session)
+
+- The owner chose layout A. Built in 927e52d.
+- Fixed and checked on the live server: To collect ₹3,296 equals the customer list ₹3,296, and To pay ₹3,150 equals the supplier list ₹3,150. Advances are shown as their own line. Fail-before: `test_the_dues_tiles_add_up_to_the_lists_they_open` and the rewritten AC-1 in `test_dashboard_reconcile.py`.
+- Found by looking: once the title became the business name, "Shree Ganesh Kirana Stores" was cut to "Shree Ganesh Ki…" at 360 and 390 px. It now wraps; the component test failed first.
+- `e2e/dashboard-review.mjs`: no overflow at any of eight widths; the Today, Customers, Suppliers and Needs attention regions each appear once; More → Record payment opens the form at 360. One long customer name is still cut at 360.
+- Gates: Jest passed (full suite 4209 before the title fix, dashboard file 19/19 after); `tsc` clean; ESLint clean on the changed files; i18n in step; build passed; bundle gate passed (/dashboard 72.5 of 88 KB). Backend reports and golden tests passed. `apps/dues/tests/test_run_scale.py` fails at about 139 s against 60 s in this sandbox on the previous commit too.
+- Still open: Overdue from the nightly status, Cash in hand mixing books, one failure blanking the page, activity by typed time. Railway deployment and 9/10 readiness are NOT claimed.

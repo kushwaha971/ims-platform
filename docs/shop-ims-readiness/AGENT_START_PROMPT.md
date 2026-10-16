@@ -166,14 +166,15 @@ the server-prepared reference.
    reason field in a dialog by hand. D-04d is done (R-13): a bordered list of
    rows is `UbPanel as="ul"`; a guard fails on a hand-built divided list.
    D-04 is closed and D-05 is done (R-08).
-   Next: WP-06, the Shop dashboard. Start with a design review for the owner
-   (as WP-05 did in 12-counter-editor-design-review.md): what each figure
-   means and which server query owns it, separate customer and supplier
-   panels, and that every figure reconciles with its drill-down. Do not build
-   before the owner has chosen. The review is 13-shop-dashboard-design-review.md
-   (`e2e/dashboard-review.mjs`); the owner was asked A/B/C on 16 Oct. Its
-   "Done whichever option is chosen" list is not layout and can go first,
-   test-first: To collect / To pay from the same query as the list they open.
+   WP-06, the Shop dashboard: the review is 13-shop-dashboard-design-review.md
+   (`e2e/dashboard-review.mjs`). The owner chose A, two books side by side,
+   and it is built (927e52d): To collect / To pay are role-scoped and equal
+   the lists they open; Customers and Suppliers panels; Needs attention always
+   shown; `?add=1` opens Record payment and Add expense (`useOpenOnAddQuery`).
+   Next, test-first, the list at the end of that review: Overdue decided when
+   read (not the nightly status) with its list free of the FY default; Cash in
+   hand from the Shop book only, never a negative till; each dashboard section
+   failing and retrying alone; activity by record date.
 4. Still owed to WP-02, needing the owner or a device: a physical
    network-interruption check on a phone, and the owner's SH-011 release
    review in the tracker. Do not wait on these.

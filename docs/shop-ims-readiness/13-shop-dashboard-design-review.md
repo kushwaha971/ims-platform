@@ -97,3 +97,22 @@ All three keep today's widths, tokens and components, and all three fix Findings
 ## Asked of the owner
 
 Which arrangement: A, B or C. Recommended: A, because it is the spec's order and gives suppliers their own panel.
+
+## The owner's choice and what was built (16 Oct 2026, 927e52d)
+
+The owner chose **A, two books side by side**. Built and checked on the live stack at 360 to 1920 px (`e2e/dashboard-review.mjs`):
+
+- **Finding 1 fixed.** To collect and To pay use the same `party_totals` as the lists, over active customers and active suppliers. Advances are their own line ("Customers paid ₹700.00 ahead", "You paid suppliers ₹300.00 ahead"). Live: To collect ₹3,296 = the customer list ₹3,296; To pay ₹3,150 = the supplier list ₹3,150. A new API test asserts each tile equals its list.
+- **Header:** the business name (wraps, never cut), "Shop · Today, dd/mm/yyyy · Updated". New bill, and More with New purchase, Record payment and Add expense. Record payment and Add expense open their forms (`?add=1`).
+- **Today row:** net sales, money received today (new, Shop book only), cash in hand.
+- **Customers panel:** To collect, overdue bills with the oldest bill's age, top five customers. Links stay in the Shop book.
+- **Suppliers panel (Finding 6):** To pay, overdue and due-this-week purchase bills, top five suppliers you owe.
+- **Needs attention:** always on the page: collect, pay, out of stock, low stock.
+
+**Not yet done, in order:**
+1. Overdue is still the nightly status (Finding 2), and the bill list's financial-year default still applies.
+2. Cash in hand still mixes books and can start below zero (Finding 4).
+3. One failure still blanks the page (Finding 7).
+4. Recent activity shows when a record was typed, not its date (Finding 5).
+5. Promises due and open orders are not yet rows in Needs attention; there is no range control beyond Today.
+6. At 360 px one long customer name in the top five is cut with an ellipsis, as before.
