@@ -22,6 +22,7 @@ import { useTranslation } from 'src/hooks/useTranslation';
 import { showSnackbar } from 'src/redux/slice/snackbarSlice';
 import { ROUTES } from 'src/routes';
 import { formatInr, sumMoney } from 'src/utils/money';
+import { hasReason } from 'src/utils/reason';
 
 import { originHref } from '../originLinks';
 import { voidCreditNote, voidInvoice } from '../redux/salesFlowThunk';
@@ -32,7 +33,6 @@ import type { SalesDocument } from '../types/sales.types';
 import type { UnallocatedPayment } from '../types/salesFlows.types';
 import 'src/i18n/catalogues/sales';
 import 'src/i18n/catalogues/validation';
-import { hasReason } from 'src/utils/reason';
 
 const ICONS = { stock: Package, ledger: BookOpen, payment: Wallet } as const;
 

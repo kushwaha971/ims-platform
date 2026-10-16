@@ -17,6 +17,7 @@ import {
 import { useAppDispatch } from 'src/hooks/useAppStore';
 import { useTranslation } from 'src/hooks/useTranslation';
 import { showSnackbar } from 'src/redux/slice/snackbarSlice';
+import { hasReason } from 'src/utils/reason';
 
 import { moveEstimate } from '../redux/salesFlowThunk';
 import { useSalesFlowSchemas } from '../validation/salesFlowSchemas';
@@ -24,7 +25,6 @@ import { useSalesFlowSchemas } from '../validation/salesFlowSchemas';
 import type { SalesDocument } from '../types/sales.types';
 import 'src/i18n/catalogues/sales';
 import 'src/i18n/catalogues/validation';
-import { hasReason } from 'src/utils/reason';
 
 /**
  * Shop item 3 — "Cancel order SO/26-27/0004?" with the customer's reason (three

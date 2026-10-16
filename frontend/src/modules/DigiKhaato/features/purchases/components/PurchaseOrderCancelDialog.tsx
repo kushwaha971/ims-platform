@@ -17,13 +17,13 @@ import {
 import { useAppDispatch } from 'src/hooks/useAppStore';
 import { useTranslation } from 'src/hooks/useTranslation';
 import { showSnackbar } from 'src/redux/slice/snackbarSlice';
+import { hasReason } from 'src/utils/reason';
 
 import { movePurchaseOrder, voidDebitNote } from '../redux/purchaseBillThunk';
 import { usePurchaseBillSchemas } from '../validation/purchaseBillSchemas';
 
 import type { PurchaseBill } from '../types/purchase.types';
 import 'src/i18n/catalogues/validation';
-import { hasReason } from 'src/utils/reason';
 
 /**
  * Shop item 3 — "Cancel order PO/26-27/0004?" with the reason (three characters at

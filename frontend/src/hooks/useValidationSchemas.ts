@@ -17,8 +17,8 @@ import { useTranslation, type TranslateFn } from 'src/hooks/useTranslation';
 import { selectTenantTimezone } from 'src/redux/slice/sessionSlice';
 import { todayInTenantTz } from 'src/utils/dates';
 import { isValidMobile, readsAsIndian } from 'src/utils/phone';
-import { REGEX } from 'src/utils/regexConstants';
 import { REASON_MAX_CHARS, REASON_MIN_CHARS } from 'src/utils/reason';
+import { REGEX } from 'src/utils/regexConstants';
 
 /**
  * Part 19 §19.5.2 (ADR-003) — the single source of truth for field-level

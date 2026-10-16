@@ -4,12 +4,12 @@ import { useEffect, useRef, useState } from 'react';
 
 import { UbButton, UbStack, UbText, UbTextInput } from 'src/design-system';
 import { useTranslation } from 'src/hooks/useTranslation';
+import { hasReason } from 'src/utils/reason';
 
 // Loaded with dynamic(), so its words come with its own chunk.
 import { LibraryDialog } from './LibraryOverlays';
 
 import 'src/i18n/catalogues/library';
-import { hasReason } from 'src/utils/reason';
 
 /**
  * W05 — a student who left or is on hold is refused at the desk. The dialog

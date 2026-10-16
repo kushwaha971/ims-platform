@@ -22,6 +22,7 @@ import { useTranslation } from 'src/hooks/useTranslation';
 import { useValidationSchemas } from 'src/hooks/useValidationSchemas';
 import { readDetailString } from 'src/utils/errorDetails';
 import { addMoney, formatInr, isNegativeAmount, moneyOrZero, subtractMoney } from 'src/utils/money';
+import { REASON_MAX_CHARS, hasReason } from 'src/utils/reason';
 
 import {
   MANUAL_CHARGE_KINDS,
@@ -38,7 +39,6 @@ import type { ChargeOutcome } from '../hooks/useMemberCharges';
 // Loaded with dynamic(), so its words come with its own chunk.
 import 'src/i18n/catalogues/library';
 import 'src/i18n/catalogues/validation';
-import { REASON_MAX_CHARS, hasReason } from 'src/utils/reason';
 
 /** What the member will owe after a change, never negative — said before Save (Part 17.0.3). */
 const after = (dues: string, change: string, direction: 'add' | 'take'): string => {
