@@ -33,7 +33,7 @@ from django.db import models
 from django.db.models.functions import Upper
 
 from apps.common.db.fields import MoneyField, QuantityField, RateField, UnitCostField, uuid7_pk
-from apps.common.models import TenantModel
+from apps.common.models import DraftCreationBase, TenantModel
 from apps.purchases.constants import DiscountType, DocumentKind, DocumentStatus
 
 
@@ -151,6 +151,24 @@ class PurchaseDocument(TenantModel):
 
     def __str__(self) -> str:  # pragma: no cover - admin convenience
         return self.number or f"draft {self.id}"
+
+
+class DraftCreation(DraftCreationBase):
+    """Purchases' claim table (ADR-063); the family is the document kind, so a bill's
+    key never recovers an order. `apps.common.draft_creation` owns the protocol."""
+
+    document = models.OneToOneField(
+        PurchaseDocument, on_delete=models.SET_NULL, null=True, related_name="draft_creation"
+    )
+
+    class Meta:
+        db_table = "purchases_draft_creation"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["tenant", "actor_key", "family", "key"],
+                name="uq_purchases_draft_creation",
+            ),
+        ]
 
 
 class PurchaseDocumentLine(models.Model):

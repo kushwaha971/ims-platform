@@ -1,6 +1,6 @@
-# Sales draft recovery contract — WP-02
+# Draft recovery contract — WP-02 (sales and purchases)
 
-Implementation scope: invoice/bill-of-supply drafts, estimates, sales orders and delivery challans. Purchase draft recovery is a separate remaining verification item; do not infer that it is covered by sales tests.
+Implementation scope: invoice/bill-of-supply drafts, estimates, sales orders and delivery challans; and, from 16 Oct 2026, purchase bills and purchase orders (see "Purchases" below). Debit notes have no autosaved draft editor and are out of scope.
 
 ## Identity and ownership
 
@@ -29,3 +29,13 @@ Migration `sales.0008_durable_draft_creation` is additive. It does not rewrite o
 See the latest `QA.md` checkpoint for exact automated results and browser screenshots. Regression scenarios include all four route families, changed retry contents, concurrent first requests, actor/tenant/family isolation, corrected validation, recovery after the short cache window, already-posted documents, discard tombstones, lost-response/remount, overlapping saves, stale local copies and late responses after reset.
 
 Desktop and 390px browser checks cover actual draft save/reload and accessible mobile save actions. A physical network interruption, physical-device storage failure and purchase-editor recovery are not certified by these checks. Guarded storage can be unavailable in private/quota-limited environments; in-memory retries still reuse the key, but a reload cannot recover an identity the browser could not persist. Multiple distinct unsynced new drafts in separate tabs still share the existing per-user/family `new` device slot; multi-draft offline workspace design is outside this slice.
+
+## Purchases (16 Oct 2026)
+
+Same API semantics on `POST /purchases/bills` and `POST /purchases/orders`: optional `client_draft_key`; 201 + `meta.draft_recovered=false` on a first create; 200 + the current document + `meta.draft_recovered=true` on a retry; 404 after the draft was deleted. The family is the document kind (`purchase_bill`, `purchase_order`). `POST /purchases/bills?record=true` ignores the key (its Idempotency-Key deduplicates it), and a PATCH ignores it. Bills created from an order (`create-bill`) carry no key. Claims live in `purchases_draft_creation` (additive migration `purchases.0005_durable_draft_creation`); both claim tables are registered for tenant export/deletion.
+
+Shared owners: server `apps.common.draft_creation` + `DraftCreationBase`; client `useDraftSaveQueue` and `utils/draftCreation`. Domain adapters: `salesDraftReply`, `purchaseDraftReply`, each app's create service and envelope. Purchase payable, stock receipt, recording and duplicate-supplier-number rules are untouched.
+
+Editor behavior: autosave, the supplier-pick save, "Save draft" and the save before Record/Send run in one queue; each reads the acknowledged id/version when it starts. A recovered untouched draft is adopted by PATCH against version 1 with current typing; a recovered draft at a higher version opens the existing conflict dialog, whose "use the saved one" now opens the recovered draft by id from `/new`; a recovered recorded bill or sent order locks the editor and is never recorded or sent again. Typing made during a slow autosave stays dirty and is saved next. Late replies after teardown, document change or user/business change are ignored.
+
+Purchase limits: the purchase editor has no device copy (it never had one), so the creation key is kept in memory for the editor session only. Retries, overlapping saves and record-after-lost-reply are covered; a full page reload after a lost reply starts a new bill, and the first draft remains listed under Drafts where it can be opened or deleted. Persisting a "new" key without a per-tab device copy would let another tab adopt this tab's draft, which is worse. Physical network interruption and real-device evidence remain open, as for sales.

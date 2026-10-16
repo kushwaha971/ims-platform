@@ -23,4 +23,5 @@ register(
         tenant_path="document__tenant",
     ),
     TenantTable("sales.SalesCreditApplication", export_name="sales_credit_applications.csv"),
+    TenantTable("sales.DraftCreation", export_name="sales_draft_creations.csv"),
 )

@@ -14,11 +14,12 @@ from typing import Any
 from django.db import transaction
 from django.utils import timezone
 
+from apps.common import draft_creation
 from apps.common.audit import AuditAction, write_audit
 from apps.common.context import Ctx
 from apps.common.exceptions import BusinessRuleViolation, NotFound, PermissionDenied, StaleVersion
 from apps.purchases.constants import BILL_KINDS, DocumentKind, DocumentStatus
-from apps.purchases.models import PurchaseDocument, PurchaseDocumentLine
+from apps.purchases.models import DraftCreation, PurchaseDocument, PurchaseDocumentLine
 from apps.purchases.services import settings as purchase_settings
 from apps.purchases.services.payload import apply_payload
 
@@ -115,6 +116,18 @@ def may_edit_draft(ctx: Ctx, document: PurchaseDocument) -> bool:
 @transaction.atomic
 def create_draft(*, ctx: Ctx, payload: dict, kind: str = DocumentKind.PURCHASE_BILL) -> dict:
     tenant = ctx.tenant
+    creation = None
+    if key := payload.get("client_draft_key"):
+        creation, claimed = draft_creation.claim(
+            DraftCreation, ctx=ctx, family=kind, key=key, created_by=actor_of(ctx)
+        )
+        if not claimed:
+            # SH-011 — a retried first save is a lookup of the bill as it is now
+            # (recorded or sent included); its body is never applied.
+            document = draft_creation.recovered(
+                creation, PurchaseDocument.objects.filter(tenant=tenant, kind=kind)
+            )
+            return {"document": document, "warnings": [], "recovered": True}
     document = PurchaseDocument(
         tenant=tenant,
         created_by=actor_of(ctx),
@@ -126,6 +139,8 @@ def create_draft(*, ctx: Ctx, payload: dict, kind: str = DocumentKind.PURCHASE_B
     outcome = apply_payload(ctx, document, payload, strict=False)
     _payable(document)
     document.save()
+    if creation is not None:
+        draft_creation.attach(creation, document)
     replace_lines(document, outcome["rows"])
     write_audit(
         ctx=ctx,
@@ -146,6 +161,7 @@ def update_draft(
     *, ctx: Ctx, document_id: Any, payload: dict, kinds: tuple[str, ...] = BILL_KINDS
 ) -> dict:
     """PATCH a draft (`version` required); on a recorded bill only `notes` (BR-7, T-PUR-01-10)."""
+    payload = {k: v for k, v in payload.items() if k != "client_draft_key"}
     document = lock_document(ctx.tenant, document_id, kinds)
     if document.status != DocumentStatus.DRAFT:
         return _update_recorded(ctx, document, payload)

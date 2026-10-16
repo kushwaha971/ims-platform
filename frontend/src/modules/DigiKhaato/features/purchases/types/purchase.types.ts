@@ -204,6 +204,8 @@ export interface PurchaseWarning {
 }
 
 export interface PurchaseBillEnvelope {
+  /** ADR-063 — a retried first create answered with the CURRENT document. */
+  readonly draftRecovered?: boolean;
   readonly bill: PurchaseBill;
   readonly warnings: readonly PurchaseWarning[];
   readonly partyBalance: string | null;

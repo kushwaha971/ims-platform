@@ -14,6 +14,7 @@ from typing import Any
 from django.db import transaction
 from django.utils import timezone
 
+from apps.common import draft_creation
 from apps.common.audit import AuditAction, write_audit
 from apps.common.context import Ctx
 from apps.common.exceptions import BusinessRuleViolation, NotFound, PermissionDenied, StaleVersion
@@ -85,20 +86,18 @@ def create_draft(*, ctx: Ctx, payload: dict, kind: str | None = None) -> dict:
     resolved_kind = kind or kind_for(tenant, payload.get("kind"))
     creation = None
     if key := payload.get("client_draft_key"):
-        # get_or_create's unique insert waits for a competing transaction. The
-        # claim and document commit together; failed creates never burn a key.
-        creation, claimed = DraftCreation.objects.get_or_create(
-            tenant=tenant,
-            actor_key=str(ctx.actor.pk) if ctx.actor else ctx.actor_type,
+        creation, claimed = draft_creation.claim(
+            DraftCreation,
+            ctx=ctx,
             family="invoice" if resolved_kind in INVOICE_KINDS else resolved_kind,
             key=key,
-            defaults={"created_by": _actor(ctx)},
+            created_by=_actor(ctx),
         )
         if not claimed:
-            document = SalesDocument.objects.filter(tenant=tenant, pk=creation.document_id).first()
-            if document is None:
-                raise NotFound("This draft was discarded. Start a new document.")
             # A retry is a lookup, never an update, including posted documents.
+            document = draft_creation.recovered(
+                creation, SalesDocument.objects.filter(tenant=tenant)
+            )
             return {"document": document, "warnings": [], "recovered": True}
     document = SalesDocument(
         tenant=tenant,
@@ -111,8 +110,7 @@ def create_draft(*, ctx: Ctx, payload: dict, kind: str | None = None) -> dict:
     outcome = apply_payload(ctx, document, payload, strict=False)
     document.save()
     if creation is not None:
-        creation.document = document
-        creation.save(update_fields=["document", "updated_at"])
+        draft_creation.attach(creation, document)
     replace_lines(document, outcome["rows"])
     write_audit(
         ctx=ctx,

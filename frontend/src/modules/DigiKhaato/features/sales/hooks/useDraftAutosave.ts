@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useAppDispatch, useAppSelector } from 'src/hooks/useAppStore';
 import { selectNetworkImpaired } from 'src/redux/slice/networkSlice';
 import { selectActiveTenant, selectSessionUser } from 'src/redux/slice/sessionSlice';
+import { draftSnapshot, settleAutosave } from 'src/utils/draftCreation';
 import {
   isLocalNewer,
   localDraftKey,
@@ -114,17 +115,11 @@ export const useDraftAutosave = (
     const timer = window.setTimeout(() => {
       if (saving.current) return;
       saving.current = true;
-      const submitted = JSON.stringify(form.getValues());
+      const submitted = draftSnapshot(form.getValues());
       void save(true).then((result) => {
         saving.current = false;
-        if (!result) return;
-        if (submitted === JSON.stringify(form.getValues())) {
-          // Only the submitted values are saved; newer typing must stay dirty.
-          form.reset(form.getValues(), { keepValues: true });
-        } else {
-          // Its debounce may have expired while the first request was running.
-          setSaveRevision((revision) => revision + 1);
-        }
+        // Only the submitted values are saved; newer typing stays dirty and re-arms.
+        if (result && settleAutosave(form, submitted)) setSaveRevision((revision) => revision + 1);
       });
     }, SERVER_AUTOSAVE_MS);
     return () => window.clearTimeout(timer);

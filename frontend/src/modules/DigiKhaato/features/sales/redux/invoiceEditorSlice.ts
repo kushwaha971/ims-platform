@@ -9,6 +9,7 @@ import {
 import { resetAllFeatureState } from 'src/redux/actions';
 import { rootReducer, type RootState } from 'src/redux/store';
 import type { ApiErrorShape, RequestStatus } from 'src/types/api.types';
+import { draftReplyOutcome, type DraftReply } from 'src/utils/draftCreation';
 
 import { fetchFlowDocument, moveEstimate, saveEstimateDraft } from './salesFlowThunk';
 import {
@@ -80,6 +81,13 @@ const accept = (state: Draft<InvoiceEditorState>, envelope: SalesDocumentEnvelop
   state.warnings = envelope.warnings as Draft<SalesWarning>[];
   state.rule46 = envelope.rule46 as Draft<Rule46Check> | null;
 };
+
+/** ADR-063 — a sales envelope in the shared recovery decision's terms. */
+export const salesDraftReply = (envelope: SalesDocumentEnvelope): DraftReply => ({
+  recovered: envelope.draftRecovered === true,
+  isDraft: envelope.document.status === 'draft',
+  version: envelope.document.version,
+});
 
 const markConflict = (state: Draft<InvoiceEditorState>) => {
   state.saveState = 'conflict';
@@ -169,14 +177,11 @@ const invoiceEditorSlice = createSlice({
         (state, action) => {
           if (state.saveRequestId !== action.meta.requestId) return;
           accept(state, action.payload);
-          if (action.payload.document.status !== 'draft') {
+          const outcome = draftReplyOutcome(salesDraftReply(action.payload));
+          if (outcome === 'posted') {
             state.issued = action.payload as Draft<SalesDocumentEnvelope>;
           }
-          if (
-            action.payload.draftRecovered &&
-            action.payload.document.status === 'draft' &&
-            action.payload.document.version > 1
-          ) {
+          if (outcome === 'conflict') {
             markConflict(state);
             return;
           }

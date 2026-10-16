@@ -18,4 +18,5 @@ register(
         export_name="purchase_bill_lines.csv",
         tenant_path="document__tenant",
     ),
+    TenantTable("purchases.DraftCreation", export_name="purchase_draft_creations.csv"),
 )

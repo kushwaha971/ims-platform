@@ -12,6 +12,7 @@ from typing import Any
 
 from rest_framework import serializers
 
+from apps.common.draft_creation import client_draft_key_field
 from apps.purchases.constants import LINES_MAX
 from apps.purchases.models import PurchaseDocument, PurchaseDocumentLine
 
@@ -56,6 +57,8 @@ class PaymentInputSerializer(serializers.Serializer):
 
 
 class BillWriteSerializer(serializers.Serializer):
+    #: SH-011 — first-create identity; read by `create_draft` only (ADR-063).
+    client_draft_key = client_draft_key_field()
     party_id = serializers.UUIDField(required=False, allow_null=True)
     supplier_invoice_number = serializers.CharField(
         required=False, allow_null=True, allow_blank=True, max_length=48

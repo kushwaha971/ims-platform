@@ -3,6 +3,7 @@ import { createSlice, type Draft, type PayloadAction, type WithSlice } from '@re
 import { resetAllFeatureState } from 'src/redux/actions';
 import { rootReducer, type RootState } from 'src/redux/store';
 import type { ApiErrorShape, RequestStatus } from 'src/types/api.types';
+import { draftReplyOutcome, type DraftReply } from 'src/utils/draftCreation';
 
 import {
   checkDuplicateSupplierInvoice,
@@ -35,6 +36,9 @@ export interface PurchaseBillEditorState {
   version: number | null;
   document: PurchaseBill | null;
   loadStatus: RequestStatus;
+  /** The latest load/save request; an older one's late reply is ignored (ADR-063). */
+  loadRequestId: string | null;
+  saveRequestId: string | null;
   context: PurchaseContext | null;
   saveState: PurchaseSaveState;
   savedAt: string | null;
@@ -50,6 +54,8 @@ const initialState: PurchaseBillEditorState = {
   version: null,
   document: null,
   loadStatus: 'idle',
+  loadRequestId: null,
+  saveRequestId: null,
   context: null,
   saveState: 'idle',
   savedAt: null,
@@ -66,6 +72,13 @@ const accept = (state: Draft<PurchaseBillEditorState>, envelope: PurchaseBillEnv
   state.document = envelope.bill as Draft<PurchaseBill>;
   state.warnings = envelope.warnings as Draft<PurchaseWarning>[];
 };
+
+/** ADR-063 — a purchase envelope in the shared recovery decision's terms. */
+export const purchaseDraftReply = (envelope: PurchaseBillEnvelope): DraftReply => ({
+  recovered: envelope.draftRecovered === true,
+  isDraft: envelope.bill.status === 'draft',
+  version: envelope.bill.version,
+});
 
 /** The 409's `details.existing` → the same shape the blur check produces. */
 const duplicateFrom = (error: ApiErrorShape | undefined): DuplicateSupplierInvoice | null => {
@@ -102,28 +115,43 @@ const purchaseBillEditorSlice = createSlice({
       .addCase(fetchPurchaseContext.fulfilled, (state, action) => {
         state.context = action.payload as Draft<PurchaseContext>;
       })
-      .addCase(fetchPurchaseBill.pending, (state) => {
+      .addCase(fetchPurchaseBill.pending, (state, action) => {
+        state.loadRequestId = action.meta.requestId;
         state.loadStatus = 'loading';
         state.error = null;
       })
       .addCase(fetchPurchaseBill.fulfilled, (state, action) => {
+        if (state.loadRequestId !== action.meta.requestId) return;
         accept(state, action.payload);
         state.loadStatus = 'succeeded';
       })
       .addCase(fetchPurchaseBill.rejected, (state, action) => {
-        if (action.meta.aborted) return;
+        if (action.meta.aborted || state.loadRequestId !== action.meta.requestId) return;
         state.loadStatus = 'failed';
         state.error = (action.payload ?? null) as Draft<ApiErrorShape> | null;
       })
-      .addCase(savePurchaseBillDraft.pending, (state) => {
+      .addCase(savePurchaseBillDraft.pending, (state, action) => {
+        state.saveRequestId = action.meta.requestId;
         state.saveState = 'saving';
       })
       .addCase(savePurchaseBillDraft.fulfilled, (state, action) => {
+        if (state.saveRequestId !== action.meta.requestId) return;
         accept(state, action.payload);
+        const outcome = draftReplyOutcome(purchaseDraftReply(action.payload));
+        // A retried first save found the bill already recorded (or the order sent):
+        // the editor locks on it and never records it a second time.
+        if (outcome === 'posted') state.recorded = action.payload as Draft<PurchaseBillEnvelope>;
+        if (outcome === 'conflict') {
+          // Edited elsewhere since its create: review before any PATCH overwrites it.
+          state.saveState = 'conflict';
+          state.error = null;
+          return;
+        }
         state.saveState = 'saved';
         state.savedAt = action.payload.bill.updatedAt;
       })
       .addCase(savePurchaseBillDraft.rejected, (state, action) => {
+        if (state.saveRequestId !== action.meta.requestId) return;
         state.saveState = action.payload?.code === 'stale_version' ? 'conflict' : 'error';
         state.error = (action.payload ?? null) as Draft<ApiErrorShape> | null;
       })

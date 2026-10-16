@@ -16,7 +16,7 @@ from __future__ import annotations
 from django.db import models
 
 from apps.common.db.fields import MoneyField, QuantityField, RateField, UnitCostField, uuid7_pk
-from apps.common.models import TenantModel
+from apps.common.models import DraftCreationBase, TenantModel
 from apps.sales.constants import CreditMode, DiscountType, DocumentKind, DocumentStatus
 
 
@@ -174,16 +174,9 @@ class SalesDocument(TenantModel):
         return self.number or f"draft {self.id}"
 
 
-class DraftCreation(TenantModel):
-    """Durable retry identity. A null document is a discarded-draft tombstone.
+class DraftCreation(DraftCreationBase):
+    """Sales' claim table (ADR-063); invoice and bill of supply share one family."""
 
-    Keep the actor's immutable identifier after account deletion; a new account
-    must never inherit its retry namespace. No form/price/contact data is copied.
-    """
-
-    actor_key = models.CharField(max_length=64)
-    family = models.CharField(max_length=24)
-    key = models.CharField(max_length=64)
     document = models.OneToOneField(
         SalesDocument, on_delete=models.SET_NULL, null=True, related_name="draft_creation"
     )

@@ -164,6 +164,7 @@ export const toEnvelope = (body: EnvelopeWire): PurchaseBillEnvelope => {
   const meta = body.meta ?? {};
   const paid = meta.payment as Wire | null | undefined;
   return {
+    draftRecovered: meta.draft_recovered === true,
     bill: toBill(body.data),
     warnings: (meta.warnings ?? []) as PurchaseBillEnvelope['warnings'],
     partyBalance: sn(meta.party_balance),

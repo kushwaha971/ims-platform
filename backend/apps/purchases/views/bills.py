@@ -84,6 +84,16 @@ def _envelope(
     return {"data": BillReadSerializer(document).data, "meta": meta}
 
 
+def draft_created(result: dict, envelope: Any = _envelope) -> Any:
+    """SH-011 — 201 for a new draft, 200 with the CURRENT document for a recovered one."""
+    recovered = bool(result.get("recovered"))
+    body = envelope(
+        result["document"], warnings=result["warnings"], extra={"draft_recovered": recovered}
+    )
+    respond = StandardResponse.ok if recovered else StandardResponse.created
+    return respond(body["data"], meta=body["meta"])
+
+
 class PurchaseBillViewSet(
     TenantScopeMixin,
     mixins.ListModelMixin,
@@ -157,8 +167,7 @@ class PurchaseBillViewSet(
         result = drafts.create_draft(
             ctx=Ctx.from_request(request), payload=dict(serializer.validated_data)
         )
-        body = _envelope(result["document"], warnings=result["warnings"])
-        return StandardResponse.created(body["data"], meta=body["meta"])
+        return draft_created(result)
 
     @idempotent("purchase_bill_record")
     def _create_and_record(self, request: Any) -> Any:
@@ -168,6 +177,7 @@ class PurchaseBillViewSet(
         serializer.is_valid(raise_exception=True)
         payload = dict(serializer.validated_data)
         payment = _payment_allowed(request, payload.pop("payment", None))
+        payload.pop("client_draft_key", None)  # direct record uses its Idempotency-Key
         ctx = Ctx.from_request(request)
         with transaction.atomic():
             draft = drafts.create_draft(ctx=ctx, payload=payload)

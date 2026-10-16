@@ -1361,7 +1361,8 @@
     "9 Oct 2026, mobile numbers from any country (owner): every mobile field is UbPhoneInput with a country picker that starts on India — a native <select> of 243 countries named by Intl.DisplayNames, so no names ship. The country table lives in src/utils/phoneCountries.ts, imported only by the control: importing it from the shared validator first put ~1 KB on fifty routes including /login, and that was undone. The screens that render a mobile field grew 1.3-2.2 KB. Raised by the measured + 0.5 rule: /purchases/orders/[id]/edit 148→149, /purchases/bills/[id]/edit 148→149, /purchases/orders/new 148→149, /purchases/bills/new 148→149, /sales/orders/[id]/edit 145→148, /sales/challans/[id]/edit 145→148, /sales/estimates/[id]/edit 145→148, /sales/challans/new 145→148, /sales/invoices/[id]/edit 145→148, /sales/orders/new 145→148, /sales/estimates/new 145→148, /sales/invoices/new 145→148, /settings/profile 134→137, /lending/loans/new 123→126, /library/settings 110→111, /design-system 106→109, /settings 100→101, /onboarding/step/[n] 88→91, /library/copies 73→74.",
     "9 Oct 2026, mobile + OTP sign-in (DEC-013): sharedApp 107.8 → 108.2, the auth slice's OTP state and its two thunks, net of the email sign-up code removed with it (the first build was +1.7 KB until registerAccount and its service went). Routes that sat on their ceiling went over by 0.1-0.5 KB (the phone field's deferred-module shim, and the shared growth in first load); raised by the measured + 0.5 rule. The phone field's country list is fetched after first paint and only where it shows: imported statically it put 23 KB on /login, where the field is locked to +91. /login is 55.4 (was 57.7, the password form is gone). Route ceilings: /sales/challans/[id]/edit 148→149, /sales/orders/[id]/edit 148→149, /sales/challans/new 148→149, /sales/orders/new 148→149, /sales/invoices/[id]/edit 148→149, /sales/invoices/new 148→149, /sales/credit-notes/new 140→141, /library/settings 111→112, /reports/purchase-register 105→106, /reports/sales-register 105→106, /parties/[id] 102→103, /reports/profit 101→102, /settings 101→102, /settings/branding 88→89, /settings/team 79→80, /library/members 79→80, /sales/challans 76→77, /sales/orders 76→77, /library/counter 73→74, /library/members/[membershipId] 72→73, /ledger/reminders 70→71, /library/seats 68→69, /library/money 67→68, /library/attendance 66→67, /library/catalogue/[titleId] 65→66, /library/messages 64→65, /lending 64→65, /library/catalogue/categories 63→64, /library/catalogue/locations 63→64, /parties/tags 61→62, /payments/[id] 61→62, /lending/loans 61→62, /login/email new at 58, /settings/data 56→57, /signup 51→56, /settings/devices 54→55, /reset-password 51→52, /items/masters 50→51, /set-password 50→51, /imports/[id] 49→50, /imports 49→50, /settings/plan 47→48. Later the same day `errors.field.already_member` joined the shared message catalogue (adding someone already on the team now says so under the field); it put / at 273.0x against 273, raised to 274.",
     "11 Oct 2026, landing redesign and account-name fix: `accountIdentity` (a mobile-number account's placeholder email is never shown as a name) reached the shared shell through the account menu, +0.1 KB, which tipped routes sitting on their ceiling. `/` gained the module cards' phone recordings and actions, and the six-job explorer now keeps every job's words in the HTML; the demo section (player, language tabs, both transcripts) is its own chunk and is NOT in this figure. Raised by the measured + 0.5 rule: /lending/loans/new route 126→126, first load 361→362; /reports/gst-summary route 106→107, first load 341→342; /ledger/aging route 92→93, first load 327→328; /library/copies/[copyId] route 68→69, first load 303→304; /stock/low route 65→65, first load 300→301; /switch route 49→50, first load 284→285; / route 38→40, first load 274→275.",
-    "16 Oct 2026, WP-02 durable sales draft recovery: recovery body loaded only on first save. Shared app remains 111.8 KB (112 KB ceiling), framework 127.3 KB. After splitting, ten sales-editor scalar ceilings exceeded by <0.1 KB (invoice-new first-load report rounds excess to 0.1). Raised only these measured scalars to rounded measurement +0.1 KB: /sales/challans/[id]/edit route 151.4→151.5; /sales/challans/[id]/edit firstLoad 390.5→390.6; /sales/orders/[id]/edit route 151.4→151.5; /sales/orders/[id]/edit firstLoad 390.5→390.6; /sales/estimates/[id]/edit route 151.4→151.5; /sales/challans/new route 151.4→151.5; /sales/orders/new route 151.4→151.5; /sales/estimates/new route 151.4→151.5; /sales/invoices/[id]/edit route 151.4→151.5; /sales/invoices/new firstLoad 390.4→390.6. Buys stable create identity, scoped recovery, serialized saves and stale-version/late-response guards; no global ceiling changes or disabled gate."
+    "16 Oct 2026, WP-02 durable sales draft recovery: recovery body loaded only on first save. Shared app remains 111.8 KB (112 KB ceiling), framework 127.3 KB. After splitting, ten sales-editor scalar ceilings exceeded by <0.1 KB (invoice-new first-load report rounds excess to 0.1). Raised only these measured scalars to rounded measurement +0.1 KB: /sales/challans/[id]/edit route 151.4→151.5; /sales/challans/[id]/edit firstLoad 390.5→390.6; /sales/orders/[id]/edit route 151.4→151.5; /sales/orders/[id]/edit firstLoad 390.5→390.6; /sales/estimates/[id]/edit route 151.4→151.5; /sales/challans/new route 151.4→151.5; /sales/orders/new route 151.4→151.5; /sales/estimates/new route 151.4→151.5; /sales/invoices/[id]/edit route 151.4→151.5; /sales/invoices/new firstLoad 390.4→390.6. Buys stable create identity, scoped recovery, serialized saves and stale-version/late-response guards; no global ceiling changes or disabled gate.",
+    "16 Oct 2026, WP-02 purchase draft recovery and shared draft owners (ADR-063 addendum): the save queue (src/hooks/useDraftSaveQueue.ts) and the reply decision/autosave settle rule (src/utils/draftCreation.ts) are now one owner used by both the sales and the purchase editor, replacing the sales editor's inline queue. Measured against dev's own build in the same environment (dev itself sat at its ceiling there, six routes 'over by 0 KB'): sales editor routes +0.5 KB route/first load, purchase editor routes +0.3-0.4 KB. Buys one creation key per purchase editor session, one serial save lane for autosave/supplier pick/save/record, recovered-draft adoption and conflict review, no re-record of a recovered bill, and late-reply guards. Shared app and framework unchanged; no global ceiling raised. Raised only the exceeded scalars to measured + 0.1 KB: /sales/challans/new route 151.5→152.1; /sales/challans/new firstLoad 390.5→391.1; /sales/challans/[id]/edit route 151.5→152.1; /sales/challans/[id]/edit firstLoad 390.6→391.1; /purchases/orders/new route 150.9→151.3; /purchases/orders/new firstLoad 389.9→390.3; /purchases/orders/[id]/edit route 150.9→151.4; /purchases/orders/[id]/edit firstLoad 390.0→390.4; /sales/orders/new route 151.5→152.1; /sales/orders/new firstLoad 390.5→391.1; /sales/orders/[id]/edit route 151.5→152.1; /sales/orders/[id]/edit firstLoad 390.6→391.1; /sales/invoices/new route 151.4→152.1; /sales/invoices/new firstLoad 390.6→391.1; /sales/invoices/[id]/edit route 151.5→152.1; /sales/invoices/[id]/edit firstLoad 390.5→391.1; /sales/estimates/new route 151.5→152.1; /sales/estimates/[id]/edit route 151.5→152.1; /purchases/bills/[id]/edit route 150.9→151.4; /purchases/bills/[id]/edit firstLoad 389.9→390.4; /purchases/bills/new route 150.9→151.3; /purchases/bills/new firstLoad 389.9→390.3."
   ],
   "default": {
     "route": 56,
@@ -1389,12 +1390,12 @@
       "firstLoad": 319.6
     },
     "/sales/challans/new": {
-      "route": 151.5,
-      "firstLoad": 390.5
+      "route": 152.1,
+      "firstLoad": 391.1
     },
     "/sales/challans/[id]/edit": {
-      "route": 151.5,
-      "firstLoad": 390.6
+      "route": 152.1,
+      "firstLoad": 391.1
     },
     "/purchases/orders/[id]": {
       "route": 66.6,
@@ -1405,12 +1406,12 @@
       "firstLoad": 315.9
     },
     "/purchases/orders/new": {
-      "route": 150.9,
-      "firstLoad": 389.9
+      "route": 151.3,
+      "firstLoad": 390.3
     },
     "/purchases/orders/[id]/edit": {
-      "route": 150.9,
-      "firstLoad": 390.0
+      "route": 151.4,
+      "firstLoad": 390.4
     },
     "/sales/orders/[id]": {
       "route": 77.9,
@@ -1421,12 +1422,12 @@
       "firstLoad": 319.6
     },
     "/sales/orders/new": {
-      "route": 151.5,
-      "firstLoad": 390.5
+      "route": 152.1,
+      "firstLoad": 391.1
     },
     "/sales/orders/[id]/edit": {
-      "route": 151.5,
-      "firstLoad": 390.6
+      "route": 152.1,
+      "firstLoad": 391.1
     },
     "/parties": {
       "route": 109,
@@ -1437,12 +1438,12 @@
       "firstLoad": 336
     },
     "/sales/invoices/new": {
-      "route": 151.4,
-      "firstLoad": 390.6
+      "route": 152.1,
+      "firstLoad": 391.1
     },
     "/sales/invoices/[id]/edit": {
-      "route": 151.5,
-      "firstLoad": 390.5
+      "route": 152.1,
+      "firstLoad": 391.1
     },
     "/sales/invoices": {
       "route": 98,
@@ -1457,11 +1458,11 @@
       "firstLoad": 356
     },
     "/sales/estimates/new": {
-      "route": 151.5,
+      "route": 152.1,
       "firstLoad": 400
     },
     "/sales/estimates/[id]/edit": {
-      "route": 151.5,
+      "route": 152.1,
       "firstLoad": 400
     },
     "/sales/estimates/[id]": {
@@ -1613,16 +1614,16 @@
       "firstLoad": 305.7
     },
     "/purchases/bills/[id]/edit": {
-      "route": 150.9,
-      "firstLoad": 389.9
+      "route": 151.4,
+      "firstLoad": 390.4
     },
     "/purchases/bills": {
       "route": 95,
       "firstLoad": 330
     },
     "/purchases/bills/new": {
-      "route": 150.9,
-      "firstLoad": 389.9
+      "route": 151.3,
+      "firstLoad": 390.3
     },
     "/reports": {
       "route": 72,

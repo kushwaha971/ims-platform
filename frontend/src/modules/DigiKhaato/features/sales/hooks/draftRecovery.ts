@@ -1,6 +1,8 @@
+import { draftReplyOutcome, draftSnapshot } from 'src/utils/draftCreation';
 import { localDraftKey, removeLocalDraft, writeLocalDraft } from 'src/utils/localDrafts';
 import { newRequestId } from 'src/utils/requestId';
 
+import { salesDraftReply } from '../redux/invoiceEditorSlice';
 import { fromDocument, toWireBody, type InvoiceFormValues } from '../view-model/invoiceForm';
 
 import type { EditorKind } from './useInvoiceEditor';
@@ -63,18 +65,14 @@ export const saveDraftWithRecovery = async ({
   // Persist identity and current typing BEFORE the first request. A lost
   // response/reload must retry that identity, even if the text has changed.
   const values = form.getValues();
-  const submitted = JSON.stringify(values);
+  const submitted = draftSnapshot(values);
   writeLocalDraft(localDraftKey(tenantId, kind, id ?? 'new', userId), values, current.version);
   const body = wireBodyFor(kind, values);
   if (!id) body.client_draft_key = values.clientDraftKey;
   const arg = { id, version: current.version, body, quiet };
   let result = await send(arg);
   if (!currentScope() || !result) return null;
-  if (
-    result.draftRecovered &&
-    result.document.status === 'draft' &&
-    result.document.version === 1
-  ) {
+  if (draftReplyOutcome(salesDraftReply(result)) === 'adopt') {
     // The create retry only looked up the original draft. Save the current
     // typing explicitly against version 1, so a concurrent server edit
     // still produces a conflict instead of being silently overwritten.
@@ -91,9 +89,10 @@ export const saveDraftWithRecovery = async ({
     if (!currentScope() || !result) return null;
   }
   // Move the newest local copy synchronously before the URL changes.
-  const recoveredConflict = result.draftRecovered && result.document.version > 1;
+  const outcome = draftReplyOutcome(salesDraftReply(result));
+  const recoveredConflict = outcome === 'conflict';
   const recoveredKey = localDraftKey(tenantId, kind, result.document.id, userId);
-  if (recoveredConflict || submitted !== JSON.stringify(form.getValues())) {
+  if (recoveredConflict || submitted !== draftSnapshot(form.getValues())) {
     writeLocalDraft(
       recoveredKey,
       form.getValues(),
@@ -103,13 +102,13 @@ export const saveDraftWithRecovery = async ({
     removeLocalDraft(recoveredKey);
   }
   removeLocalDraft(localDraftKey(tenantId, kind, 'new', userId));
-  if (result.document.status !== 'draft') {
+  if (outcome === 'posted') {
     form.reset(fromDocument(result.document));
     return result;
   }
   // Another device has edited this recovered draft. Explicit conflict
   // review is required before any PATCH can overwrite its current version.
-  if (result.draftRecovered && result.document.version > 1) return null;
+  if (recoveredConflict) return null;
   if (!form.getValues('placeOfSupplyState')) {
     form.setValue('placeOfSupplyState', result.document.placeOfSupplyState);
   }

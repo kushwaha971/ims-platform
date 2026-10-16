@@ -62,3 +62,8 @@ These are queued requirements, not implemented features. The next implementation
 ## WP-02 continuation — 16 October 2026
 
 Sales SH-011 is implemented with the [durable recovery contract](09-draft-recovery-contract.md). Do not reimplement it. Next inspect purchase bills/orders: their first draft POST currently has no durable creation key; the purchase autosave completion resets current typing unconditionally. Treat these as remaining WP-02 work, with fail-before tests and reuse review before extending the protocol. Shared lifecycle mechanics should have one owner with typed sales/purchase adapters; preserve their distinct financial/stock/posting rules. WP-03 reuse inventory accompanies this work. WP-04 communications and WP-05/06 design follow; pricing/contacts stay in WP-07.
+
+
+## WP-02 continuation — purchases (16 October 2026, cloud session)
+
+Purchase bills/orders now follow the durable recovery contract (09, ADR-063 addendum), with the protocol mechanics moved to shared owners and sales migrated onto them. Remaining in WP-02: a real browser journey of purchase save/reload/record on desktop and 390 px (not possible in the cloud session: no running stack with the owner's data or browser evidence tooling was used), the physical network-interruption evidence for both editors, and the rest of SH-011's release review. Next package after that evidence: WP-03 reuse inventory (continue from the shared owners added here), then WP-04.

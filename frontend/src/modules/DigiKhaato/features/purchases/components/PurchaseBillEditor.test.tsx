@@ -1,11 +1,17 @@
-import { screen, waitFor } from '@testing-library/react';
+import { act, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { resetAllFeatureState } from 'src/redux/actions';
+import { responseObserved } from 'src/redux/slice/networkSlice';
 import { sessionLoaded } from 'src/redux/slice/sessionSlice';
 import { store } from 'src/redux/store';
 import { renderWithProviders } from 'src/tests/renderWithProviders';
 import type { ModuleCode, PermissionCode } from 'src/types/domain.types';
+
+import {
+  usePurchaseBillEditor,
+  type UsePurchaseBillEditorResult,
+} from '../hooks/usePurchaseBillEditor';
 
 import { PurchaseBillEditorPageContent } from './PurchaseBillEditorPageContent';
 
@@ -45,6 +51,7 @@ jest.mock('next/navigation', () => ({
 }));
 
 const service = jest.requireMock('../api/purchaseBillService') as {
+  createPurchaseBill: jest.Mock;
   getPurchaseBill: jest.Mock;
   updatePurchaseBill: jest.Mock;
   recordPurchaseBill: jest.Mock;
@@ -152,8 +159,10 @@ const DRAFT: PurchaseBill = {
 
 const envelope = (
   bill: PurchaseBill,
-  partyBalance: string | null = null
+  partyBalance: string | null = null,
+  draftRecovered = false
 ): PurchaseBillEnvelope => ({
+  draftRecovered,
   bill,
   warnings: [],
   partyBalance,
@@ -357,4 +366,192 @@ it('never offers input tax credit to a composition shop (FR-11)', async () => {
   expect(await screen.findByTestId('purchase-grand-total')).toHaveTextContent('₹2,921.00');
   expect(screen.queryByText('Input tax credit')).not.toBeInTheDocument();
   expect(screen.getAllByText(/CGST \(cost\)/).length).toBeGreaterThan(0);
+});
+
+describe('SH-011 — first-save recovery and one save lane (ADR-063)', () => {
+  /**
+   * The purchase editor saves from four places: autosave, the supplier pick,
+   * "Save draft" and the save before Record. Before ADR-063 reached purchases a
+   * first POST carried no identity and nothing serialised the four, so a lost
+   * reply or two overlapping saves made a SECOND draft bill of the same paper.
+   */
+  let editor: UsePurchaseBillEditorResult;
+  function Probe({
+    kind = 'purchase_bill',
+  }: Readonly<{ kind?: 'purchase_bill' | 'purchase_order' }>) {
+    editor = usePurchaseBillEditor(null, kind);
+    return null;
+  }
+  const fresh = (version = 1, over: Partial<PurchaseBill> = {}) =>
+    envelope({ ...DRAFT, version, ...over }, null, false);
+  const recovered = (version: number, over: Partial<PurchaseBill> = {}) =>
+    envelope({ ...DRAFT, version, ...over }, null, true);
+  const open = async (kind?: 'purchase_bill' | 'purchase_order') => {
+    const view = renderWithProviders(<Probe kind={kind} />);
+    await waitFor(() => expect(editor.editor.context).not.toBeNull());
+    return view;
+  };
+  // A lost reply marks the network degraded, which correctly pauses autosave;
+  // each scenario starts online.
+  beforeEach(() => {
+    store.dispatch(responseObserved());
+  });
+  const deferred = () => {
+    let resolve!: (value: unknown) => void;
+    const promise = new Promise((done) => {
+      resolve = done;
+    });
+    return { promise, resolve };
+  };
+
+  it('retries a lost first save with the same creation key', async () => {
+    await open();
+    service.createPurchaseBill.mockRejectedValueOnce(new Error('lost response'));
+    service.createPurchaseBill.mockResolvedValueOnce(fresh());
+    await act(async () => {
+      await editor.save(true);
+    });
+    await act(async () => {
+      await editor.save(true);
+    });
+    const first = service.createPurchaseBill.mock.calls[0]?.[0] as Record<string, unknown>;
+    const retry = service.createPurchaseBill.mock.calls[1]?.[0] as Record<string, unknown>;
+    expect(first.client_draft_key).toEqual(expect.any(String));
+    expect(retry.client_draft_key).toBe(first.client_draft_key);
+    expect(editor.editor.documentId).toBe('b1');
+  });
+
+  it('queues an overlapping save behind the first create instead of POSTing twice', async () => {
+    await open('purchase_order');
+    const pending = deferred();
+    service.createPurchaseBill.mockImplementationOnce(() => pending.promise);
+    let first!: Promise<unknown>;
+    act(() => {
+      first = editor.save(true);
+    });
+    await waitFor(() => expect(service.createPurchaseBill).toHaveBeenCalledTimes(1));
+    act(() => editor.form.setValue('notes', 'typed during save', { shouldDirty: true }));
+    let second!: Promise<unknown>;
+    act(() => {
+      second = editor.save(false);
+    });
+    await act(async () => {
+      pending.resolve(fresh(1, { kind: 'purchase_order' }));
+      await first;
+      await second;
+    });
+    expect(service.createPurchaseBill).toHaveBeenCalledTimes(1);
+    expect(service.createPurchaseBill.mock.calls[0]?.[1]).toMatchObject({ kind: 'purchase_order' });
+    expect(service.updatePurchaseBill).toHaveBeenCalledWith(
+      'b1',
+      expect.objectContaining({ version: 1, notes: 'typed during save' }),
+      expect.objectContaining({ kind: 'purchase_order' })
+    );
+  });
+
+  it('adopts a recovered untouched draft with an explicit version-1 PATCH of current typing', async () => {
+    await open();
+    act(() => editor.form.setValue('notes', 'current typing', { shouldDirty: true }));
+    service.createPurchaseBill.mockResolvedValueOnce(recovered(1, { notes: 'old body' }));
+    service.updatePurchaseBill.mockResolvedValueOnce(fresh(2, { notes: 'current typing' }));
+    let result: unknown;
+    await act(async () => {
+      result = await editor.save(false);
+    });
+    expect(service.updatePurchaseBill).toHaveBeenCalledWith(
+      'b1',
+      expect.objectContaining({ version: 1, notes: 'current typing' }),
+      expect.anything()
+    );
+    expect(result).not.toBeNull();
+    expect(editor.editor.version).toBe(2);
+    expect(editor.editor.saveState).toBe('saved');
+  });
+
+  it('asks for review instead of overwriting a recovered draft edited elsewhere', async () => {
+    await open();
+    service.createPurchaseBill.mockResolvedValueOnce(recovered(3));
+    let result: unknown;
+    await act(async () => {
+      result = await editor.save(false);
+    });
+    expect(result).toBeNull();
+    expect(editor.editor.saveState).toBe('conflict');
+    await act(async () => {
+      await editor.save(true);
+    });
+    expect(service.updatePurchaseBill).not.toHaveBeenCalled();
+  });
+
+  it('never records again a recovered bill that was already recorded', async () => {
+    await open();
+    const RECORDED_BILL = {
+      ...DRAFT,
+      status: 'recorded' as const,
+      number: 'PB/26-27/0009',
+      version: 2,
+    };
+    service.createPurchaseBill.mockResolvedValueOnce(envelope(RECORDED_BILL, null, true));
+    act(() => {
+      editor.form.setValue('partyId', 'p1', { shouldDirty: true });
+      editor.form.setValue('supplierInvoiceNumber', 'AT/778');
+      editor.form.setValue('documentDate', '2026-09-18');
+    });
+    let result: PurchaseBillEnvelope | null = null;
+    await act(async () => {
+      result = await editor.record(null);
+    });
+    expect(service.recordPurchaseBill).not.toHaveBeenCalled();
+    expect(service.updatePurchaseBill).not.toHaveBeenCalled();
+    expect((result as PurchaseBillEnvelope | null)?.bill.number).toBe('PB/26-27/0009');
+    expect(editor.editor.recorded?.bill.id).toBe('b1');
+  });
+
+  it('keeps typing made during a slow autosave dirty, and saves it next', async () => {
+    jest.useFakeTimers();
+    try {
+      await open();
+      const pending = deferred();
+      service.createPurchaseBill.mockImplementationOnce(() => pending.promise);
+      service.updatePurchaseBill.mockResolvedValueOnce(fresh(2));
+      act(() => editor.form.setValue('partyId', 'p1', { shouldDirty: true }));
+      await act(async () => {
+        jest.advanceTimersByTime(10_000);
+      });
+      expect(service.createPurchaseBill).toHaveBeenCalledTimes(1);
+      act(() => editor.form.setValue('notes', 'typed while saving', { shouldDirty: true }));
+      await act(async () => {
+        pending.resolve(fresh());
+      });
+      expect(editor.form.formState.isDirty).toBe(true);
+      await act(async () => {
+        jest.advanceTimersByTime(10_000);
+      });
+      expect(service.updatePurchaseBill).toHaveBeenCalledWith(
+        'b1',
+        expect.objectContaining({ version: 1, notes: 'typed while saving' }),
+        expect.anything()
+      );
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it('ignores a late save reply after the editor and account are gone', async () => {
+    const view = await open();
+    const pending = deferred();
+    service.createPurchaseBill.mockImplementationOnce(() => pending.promise);
+    act(() => {
+      void editor.save(true);
+    });
+    await waitFor(() => expect(service.createPurchaseBill).toHaveBeenCalledTimes(1));
+    view.unmount();
+    act(() => {
+      store.dispatch(resetAllFeatureState());
+    });
+    await act(async () => {
+      pending.resolve(fresh());
+    });
+    expect(store.getState().purchaseBillEditor?.documentId ?? null).toBeNull();
+  });
 });

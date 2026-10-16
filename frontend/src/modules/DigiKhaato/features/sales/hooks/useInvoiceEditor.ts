@@ -6,6 +6,7 @@ import { useForm, useWatch, type UseFormReturn } from 'react-hook-form';
 import { useStore } from 'react-redux';
 
 import { useAppDispatch, useAppSelector } from 'src/hooks/useAppStore';
+import { useDraftSaveQueue } from 'src/hooks/useDraftSaveQueue';
 import { useIdempotencyKey } from 'src/hooks/useIdempotencyKey';
 import { usePermissions } from 'src/hooks/usePermissions';
 import { useTranslation } from 'src/hooks/useTranslation';
@@ -85,9 +86,7 @@ export const useInvoiceEditor = (
   const user = useAppSelector(selectSessionUser);
   const tenantId = tenant?.id;
   const userId = user?.id;
-  const saveQueue = useRef<Promise<unknown>>(Promise.resolve());
-  const generation = useRef(0);
-  const activeSave = useRef<{ abort: () => void } | null>(null);
+  const saves = useDraftSaveQueue(tenantId, userId);
   const editor = useAppSelector(selectInvoiceEditor);
   const timezone = useAppSelector(selectTenantTimezone);
   const { can, hasModule } = usePermissions();
@@ -128,7 +127,7 @@ export const useInvoiceEditor = (
 
   // Load: the shop's context always, the draft when editing one.
   useEffect(() => {
-    generation.current += 1;
+    saves.invalidate();
     seeded.current = null;
     dispatch(editorReset());
     const context = dispatch(fetchSalesContext(today));
@@ -138,12 +137,11 @@ export const useInvoiceEditor = (
         ? dispatch(fetchFlowDocument({ kind, id: documentId }))
         : dispatch(fetchInvoice(documentId));
     return () => {
-      generation.current += 1;
-      activeSave.current?.abort();
+      saves.invalidate();
       context.abort();
       draft?.abort();
     };
-  }, [dispatch, documentId, today, kind, tenantId, userId]);
+  }, [dispatch, documentId, today, kind, tenantId, userId, saves]);
 
   // Seed the form ONCE per editor: from the draft, or from the shop's defaults.
   const { context, document } = editor;
@@ -189,17 +187,10 @@ export const useInvoiceEditor = (
   );
 
   const save = useCallback(
-    (quiet: boolean): Promise<SalesDocumentEnvelope | null> => {
-      const epoch = generation.current;
-      const currentScope = () => {
-        const session = store.getState().session;
-        return (
-          epoch === generation.current &&
-          tenantId === session.activeTenant?.id &&
-          userId === session.user?.id
-        );
-      };
-      const run = async (): Promise<SalesDocumentEnvelope | null> => {
+    (quiet: boolean): Promise<SalesDocumentEnvelope | null> =>
+      // Manual save, autosave and save-before-issue share this queue. Each task
+      // reads the latest server id/version and current form when it starts.
+      saves.enqueue(async (currentScope) => {
         try {
           const { saveDraftWithRecovery } = await import('./draftRecovery');
           return await saveDraftWithRecovery({
@@ -215,7 +206,7 @@ export const useInvoiceEditor = (
               const pending = isQuoteKind(kind)
                 ? dispatch(saveEstimateDraft({ ...arg, kind }))
                 : dispatch(saveInvoiceDraft(arg));
-              activeSave.current = pending;
+              saves.track(pending);
               const result = await pending;
               return saveInvoiceDraft.fulfilled.match(result) ||
                 saveEstimateDraft.fulfilled.match(result)
@@ -229,14 +220,8 @@ export const useInvoiceEditor = (
           if (currentScope()) dispatch(saveUnavailable());
           return null;
         }
-      };
-      // Manual save, autosave and save-before-issue share this queue. Each task
-      // reads the latest server id/version and current form when it starts.
-      const pending = saveQueue.current.then(run, run);
-      saveQueue.current = pending;
-      return pending;
-    },
-    [dispatch, documentId, form, kind, store, tenantId, userId]
+      }),
+    [dispatch, documentId, form, kind, store, tenantId, userId, saves]
   );
 
   const issue = useCallback(
@@ -277,8 +262,7 @@ export const useInvoiceEditor = (
 
   /** "New bill" after an issue on `/new`: a blank editor without a page load (Ctrl+N, §6). */
   const restart = useCallback(() => {
-    generation.current += 1;
-    activeSave.current?.abort();
+    saves.invalidate();
     dispatch(editorReset());
     seeded.current = 'new';
     form.reset(
@@ -289,7 +273,7 @@ export const useInvoiceEditor = (
       )
     );
     idempotency.rotate();
-  }, [dispatch, form, today, context, idempotency, kind]);
+  }, [dispatch, form, today, context, idempotency, kind, saves]);
 
   return { kind, form, values, preview, editor, today, canWrite, save, issue, restart };
 };

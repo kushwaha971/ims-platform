@@ -11,6 +11,7 @@ from typing import Any
 
 from rest_framework import serializers
 
+from apps.common.draft_creation import client_draft_key_field
 from apps.sales.models import SalesDocument, SalesDocumentLine
 from apps.sales.serializers.common import mask_mobile, person, refuse_origin_keys
 from apps.sales.serializers.links import document_links
@@ -52,7 +53,7 @@ class PaymentInputSerializer(serializers.Serializer):
 
 
 class InvoiceWriteSerializer(serializers.Serializer):
-    client_draft_key = serializers.RegexField(r"^[A-Za-z0-9_-]{1,64}$", required=False)
+    client_draft_key = client_draft_key_field()
     kind = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     party_id = serializers.UUIDField(required=False, allow_null=True)
     walk_in_name = serializers.CharField(

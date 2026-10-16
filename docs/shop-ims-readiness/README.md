@@ -27,7 +27,7 @@ Shared message editing and code-reuse requirements extend to Shop, Library, Lend
 
 Source: [Shop audit](../review/06-shop-user-audit.md), [QA handoff](../../QA.md), and [existing decisions](../DECISIONS.md). Last recorded baseline: 1,542 Shop backend tests, 4,096 frontend tests, build/types/locale/contrast/bundle checks passed. This baseline precedes the future work here and is not evidence that these requirements are implemented.
 
-SH-009 is resolved by the explicit owner choice on16 October2026: keep weighted-average stock costing and correct conflicting return documentation. Known open work: desktop billing density SH-010; purchase-draft recovery/release proof (sales SH-011 implementation is documented); mobile price visibility SH-012; supplier-return proof SH-013; terminology/paging SH-014. Local audit fixes require release verification; a journal entry saying “fixed locally” is not proof of deployment.
+SH-009 is resolved by the explicit owner choice on16 October2026: keep weighted-average stock costing and correct conflicting return documentation. Known open work: desktop billing density SH-010; SH-011 release proof (sales and purchase recovery are implemented and documented; purchase browser journey pending); mobile price visibility SH-012; supplier-return proof SH-013; terminology/paging SH-014. Local audit fixes require release verification; a journal entry saying “fixed locally” is not proof of deployment.
 
 ## Agent entry point
 
@@ -43,4 +43,4 @@ Use the [portable coding-agent prompt](AGENT_START_PROMPT.md) with this reposito
 
 Hard gates: no unresolved critical/high correctness or privacy defect in enabled scope; no missing editable outgoing-message path; no unreviewed high-risk duplicated business logic; both independent scores at least 9/10. A good average cannot compensate for wrong money, data leakage or unusable billing.
 
-Implementation detail: [Sales draft recovery contract](09-draft-recovery-contract.md), including API semantics, retention, rollback and evidence limits.
+Implementation detail: [Draft recovery contract (sales and purchases)](09-draft-recovery-contract.md), including API semantics, retention, rollback and evidence limits.

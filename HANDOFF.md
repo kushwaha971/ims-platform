@@ -4,6 +4,8 @@ Last updated: 5 Oct 2026 (§0 is live); older sections last revised 29 Sep 2026 
 
 ---
 
+> **16 Oct 2026: the current work is the Shop/IMS readiness programme.** Start from `docs/shop-ims-readiness/AGENT_START_PROMPT.md` ("Current handoff") and the newest `QA.md` entry; they supersede the §0 checklist below for what to do next. §0 remains the record of the 12 Oct screen-design work and the owner's standing rules.
+
 ## 0. RESUME HERE — live state (updated 12 Oct 2026; the owner pushes `dev`)
 
 **This section is the current state and wins over anything older below.** The local repo is the source of truth. Before changing anything:

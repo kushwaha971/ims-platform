@@ -1,22 +1,32 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useForm, useWatch, type UseFormReturn } from 'react-hook-form';
+import { useStore } from 'react-redux';
 import { ValidationError } from 'yup';
 
 import { useAppDispatch, useAppSelector } from 'src/hooks/useAppStore';
+import { useDraftSaveQueue } from 'src/hooks/useDraftSaveQueue';
 import { useIdempotencyKey } from 'src/hooks/useIdempotencyKey';
 import { usePermissions } from 'src/hooks/usePermissions';
 import { useTranslation } from 'src/hooks/useTranslation';
 import { selectNetworkImpaired } from 'src/redux/slice/networkSlice';
-import { selectTenantTimezone } from 'src/redux/slice/sessionSlice';
+import {
+  selectActiveTenant,
+  selectSessionUser,
+  selectTenantTimezone,
+} from 'src/redux/slice/sessionSlice';
+import type { RootState } from 'src/redux/store';
 import { applyServerErrors } from 'src/utils/applyServerErrors';
 import { todayInTenantTz } from 'src/utils/dates';
+import { draftReplyOutcome, draftSnapshot, settleAutosave } from 'src/utils/draftCreation';
+import { newRequestId } from 'src/utils/requestId';
 
 import { computeDocumentTotals, type EngineResult } from '../../sales/view-model/taxEngine';
 import { PURCHASE_AUTOSAVE_MS } from '../constants/purchaseConstants';
 import {
+  purchaseDraftReply,
   purchaseEditorReset,
   selectPurchaseBillEditor,
   type PurchaseBillEditorState,
@@ -28,6 +38,7 @@ import {
   movePurchaseOrder,
   recordPurchaseBill,
   savePurchaseBillDraft,
+  type SavePurchaseDraftArg,
 } from '../redux/purchaseBillThunk';
 import { usePurchaseBillSchemas } from '../validation/purchaseBillSchemas';
 import {
@@ -65,6 +76,13 @@ const FORM_FIELDS: readonly string[] = [
  * FR-8 autosave lives here too: 10 s after the last change, while the form is
  * dirty and the bill means something (a supplier or a complete line), the
  * draft is PATCHed quietly; the header shows the state.
+ *
+ * SH-011 / ADR-063 — every save (autosave, supplier pick, "Save draft", the
+ * save before Record) runs in ONE queue, and the first create carries a
+ * creation key kept for this editor session, so a retry after a lost reply
+ * finds the same draft instead of making a second. The key lives in memory
+ * only: this editor keeps no device copy, so a reload starts a new bill; a
+ * stored "new" key would let a second tab adopt the first tab's draft.
  */
 export interface UsePurchaseBillEditorResult {
   readonly form: UseFormReturn<PurchaseBillFormValues>;
@@ -92,7 +110,13 @@ export const usePurchaseBillEditor = (
   kind: PurchaseKind = 'purchase_bill'
 ): UsePurchaseBillEditorResult => {
   const dispatch = useAppDispatch();
+  const store = useStore<RootState>();
   const { t } = useTranslation();
+  const tenantId = useAppSelector(selectActiveTenant)?.id;
+  const userId = useAppSelector(selectSessionUser)?.id;
+  const saves = useDraftSaveQueue(tenantId, userId);
+  /** The first create's identity, minted on the first save of a new bill. */
+  const creationKey = useRef<string | null>(null);
   const editor = useAppSelector(selectPurchaseBillEditor);
   const timezone = useAppSelector(selectTenantTimezone);
   const offline = useAppSelector(selectNetworkImpaired);
@@ -108,19 +132,25 @@ export const usePurchaseBillEditor = (
   });
   const values = useWatch({ control: form.control }) as PurchaseBillFormValues;
 
-  // Load: the shop's context always, the draft when editing one.
+  // Seed the form ONCE per editor: from the draft, or from the shop's defaults.
+  const seeded = useRef<string | null>(null);
+
+  // Load: the shop's context always, the draft when editing one. A different
+  // document, business or user is a new editor: queued saves are abandoned.
   useEffect(() => {
+    saves.invalidate();
+    creationKey.current = null;
+    seeded.current = null;
     dispatch(purchaseEditorReset());
     const context = dispatch(fetchPurchaseContext(today));
     const draft = documentId ? dispatch(fetchPurchaseBill({ id: documentId, kind })) : null;
     return () => {
+      saves.invalidate();
       context.abort();
       draft?.abort();
     };
-  }, [dispatch, documentId, today, kind]);
+  }, [dispatch, documentId, today, kind, tenantId, userId, saves]);
 
-  // Seed the form ONCE per editor: from the draft, or from the shop's defaults.
-  const seeded = useRef<string | null>(null);
   const { context, document } = editor;
   useEffect(() => {
     if (documentId) {
@@ -152,27 +182,53 @@ export const usePurchaseBillEditor = (
     [values, context]
   );
 
-  const { documentId: savedId, version } = editor;
+  const { documentId: savedId } = editor;
   const save = useCallback(
-    async (quiet: boolean): Promise<PurchaseBillEnvelope | null> => {
-      const result = await dispatch(
-        savePurchaseBillDraft({
-          kind,
-          id: savedId,
-          version,
-          body: toPurchaseWireBody(form.getValues()),
-          quiet,
-        })
-      );
-      if (!savePurchaseBillDraft.fulfilled.match(result)) {
-        if (!quiet && result.payload?.code === 'validation_error') {
-          applyServerErrors(result.payload, form.setError, FORM_FIELDS);
+    (quiet: boolean): Promise<PurchaseBillEnvelope | null> =>
+      saves.enqueue(async (currentScope) => {
+        // Read when the task STARTS: an earlier save in the queue may have
+        // just created the draft or moved its version.
+        const current = selectPurchaseBillEditor(store.getState());
+        if (
+          current.saveState === 'conflict' ||
+          current.recorded ||
+          (documentId && current.loadStatus !== 'succeeded')
+        )
+          return null;
+        const send = async (
+          arg: Omit<SavePurchaseDraftArg, 'kind' | 'quiet'>
+        ): Promise<PurchaseBillEnvelope | null> => {
+          const pending = dispatch(savePurchaseBillDraft({ ...arg, kind, quiet }));
+          saves.track(pending);
+          const result = await pending;
+          if (!currentScope()) return null;
+          if (savePurchaseBillDraft.fulfilled.match(result)) return result.payload;
+          if (!quiet && result.payload?.code === 'validation_error') {
+            applyServerErrors(result.payload, form.setError, FORM_FIELDS);
+          }
+          return null;
+        };
+        const id = current.documentId ?? documentId;
+        const body = toPurchaseWireBody(form.getValues());
+        if (!id) {
+          creationKey.current ??= newRequestId();
+          body.client_draft_key = creationKey.current;
         }
-        return null;
-      }
-      return result.payload;
-    },
-    [dispatch, savedId, version, form, kind]
+        let result = await send({ id, version: current.version, body });
+        if (!result) return null;
+        const outcome = draftReplyOutcome(purchaseDraftReply(result));
+        if (outcome === 'adopt') {
+          // The retry only looked the draft up. Save today's typing explicitly
+          // against version 1, so an edit made elsewhere still conflicts.
+          result = await send({
+            id: result.bill.id,
+            version: 1,
+            body: toPurchaseWireBody(form.getValues()),
+          });
+        }
+        return outcome === 'conflict' ? null : result;
+      }),
+    [saves, store, documentId, dispatch, kind, form]
   );
 
   /** §10 — the header rules at Record only; a draft is saved half-entered (FR-8). */
@@ -201,6 +257,8 @@ export const usePurchaseBillEditor = (
       if (!(await validate())) return null;
       const saved = await save(false);
       if (!saved) return null;
+      // Recovered as already recorded/sent: show it, never post it again.
+      if (saved.bill.status !== 'draft') return saved;
       if (kind === 'purchase_order') {
         // Shop item 3 — an order's "Record" is Send: numbered, owing nothing, no stock.
         const sent = await dispatch(
@@ -252,27 +310,31 @@ export const usePurchaseBillEditor = (
   const blocked =
     offline || editor.saveState === 'conflict' || editor.recording || !!editor.recorded;
   const saving = useRef(false);
+  const [saveRevision, setSaveRevision] = useState(0);
   useEffect(() => {
     if (!dirty || blocked || !meaningful || !canWrite) return undefined;
     const timer = window.setTimeout(() => {
       if (saving.current) return;
       saving.current = true;
+      const submitted = draftSnapshot(form.getValues());
       void save(true).then((result) => {
         saving.current = false;
-        // Keep the typed values; clear only the dirty flag so the next change re-arms.
-        if (result) form.reset(form.getValues(), { keepValues: true });
+        // Only what was submitted is saved; typing since stays dirty and re-arms.
+        if (result && settleAutosave(form, submitted)) setSaveRevision((n) => n + 1);
       });
     }, PURCHASE_AUTOSAVE_MS);
     return () => window.clearTimeout(timer);
-  }, [values, dirty, blocked, meaningful, canWrite, save, form]);
+  }, [values, dirty, blocked, meaningful, canWrite, save, form, saveRevision]);
 
   /** "New bill" after recording on `/new`: a blank editor without a page load. */
   const restart = useCallback(() => {
+    saves.invalidate();
+    creationKey.current = null;
     dispatch(purchaseEditorReset());
     seeded.current = 'new';
     form.reset(emptyPurchaseForm(today, context?.gstType === 'regular'));
     idempotency.rotate();
-  }, [dispatch, form, today, context, idempotency]);
+  }, [dispatch, form, today, context, idempotency, saves]);
 
   return {
     form,

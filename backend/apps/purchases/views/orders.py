@@ -40,7 +40,7 @@ from apps.purchases.serializers.bill import (
     BillWriteSerializer,
 )
 from apps.purchases.services import purchase_orders as service
-from apps.purchases.views.bills import _envelope
+from apps.purchases.views.bills import _envelope, draft_created
 
 #: Not on order any more: a draft, or one called off.
 Q_NOT_COUNTED = Q(status__in=("draft", "cancelled"))
@@ -54,9 +54,12 @@ class _CancelSerializer(serializers.Serializer):
     reason = serializers.CharField(max_length=160, allow_blank=True)
 
 
-def _order_envelope(document: PurchaseDocument, *, warnings: list | None = None) -> dict:
+def _order_envelope(
+    document: PurchaseDocument, *, warnings: list | None = None, extra: dict | None = None
+) -> dict:
     document = detail_queryset(tenant=document.tenant, kinds=ORDER_KINDS).get(pk=document.pk)
-    return {"data": BillReadSerializer(document).data, "meta": {"warnings": warnings or []}}
+    meta = {"warnings": warnings or [], **(extra or {})}
+    return {"data": BillReadSerializer(document).data, "meta": meta}
 
 
 class PurchaseOrderViewSet(
@@ -132,8 +135,7 @@ class PurchaseOrderViewSet(
         serializer.is_valid(raise_exception=True)
         payload = {k: v for k, v in serializer.validated_data.items() if k != "payment"}
         result = service.create_order(ctx=Ctx.from_request(request), payload=payload)
-        body = _order_envelope(result["document"], warnings=result["warnings"])
-        return StandardResponse.created(body["data"], meta=body["meta"])
+        return draft_created(result, _order_envelope)
 
     def partial_update(self, request: Any, *args: Any, **kwargs: Any) -> Any:
         serializer = BillWriteSerializer(data=request.data, partial=True)

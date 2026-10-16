@@ -85,38 +85,58 @@ all documented sign-offs and both scorecards; passing many tests alone is not en
 
 Append: “Resume from the latest verified QA.md checkpoint and acceptance tracker. Inspect the working tree, current diff and running services first. Preserve completed work and unresolved decisions; do not restart the programme or overwrite unrelated changes.”
 
-## Current handoff — 16 October 2026
+## Current handoff — 16 October 2026 (after purchase recovery)
 
-Resume **WP-02**, functionality/data reliability with regression testing. Continue
-autonomously through authorized work; a passing checkpoint is not a reason to stop.
-Do not move pricing/contact onboarding ahead of WP-07. Read the newest QA.md entry
-and git history/status for exact published commits and final gate results.
+Still **WP-02**, functionality/data reliability. Continue autonomously through
+authorized work; a passing checkpoint is not a reason to stop. Do not move
+pricing/contact onboarding ahead of WP-07. Read the newest QA.md entry and git
+history for exact commits and gate results.
 
-Completed: owner resolved D-01 (weighted-average stock costing, original-bill
-supplier credit); corrected docs and numeric replay tests. Sales drafts preserve
-their route family on reload, retain newer typing during a slow save, and now
-have durable first-create identity/recovery. Read
-09-draft-recovery-contract.md and ADR-063 before touching that protocol.
+Completed in WP-02 so far: D-01 resolved (weighted-average stock costing,
+original-bill supplier credit). Sales drafts (invoice/bill of supply, estimate,
+order, challan) and now **purchase bills and orders** have durable first-create
+identity and recovery (ADR-063 + its addendum, 09-draft-recovery-contract.md).
+Read both before touching that protocol. The sales claim table was missing
+from the tenant export/deletion registry; that is fixed and both tables are
+registered — any new claim table must be registered too.
 
-**Next: purchase bill/order recovery**, still in WP-02. Source inspection found
-unprotected first draft POSTs and the same unconditional autosave dirty reset in
-purchases/hooks/usePurchaseBillEditor.ts. Demonstrate failures, then reuse shared
-lifecycle mechanics with typed domain adapters. Do not copy the whole sales
-editor or import the sales financial model into purchases. Preserve payable,
-stock receipt, recording and supplier duplicate-number rules.
+Shared owners (WP-03 — reuse these, do not copy them):
+- server: `backend/apps/common/draft_creation.py` (claim / recovered / attach,
+  `client_draft_key_field`) and `apps.common.models.DraftCreationBase`; each app
+  keeps its own claim table with a FK to its own document.
+- client: `src/hooks/useDraftSaveQueue.ts` (one serial save lane, scope and
+  teardown) and `src/utils/draftCreation.ts` (`draftReplyOutcome`,
+  `draftSnapshot`, `settleAutosave`); adapters `salesDraftReply`
+  (invoiceEditorSlice) and `purchaseDraftReply` (purchaseBillEditorSlice).
+- browser check: `node e2e/purchase-recovery-look.mjs` on a live stack.
 
-Sales recovery owners: hooks/useInvoiceEditor.ts and its first-save lazy helper
-hooks/draftRecovery.ts, useDraftAutosave.ts, invoiceEditorSlice.ts,
-src/utils/localDrafts.ts, backend/apps/sales/services/documents.py and its thin
-estimate/order/challan adapters. Claims/tombstones survive short cache expiry;
-recovery reads current server data without applying stale request contents.
-Version-1 recovery saves current typing by explicit optimistic PATCH; newer
-versions require conflict review. Never replay posting as part of recovery.
+**Next, in order:**
+1. Remaining WP-02 evidence: a lost-reply browser check for a sales editor
+   (mirror `e2e/purchase-recovery-look.mjs` on `/sales/invoices/new`), the
+   purchase Record-after-lost-reply path in a browser, and physical-device /
+   real network interruption when a device is available. Then mark SH-011's
+   release review in 08-acceptance-and-evidence-tracker.md.
+2. WP-03 reuse inventory: continue from the shared owners above; list other
+   duplicated editor lifecycle code (sales vs purchases autosave hooks still
+   differ: sales has device copies, purchases do not) and record intentional
+   exceptions in 04-engineering-and-code-reuse.md.
+3. Then WP-04 (editable messages) per 07-delivery-roadmap.md.
 
-Use isolated fixtures and preserve unrelated work. The owner requested pushing
-tested code to dev and a continuation prompt; inspect current publication status
-before repeating a push. Do not claim Railway deployed without verification.
-Never wipe real databases, send real messages or access phone contacts in QA.
-Keep QA.md, the acceptance tracker and this handoff current. Full release/device
-sign-off, purchase recovery and multiple unsynced new-tab behavior are not proved
-by sales unit tests. Design/UX readiness is not yet 9/10.
+Known limits (do not claim otherwise): the purchase editor keeps no device
+copy, so its key is in memory only and a full reload after a lost reply starts
+a new bill (the first draft stays under Drafts). Multiple unsynced new sales
+drafts in separate tabs still share one device slot. Railway deployment,
+physical-device evidence and 9/10 readiness are not verified.
+
+Environment notes for a cloud sandbox (no owner .env): start PostgreSQL 16
+locally with role/db `udhaarbook`/`udhaarbook`, `pip install -r
+backend/requirements/dev.txt`, set `UB_TEST_DB_NAME` per concurrent pytest
+run, build the frontend with `.env.local.example` exported (the build refuses
+without `NEXT_PUBLIC_API_BASE_URL`), and run Playwright with
+`PW_CHROMIUM=/opt/pw-browsers/chromium`. Measure bundle deltas against dev's
+own build in the same environment before raising a budget. `dues`'
+5,000-schedule timing test can exceed 60 s on a shared 4-core sandbox.
+
+Use isolated fixtures and preserve unrelated work. Never wipe real databases,
+send real messages or access phone contacts in QA. Keep QA.md, the acceptance
+tracker and this handoff current.

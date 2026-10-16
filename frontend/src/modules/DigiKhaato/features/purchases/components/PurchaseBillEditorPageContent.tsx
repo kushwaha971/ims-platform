@@ -293,9 +293,11 @@ export function PurchaseBillEditorPageContent({
       <UbConfirmDialog
         open={server.saveState === 'conflict'}
         onOpenChange={(open) => {
-          // "Use the saved one": reopen the draft as the server has it.
+          // "Use the saved one": reopen the draft as the server has it. On /new a
+          // recovered draft (ADR-063) is opened by its id, which a reload would lose.
           if (open) return;
-          window.location.reload();
+          if (!documentId && server.documentId) router.replace(`${home}/${server.documentId}/edit`);
+          else window.location.reload();
         }}
         title={t('purchases.draft.conflictTitle')}
         description={t('purchases.draft.conflictBody')}

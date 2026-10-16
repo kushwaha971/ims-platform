@@ -47,6 +47,26 @@ class TenantModel(TimeStampedModel):
         abstract = True
 
 
+class DraftCreationBase(TenantModel):
+    """Durable first-create identity of an autosaved draft (ADR-063).
+
+    A concrete subclass adds a nullable one-to-one `document` with
+    `on_delete=SET_NULL` (a null document is a discarded-draft tombstone) and a
+    unique constraint on `(tenant, actor_key, family, key)`, which is the lock
+    two racing first saves meet. `actor_key` keeps the actor's immutable id even
+    after the account goes, so a new account never inherits its retry namespace.
+    No form, price or contact data is copied here. `apps.common.draft_creation`
+    is the one owner of the claim/recover protocol.
+    """
+
+    actor_key = models.CharField(max_length=64)
+    family = models.CharField(max_length=24)
+    key = models.CharField(max_length=64)
+
+    class Meta:
+        abstract = True
+
+
 class SoftDeleteModel(models.Model):
     """Master data only (Part 21 §21.6).
 
