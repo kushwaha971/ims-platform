@@ -43,8 +43,8 @@ Channel: W = WhatsApp handoff, S = device SMS, C = copy, N = platform share, T =
 | M-07 | Lending | Borrower reminder / receipt (`lending/MessageDialog`) | W S T | Server (`lending/services/messages`) with `text` | Borrower | **Yes** (reference) | Recorded with text | Existing `MessageDialog.test.tsx` |
 | M-08 | Library | Member fee / receipt / custom message (`library/MessageDialog`) | W | Server (`fee_messages.preview/send`, `custom_body`) | Member or guardian | **Yes** | Recorded | Existing tests |
 | M-09 | Library | Bulk fee message (`BulkMessageDrawer`) | W, one tap per member | Server `bulk_prepare` with shared text | Audience | **Yes**, one shared text; no per-member override | Recorded per tap | MSG-07 per-recipient override not built |
-| M-10 | Library | Counter slip after issue (`CounterPrompts`) | W | Server slip `waUrl` | Member | **No** | Not recorded as a message | **Open**: move onto a composer |
-| M-11 | Payments | UPI pay-link share (`UpiPayQrDialog`) | N (image + text), C | Client `payLink.shareText` | Chosen in the OS sheet | **No** | Link recorded | **Open**: the OS sheet takes the text as given; offer the composer for the text part |
+| M-10 | Library | Counter slip after issue (`CounterPrompts` → `FinishDialog`) | W | Server slip text | Member | **Yes**, since WP-04: the slip sits in `UbMessageBox` and the link is built from what it holds; blank offers no link | Not recorded (a share, not a reminder, by the server's design) | `FinishDialog.test.tsx` (failed before); browser `e2e/library-slip-look.mjs` 22/22 at 360/1280 px |
+| M-11 | Payments | UPI pay-link share (`UpiPayQrDialog`) | N (image + text), C | Client `payLink.shareText` | Chosen in the OS sheet | **Yes**, since WP-04: the words under the QR are editable and Share hands the phone exactly them; blank disables Share (Copy link carries only the link and stays) | Link recorded | `UpiPayQrDialog.test.tsx` (failed before); browser `e2e/paylink.mjs` at 390 px |
 | M-12 | Shop suppliers | Payment confirmation, payable follow-up, purchase/return document share | — | — | — | Not built | — | **Not built**: no supplier-side outgoing message exists yet. It must use the composer when added (WP-04 / WP-08). |
 | M-13 | Platform | Plan "contact support" link (`planDisplay`) | W | Client | YourKhata support | Not merchant-to-customer | — | Out of MSG-01 scope (merchant to us) |
 | M-14 | Platform | Sign-in OTP (Message Central) | Provider SMS | Server | The user themselves | Not editable by design | Provider | Out of scope: a security message (05: in-app validation/security alerts) |
@@ -52,6 +52,6 @@ Channel: W = WhatsApp handoff, S = device SMS, C = copy, N = platform share, T =
 ## Next
 
 1. ~~M-06 bulk reminders editable (MSG-07/08)~~ and ~~M-01/M-02 final text in the log (MSG-10)~~: done 16 Oct 2026. `final_text` / `with_final_text` in `notifications/services/whatsapp_text.py` is the one owner of the edited-text rule (blank, over 900 characters, NUL, not a string), and Lending's dialog uses it too. A provider SMS refuses `text`, because it goes out in its approved words.
-2. M-10 and M-11 onto a composer.
+2. ~~M-10 and M-11 onto a composer~~: done 16 Oct 2026. Looking at the phone screenshot found the blank-message reason hidden under the QR dialog's sticky footer; `UbMessageBox` now scrolls it into view, and `paylink.mjs` measures it with `elementFromPoint`.
 3. M-03/M-04: the receipt and invoice texts are not recorded at all; recording them needs a message-log row for a share that is not a reminder (decide with WP-08).
 4. M-12 supplier messages, when built, start on the composer.

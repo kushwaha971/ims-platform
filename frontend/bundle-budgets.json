@@ -1365,7 +1365,8 @@
     "16 Oct 2026, WP-02 purchase draft recovery and shared draft owners (ADR-063 addendum): the save queue (src/hooks/useDraftSaveQueue.ts) and the reply decision/autosave settle rule (src/utils/draftCreation.ts) are now one owner used by both the sales and the purchase editor, replacing the sales editor's inline queue. Measured against dev's own build in the same environment (dev itself sat at its ceiling there, six routes 'over by 0 KB'): sales editor routes +0.5 KB route/first load, purchase editor routes +0.3-0.4 KB. Buys one creation key per purchase editor session, one serial save lane for autosave/supplier pick/save/record, recovered-draft adoption and conflict review, no re-record of a recovered bill, and late-reply guards. Shared app and framework unchanged; no global ceiling raised. Raised only the exceeded scalars to measured + 0.1 KB: /sales/challans/new route 151.5→152.1; /sales/challans/new firstLoad 390.5→391.1; /sales/challans/[id]/edit route 151.5→152.1; /sales/challans/[id]/edit firstLoad 390.6→391.1; /purchases/orders/new route 150.9→151.3; /purchases/orders/new firstLoad 389.9→390.3; /purchases/orders/[id]/edit route 150.9→151.4; /purchases/orders/[id]/edit firstLoad 390.0→390.4; /sales/orders/new route 151.5→152.1; /sales/orders/new firstLoad 390.5→391.1; /sales/orders/[id]/edit route 151.5→152.1; /sales/orders/[id]/edit firstLoad 390.6→391.1; /sales/invoices/new route 151.4→152.1; /sales/invoices/new firstLoad 390.6→391.1; /sales/invoices/[id]/edit route 151.5→152.1; /sales/invoices/[id]/edit firstLoad 390.5→391.1; /sales/estimates/new route 151.5→152.1; /sales/estimates/[id]/edit route 151.5→152.1; /purchases/bills/[id]/edit route 150.9→151.4; /purchases/bills/[id]/edit firstLoad 389.9→390.4; /purchases/bills/new route 150.9→151.3; /purchases/bills/new firstLoad 389.9→390.3.",
     "",
     "16 Oct 2026 (WP-04 MSG-02): /design-system +0.5 KB route / +0.6 KB first load (measured 110.4 / 349.5) — the gallery renders UbShareSheet, which is now the editable composer (UbTextArea + reset + empty-message state). The product routes that share stayed inside their budgets: the invoice page loads the composer with dynamic() and /payments/[id] and /parties/[id] grew 0.1–0.6 KB within their existing figures.",
-    "16 Oct 2026 (WP-04 MSG-07/10): /design-system +0.1 KB route (measured 110.6 / 349.6) — the composer's message box became its own exported component, UbMessageBox, so \"Remind all\" uses the same box instead of a copy. Every product route stayed inside its budget."
+    "16 Oct 2026 (WP-04 MSG-07/10): /design-system +0.1 KB route (measured 110.6 / 349.6) — the composer's message box became its own exported component, UbMessageBox, so \"Remind all\" uses the same box instead of a copy. Every product route stayed inside its budget.",
+    "16 Oct 2026 (WP-04 M-11 follow-up): /payments/[id] route 63.2 -> 63.3 (measured 63.2, over by under 0.05 KB) — the shared message box now scrolls its blank-message reason into view, because in the UPI QR dialog on a phone it sat under the sticky footer. The receipt page renders the share sheet statically, so it carries those few bytes. A stable ref callback replaced the first version's effect to keep the cost to the minimum."
   ],
   "default": {
     "route": 56,
@@ -1573,7 +1574,7 @@
       "firstLoad": 339
     },
     "/payments/[id]": {
-      "route": 63.2,
+      "route": 63.3,
       "firstLoad": 302.3
     },
     "/ledger/reminders": {

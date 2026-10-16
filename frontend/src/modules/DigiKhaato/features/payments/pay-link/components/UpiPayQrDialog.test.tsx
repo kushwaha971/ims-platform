@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 
 import { renderWithProviders } from 'src/tests/renderWithProviders';
 
@@ -52,4 +52,47 @@ it('sends a business with no UPI ID to its profile', async () => {
     await screen.findByText('Add your UPI ID in Business profile to show a QR.')
   ).toBeInTheDocument();
   expect(screen.queryByTestId('pay-link-share')).not.toBeInTheDocument();
+});
+
+describe('WP-04 M-11: the words that go with the QR are the merchant’s', () => {
+  const LINK = {
+    url: 'http://localhost:3000/pay/abc',
+    upiUrl: 'upi://pay?pa=room@okhdfc&am=900.00&cu=INR',
+    vpa: 'room@okhdfc',
+    amount: '900.00',
+    note: 'Payment to Vidya Reading Room',
+    qrModules: Array.from({ length: 21 }, () => '10'.repeat(10) + '1'),
+  };
+  const original = { share: navigator.share, canShare: navigator.canShare };
+  afterEach(() => Object.assign(navigator, original));
+
+  it('shares exactly the edited words, and refuses a blank message', async () => {
+    /* Prevents: the share text being fixed — the payer received words the
+       merchant could not read or change before the phone's sheet took them. */
+    service.createPayLink.mockResolvedValue(LINK);
+    const share = jest.fn().mockResolvedValue(undefined);
+    Object.assign(navigator, { share, canShare: () => false });
+    renderWithProviders(
+      <UpiPayQrDialog amount="900.00" reference="LIB-7" title="UPI QR" onClose={jest.fn()} />
+    );
+    const box = await screen.findByRole('textbox', { name: 'Message' });
+    expect(box).toHaveValue(
+      'Pay ₹900.00 by UPI: scan this QR or open http://localhost:3000/pay/abc'
+    );
+
+    fireEvent.change(box, { target: { value: 'Asha ji, fee ₹900 — scan karke bhej do 🙏' } });
+    fireEvent.click(screen.getByTestId('pay-link-share'));
+    await waitFor(() =>
+      expect(share).toHaveBeenCalledWith({
+        text: 'Asha ji, fee ₹900 — scan karke bhej do 🙏',
+        url: LINK.url,
+      })
+    );
+
+    fireEvent.change(box, { target: { value: '  ' } });
+    expect(screen.getByRole('alert')).toHaveTextContent('Write a message before sending.');
+    expect(screen.getByTestId('pay-link-share')).toBeDisabled();
+    // Copy link carries no words, so it stays.
+    expect(screen.getByTestId('pay-link-copy')).toBeEnabled();
+  });
 });

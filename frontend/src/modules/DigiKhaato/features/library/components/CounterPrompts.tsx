@@ -2,8 +2,19 @@
 
 import { useEffect, useRef, useState } from 'react';
 
-import { UbActionLink, UbButton, UbStack, UbText, UbTextInput } from 'src/design-system';
+import {
+  finalMessage,
+  isBlankMessage,
+  UbActionLink,
+  UbButton,
+  UbMessageBox,
+  UbStack,
+  UbText,
+  UbTextInput,
+} from 'src/design-system';
+import { useShareSheetLabels } from 'src/hooks/useShareSheetLabels';
 import { useTranslation } from 'src/hooks/useTranslation';
+import { buildWhatsAppUrl } from 'src/utils/share';
 
 import { issueSlip } from '../api/libraryCirculationService';
 import { blockParams } from '../view-model/memberDisplay';
@@ -109,6 +120,11 @@ export function OverridePrompt({
 /**
  * F05 (LIB-06 FR-11) — "Finish with Asha?": the issue slip as a prepared
  * WhatsApp text, sent from the library's own phone (DEC-012), or Done.
+ *
+ * WP-04 M-10 — the slip sits in the share sheet's editable box, so a wrong
+ * date can be fixed or a line added before WhatsApp opens, and the link
+ * carries exactly what the box holds. A blank slip offers no link. The slip is
+ * a share, not a reminder: the server records nothing, so nothing is sent back.
  */
 export function FinishDialog({
   member,
@@ -120,7 +136,15 @@ export function FinishDialog({
   onDone: () => void;
 }>): React.JSX.Element {
   const { t } = useTranslation();
-  const [slip, setSlip] = useState<{ waUrl: string; hasMobile: boolean } | null>(null);
+  const labels = useShareSheetLabels();
+  const [slip, setSlip] = useState<{ text: string; waUrl: string; hasMobile: boolean } | null>(
+    null
+  );
+  const [draft, setDraft] = useState<string | null>(null);
+  const words = slip ? finalMessage(slip.text, draft) : '';
+  // The member's number; the server's own link names it too, for a summary without one.
+  const phone =
+    member.mobile ?? (slip?.waUrl ? new URL(slip.waUrl).pathname.slice(1) || null : null);
 
   useEffect(() => {
     if (member.loans.length === 0) return;
@@ -150,14 +174,25 @@ export function FinishDialog({
           {t('library.member.booksOf', { count: member.loansOpen, max: member.type.maxCopies })}
         </UbText>
         {slip?.hasMobile && slip.waUrl && (
-          <UbActionLink
-            href={slip.waUrl}
-            variant="secondary"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            {t('library.counter.slipWhatsApp')}
-          </UbActionLink>
+          <UbStack gap={2}>
+            <UbMessageBox
+              message={slip.text}
+              draft={draft}
+              onDraftChange={setDraft}
+              labels={labels}
+              rows={4}
+            />
+            {!isBlankMessage(words) && (
+              <UbActionLink
+                href={buildWhatsAppUrl(words, phone)}
+                variant="secondary"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                {t('library.counter.slipWhatsApp')}
+              </UbActionLink>
+            )}
+          </UbStack>
         )}
         {slip && !slip.hasMobile && (
           <UbText variant="caption" tone="tertiary" data-testid="counter-slip-no-mobile">

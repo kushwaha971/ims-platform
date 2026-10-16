@@ -420,3 +420,24 @@ Read this file, `git status`, current diff, root/frontend AGENTS, and the releva
   - The tap posts the edited Hindi + emoji text to `/send`.
   - No overflow and no page errors. The phone screenshot was looked at.
 - Not done: no physical-device WhatsApp handoff. Receipt and invoice shares still record no text. Railway deployment and 9/10 readiness are NOT claimed.
+
+### 16 October 2026 — WP-04: the library slip and the UPI QR words are editable (cloud session)
+
+- M-10: the library counter's "Finish with …?" dialog used to offer a fixed WhatsApp link. The librarian could not see the slip's words, let alone fix a date, before WhatsApp opened. The slip now sits in the shared `UbMessageBox`, and the link is built from exactly what the box holds, to the member's number. A blank slip offers no link and says why. The slip is still a share and not a reminder, so the server records nothing; that is its own design.
+- M-11: the words under the UPI QR are editable. Share hands the phone's share sheet exactly those words, and a blank message disables Share and says why. Copy link carries only the link, so it stays available.
+- Defect found by looking at the phone screenshot: in the UPI QR dialog, the blank-message reason sat under the dialog's sticky footer. The merchant saw a red box and a disabled Share, but not the reason. `UbMessageBox` now scrolls the reason into view when it appears, so every box gets the fix. A new sheet test failed before the fix. `paylink.mjs` now measures the reason with `elementFromPoint` and passes at 390 and 1280 px; that measure was added with the fix and was not run against the old build.
+- Fail-before:
+  - `FinishDialog.test.tsx`: 2 of 2 failed before.
+  - The new `UpiPayQrDialog.test.tsx` case failed before.
+- Gates:
+  - Frontend Jest: 4152 passed across 371 suites before the scroll fix; the share-sheet, library and payments suites (1341 tests) pass after it.
+  - `tsc` and ESLint are clean, and locales are in step (no new keys).
+  - Production build passed.
+  - Bundle: the scroll fix put `/payments/[id]` (the receipt page, which renders the share sheet statically) over its route budget by under 0.05 KB. A stable ref callback replaced the first version's effect, and the budget was then raised 63.2 → 63.3 with the reason recorded in `bundle-budgets.json`. Every other route is inside its budget.
+- Browser (live stack, synthetic businesses, nothing sent):
+  - new `e2e/library-slip-look.mjs`: 22/22 at 360 and 1280 px;
+  - `e2e/paylink.mjs` with the QR message checks: 33/33, re-run on the final build;
+  - `e2e/share-composer-look.mjs`: 44/44, re-run.
+- Harness: `paylink.mjs` hard-coded `backend/.venv/bin/python`; it now takes `E2E_PYTHON`.
+- Not done: no physical-device share-sheet handoff. Railway deployment and 9/10 readiness are NOT claimed.
+

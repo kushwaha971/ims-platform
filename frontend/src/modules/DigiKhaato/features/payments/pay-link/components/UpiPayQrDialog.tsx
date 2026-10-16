@@ -5,9 +5,12 @@ import { useCallback, useEffect, useState } from 'react';
 import { Copy, Share2, Smartphone } from 'lucide-react';
 
 import {
+  finalMessage,
+  isBlankMessage,
   UbActionLink,
   UbButton,
   UbDialog,
+  UbMessageBox,
   UbQrCode,
   UbSkeleton,
   UbStack,
@@ -15,6 +18,7 @@ import {
   UbText,
 } from 'src/design-system';
 import { useAppDispatch } from 'src/hooks/useAppStore';
+import { useShareSheetLabels } from 'src/hooks/useShareSheetLabels';
 import { useTranslation } from 'src/hooks/useTranslation';
 import { showSnackbar } from 'src/redux/slice/snackbarSlice';
 import { ROUTES } from 'src/routes';
@@ -37,6 +41,10 @@ import 'src/i18n/catalogues/payLink';
  * prefilled message) with the pay page's link as its text, and "Copy link" is the
  * same link for anywhere else. Nothing is recorded by showing a QR — the money is
  * recorded where it always is, once it has arrived.
+ *
+ * WP-04 M-11 — the words that go with the picture sit in the share sheet's
+ * editable box: Share hands the phone exactly what the box holds, and a blank
+ * message disables Share and says why. Copy link carries only the link.
  */
 export function UpiPayQrDialog({
   amount,
@@ -53,6 +61,8 @@ export function UpiPayQrDialog({
   const dispatch = useAppDispatch();
   const [link, setLink] = useState<PayLink | null>(null);
   const [error, setError] = useState<ApiErrorShape | null>(null);
+  const [draft, setDraft] = useState<string | null>(null);
+  const labels = useShareSheetLabels();
 
   useEffect(() => {
     const request = dispatch(createPayLink({ amount, reference }));
@@ -63,9 +73,11 @@ export function UpiPayQrDialog({
     return () => request.abort();
   }, [dispatch, amount, reference]);
 
-  const text = link
+  const defaultText = link
     ? t('payLink.shareText', { amount: formatInr(link.amount), url: link.url })
     : '';
+  const text = finalMessage(defaultText, draft);
+  const blank = isBlankMessage(text);
 
   const copy = useCallback(async () => {
     if (!link) return;
@@ -78,7 +90,7 @@ export function UpiPayQrDialog({
   }, [dispatch, link]);
 
   const share = useCallback(async () => {
-    if (!link) return;
+    if (!link || blank) return;
     const blob = await qrPngBlob(link.qrModules);
     const file = blob ? new File([blob], 'upi-qr.png', { type: 'image/png' }) : null;
     try {
@@ -92,7 +104,7 @@ export function UpiPayQrDialog({
     } catch {
       /* The person closed the share sheet: nothing to say. */
     }
-  }, [copy, link, text]);
+  }, [copy, link, text, blank]);
 
   const missing = error?.code === 'upi_not_configured';
   return (
@@ -115,6 +127,7 @@ export function UpiPayQrDialog({
             <UbButton
               icon={<Share2 className="h-4 w-4" aria-hidden />}
               onClick={() => void share()}
+              disabled={blank}
               data-testid="pay-link-share"
             >
               {t('payLink.share')}
@@ -164,6 +177,15 @@ export function UpiPayQrDialog({
             >
               {t('payLink.openApp')}
             </UbActionLink>
+          </UbStack>
+          <UbStack className="w-full">
+            <UbMessageBox
+              message={defaultText}
+              draft={draft}
+              onDraftChange={setDraft}
+              labels={labels}
+              rows={3}
+            />
           </UbStack>
         </UbStack>
       )}

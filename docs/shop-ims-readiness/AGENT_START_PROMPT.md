@@ -128,7 +128,9 @@ Shared owners (reuse these, do not copy them):
   add its pattern there.
 - Browser checks: `node e2e/purchase-recovery-look.mjs`,
   `node e2e/sales-recovery-look.mjs` and `node e2e/share-composer-look.mjs`
-  (khata reminder + Remind all, 44 checks), on a live stack.
+  (khata reminder + Remind all, 44 checks), `node e2e/library-slip-look.mjs`
+  and `node e2e/paylink.mjs` (set `E2E_PYTHON` to the venv python), on a
+  live stack.
 
 WP-04 has started: read 11-message-inventory.md. `UbShareSheet` is the
 editable composer for client-built messages, and its labels come from
@@ -142,9 +144,10 @@ built from text; the source-scan guard fails on it. Lending/Library dialogs are
 the server-prepared reference.
 
 **Next, in order:**
-1. WP-04 M-10 (library counter slip, `CounterPrompts`) and M-11 (pay-link
-   text, `UpiPayQrDialog`) onto a composer. Done before this: M-06 Remind all
-   and MSG-10 final text (16 Oct; see 11-message-inventory.md).
+1. WP-04 is down to decisions and one gap (see 11-message-inventory.md): M-09
+   Library bulk per-member override (MSG-07), and M-12 supplier messages, which
+   start on the composer when WP-08 builds them. Done: M-06 Remind all, MSG-10
+   final text, M-10 counter slip, M-11 pay-link text (16 Oct).
 2. WP-04 M-03/M-04: decide (with WP-08) whether receipt/invoice share text is
    recorded; today only the share link is.
 3. The UI-composition audit (WP-03 D-04) goes alongside WP-05. D-05

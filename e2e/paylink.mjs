@@ -7,7 +7,8 @@
 //   * that link opens the pay page at 390 and 1280 px: the lender's name, the amount,
 //     "Pay ₹… by UPI" pointing at upi://pay with that amount, the QR, and nothing of
 //     the product;
-//   * an edited link shows the expired screen.
+//   * an edited link shows the expired screen;
+//   * the QR dialog's message is editable, and a blank one disables Share (WP-04 M-11).
 // Every screen is measured and photographed into /tmp/e2e-shots/paylink.
 //
 //   node e2e/paylink.mjs        (PW_CHROMIUM=<path> to use a Chromium already installed)
@@ -37,7 +38,7 @@ const ten = await must('POST', '/tenants', { name: 'Verma Finance', business_typ
 tok = ten.access_token ?? tok;
 for (const step of [2, 3, 4]) await must('PATCH', '/tenants/current', { onboarding_step: step }, tok);
 await must('PATCH', '/tenants/current', { upi_vpa: 'verma.finance@okaxis' }, tok);
-const py = path.join(REPO, 'backend/.venv/bin/python');
+const py = process.env.E2E_PYTHON ?? path.join(REPO, 'backend/.venv/bin/python');
 execFileSync(py, ['manage.py', 'shell', '-c', `
 from apps.platform_app.models.membership import Membership
 t = Membership.objects.select_related('tenant').get(user__email='${email}', role__code='owner').tenant
@@ -109,6 +110,24 @@ for (const [size, viewport] of [['desktop', { width: 1280, height: 860 }], ['pho
   check(`${size}: the desk QR shows the sum and the UPI ID`, dialog.includes('verma.finance@okaxis') && /₹[\d,]+\.\d\d/.test(dialog), dialog.slice(0, 200));
   check(`${size}: Share QR and Copy link are offered`, (await page.getByTestId('pay-link-share').count()) === 1 && (await page.getByTestId('pay-link-copy').count()) === 1);
   await look('desk-qr');
+  // WP-04 M-11 — the words that go with the QR are editable, and a blank one shares nothing.
+  const words = page.getByRole('dialog').getByRole('textbox', { name: 'Message' });
+  const said = await words.inputValue();
+  check(`${size}: the QR's message holds the pay link`, said.includes('/pay/'), said.slice(0, 80));
+  await words.fill('  ');
+  check(`${size}: a blank message disables Share`, await page.getByTestId('pay-link-share').isDisabled());
+  check(`${size}: and says why`, await page.getByRole('alert').filter({ hasText: 'Write a message before sending.' }).isVisible());
+  await page.waitForTimeout(400);
+  const reasonSeen = await page.getByRole('alert').filter({ hasText: 'Write a message before sending.' }).evaluate((el) => {
+    const r = el.getBoundingClientRect();
+    const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+    return Boolean(hit && el.contains(hit));
+  });
+  check(`${size}: the reason is on screen, not under the footer`, reasonSeen);
+  check(`${size}: Copy link still works without words`, await page.getByTestId('pay-link-copy').isEnabled());
+  await look('desk-qr-blank');
+  await page.getByRole('button', { name: 'Use the original message' }).click();
+  check(`${size}: the original message comes back`, (await words.inputValue()) === said);
   check(`${size}: no page errors`, errors.length === 0, errors.join(' | '));
   await ctx.close();
 }

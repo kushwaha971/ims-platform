@@ -325,6 +325,22 @@ describe('UbShareSheet', () => {
       expect(screen.getByRole('alert')).toHaveTextContent('Write a message before sending.');
     });
 
+    it('brings the reason into view when the message goes blank', () => {
+      /* Prevents: in a dialog that scrolls (the UPI QR on a phone) the reason
+         sitting under the sticky footer, so the merchant saw a disabled
+         button and a red box but not why. */
+      const scroll = jest.fn();
+      const original = Element.prototype.scrollIntoView;
+      Element.prototype.scrollIntoView = scroll;
+      renderSheet();
+      fireEvent.change(screen.getByRole('textbox', { name: 'Message' }), {
+        target: { value: ' ' },
+      });
+      expect(scroll).toHaveBeenCalledWith({ block: 'nearest' });
+      expect(scroll.mock.contexts[0]).toBe(screen.getByRole('alert'));
+      Element.prototype.scrollIntoView = original;
+    });
+
     it('still offers Call while the message is blank: a call needs no words', () => {
       renderSheet({ callHref: 'tel:+919812345678', labels: { ...LABELS, call: 'Call' } });
       fireEvent.change(screen.getByRole('textbox', { name: 'Message' }), {

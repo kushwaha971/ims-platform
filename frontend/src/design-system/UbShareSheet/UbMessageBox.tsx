@@ -14,6 +14,10 @@ import { UbTextArea } from 'src/design-system/UbTextArea';
  * it is one component rather than a second copy of the same rules. It holds
  * no state: `draft` is `null` while the merchant has typed nothing, and then
  * the box shows `message` — the default — and follows it if it changes.
+ *
+ * The "why" line is scrolled into view when it appears. In a dialog that
+ * scrolls (the UPI QR on a phone) it otherwise sat under the sticky footer:
+ * the merchant saw a disabled Share and a red box, and not the reason.
  */
 export interface UbMessageBoxLabels {
   /** The caption over the box — "Message". */
@@ -36,6 +40,9 @@ export interface UbMessageBoxProps {
 
 /** The words that will go: the edit, or the default when there is none. */
 export const finalMessage = (message: string, draft: string | null): string => draft ?? message;
+
+/** A stable ref callback, so it runs once each time the reason appears. */
+const showReason = (el: HTMLElement | null): void => el?.scrollIntoView?.({ block: 'nearest' });
 
 /** A message with nothing but spaces in it opens no channel. */
 export const isBlankMessage = (text: string): boolean => text.trim() === '';
@@ -74,7 +81,12 @@ function UbMessageBoxBase({
         aria-describedby={blank ? `${boxId}-empty` : undefined}
       />
       {blank && (
-        <p id={`${boxId}-empty`} role="alert" className="ds-body-s-regular text-formError">
+        <p
+          ref={showReason}
+          id={`${boxId}-empty`}
+          role="alert"
+          className="ds-body-s-regular text-formError"
+        >
           {labels.empty}
         </p>
       )}
