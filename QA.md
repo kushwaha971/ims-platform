@@ -559,3 +559,10 @@ Read this file, `git status`, current diff, root/frontend AGENTS, and the releva
 - `e2e/dashboard-review.mjs`: no overflow at any of eight widths; the Today, Customers, Suppliers and Needs attention regions each appear once; More → Record payment opens the form at 360. One long customer name is still cut at 360.
 - Gates: Jest passed (full suite 4209 before the title fix, dashboard file 19/19 after); `tsc` clean; ESLint clean on the changed files; i18n in step; build passed; bundle gate passed (/dashboard 72.5 of 88 KB). Backend reports and golden tests passed. `apps/dues/tests/test_run_scale.py` fails at about 139 s against 60 s in this sandbox on the previous commit too.
 - Still open: Overdue from the nightly status, Cash in hand mixing books, one failure blanking the page, activity by typed time. Railway deployment and 9/10 readiness are NOT claimed.
+
+### 16 October 2026 — WP-06: Overdue decided on the day (cloud session)
+
+- Fixed (bb6dd2a): Overdue read the stored status set nightly at 00:15, on the dashboard and in both bill lists' Overdue tab. It is now a stored `overdue` or an open bill due before today, from one helper. Fail-before tests: the dashboard figures, `GET /sales/invoices?tab=overdue` and `GET /purchases/bills?tab=overdue` without `refresh_overdue()`.
+- Fixed: the overdue link opened the list on this financial year, so last year's unpaid bill dropped out. The link now carries the range from the oldest overdue bill's date.
+- Looked (`e2e/dashboard-review.mjs`, which now seeds a bill dated 30/03/2026): the figure and the list at its link agree, 3 bills · ₹2,160.00, at 360 and 1280; the list shows "30 Mar 2026 – 16 Oct 2026" and all three rows (screenshots `360-overdue-list.png`, `1280-overdue-list.png`).
+- Gates: backend sales, purchases, payments, reports and golden tests pass; Jest for reports, sales and purchases 363/363; `tsc` clean; ESLint clean on changed files; build and bundle gate passed with no budget change. Railway deployment and 9/10 readiness are NOT claimed.

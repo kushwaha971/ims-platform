@@ -110,7 +110,7 @@ The owner chose **A, two books side by side**. Built and checked on the live sta
 - **Needs attention:** always on the page: collect, pay, out of stock, low stock.
 
 **Not yet done, in order:**
-1. Overdue is still the nightly status (Finding 2), and the bill list's financial-year default still applies.
+1. ~~Overdue is still the nightly status (Finding 2)~~ Done in bb6dd2a: Overdue is decided when read (`apps/common/overdue.py`) by the dashboard and both bill lists' Overdue tab, and the link opens the list from the oldest overdue bill's date, so last year's bill stays in. Live: 3 bills · ₹2,160 on the figure and the list.
 2. Cash in hand still mixes books and can start below zero (Finding 4).
 3. One failure still blanks the page (Finding 7).
 4. Recent activity shows when a record was typed, not its date (Finding 5).

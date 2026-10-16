@@ -171,10 +171,12 @@ the server-prepared reference.
    and it is built (927e52d): To collect / To pay are role-scoped and equal
    the lists they open; Customers and Suppliers panels; Needs attention always
    shown; `?add=1` opens Record payment and Add expense (`useOpenOnAddQuery`).
-   Next, test-first, the list at the end of that review: Overdue decided when
-   read (not the nightly status) with its list free of the FY default; Cash in
-   hand from the Shop book only, never a negative till; each dashboard section
-   failing and retrying alone; activity by record date.
+   Overdue is decided when read (bb6dd2a, `apps/common/overdue.py`, used by
+   the dashboard and both bill lists' Overdue tab); its link carries
+   from/to from `oldest_bill_date`. Next, test-first, the rest of the list at
+   the end of that review: Cash in hand from the Shop book only, never a
+   negative till; each dashboard section failing and retrying alone; activity
+   by record date.
 4. Still owed to WP-02, needing the owner or a device: a physical
    network-interruption check on a phone, and the owner's SH-011 release
    review in the tracker. Do not wait on these.
