@@ -173,10 +173,12 @@ the server-prepared reference.
    shown; `?add=1` opens Record payment and Add expense (`useOpenOnAddQuery`).
    Overdue is decided when read (bb6dd2a, `apps/common/overdue.py`, used by
    the dashboard and both bill lists' Overdue tab); its link carries
-   from/to from `oldest_bill_date`. Next, test-first, the rest of the list at
-   the end of that review: Cash in hand from the Shop book only, never a
-   negative till; each dashboard section failing and retrying alone; activity
-   by record date.
+   from/to from `oldest_bill_date`. Cash in hand, the day book and the
+   cashbook are the Shop's money only (09e66a3); the dashboard sends
+   `shop_cash_in_hand` and keeps `cash_in_hand` every-book for the golden
+   file, which must not be regenerated. Next, test-first, the rest of the list
+   at the end of that review: each dashboard section failing and retrying
+   alone; activity by record date; opening cash so the till is never negative.
 4. Still owed to WP-02, needing the owner or a device: a physical
    network-interruption check on a phone, and the owner's SH-011 release
    review in the tracker. Do not wait on these.

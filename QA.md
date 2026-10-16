@@ -566,3 +566,10 @@ Read this file, `git status`, current diff, root/frontend AGENTS, and the releva
 - Fixed: the overdue link opened the list on this financial year, so last year's unpaid bill dropped out. The link now carries the range from the oldest overdue bill's date.
 - Looked (`e2e/dashboard-review.mjs`, which now seeds a bill dated 30/03/2026): the figure and the list at its link agree, 3 bills · ₹2,160.00, at 360 and 1280; the list shows "30 Mar 2026 – 16 Oct 2026" and all three rows (screenshots `360-overdue-list.png`, `1280-overdue-list.png`).
 - Gates: backend sales, purchases, payments, reports and golden tests pass; Jest for reports, sales and purchases 363/363; `tsc` clean; ESLint clean on changed files; build and bundle gate passed with no budget change. Railway deployment and 9/10 readiness are NOT claimed.
+
+### 16 October 2026 — WP-06: Cash in hand is the Shop's drawer (cloud session)
+
+- Fixed (09e66a3): Cash in hand, the day book and the cashbook added cash from every book. On the live stack an Udhaar-book "You got ₹300, cash" moved the Shop's drawer from ₹250 to ₹550. Now all three read only the Shop's money; the tile equals the cashbook's closing cash (₹250 = ₹250) with that Udhaar line present. Fail-before: `test_cash_in_hand_is_the_shops_drawer_alone` (1940.00 against 390.00).
+- The golden main-bucket file was not regenerated: `cash_in_hand` keeps its every-book value and the Shop reads the new `shop_cash_in_hand`.
+- Tests that changed meaning are listed in the commit message (cashbook receipts, has_any, the library's deposit cash).
+- Gates: backend reports, expenses, library, lending, imports, sales, payments, ledger, purchases and architecture tests pass; Jest reports 145/145 with the new service test; `tsc` clean; ESLint clean; build and bundle gate passed. Railway deployment and 9/10 readiness are NOT claimed.
