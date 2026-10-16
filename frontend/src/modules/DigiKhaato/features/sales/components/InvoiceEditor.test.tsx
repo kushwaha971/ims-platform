@@ -184,6 +184,29 @@ describe('a 1280 laptop (WP-05 layout A)', () => {
   });
 });
 
+describe('the bill details on a 1280 laptop (WP-05 compact context)', () => {
+  it('folds the date and place of supply under one line that says what they hold', async () => {
+    const width = 1280;
+    const original = window.matchMedia;
+    window.matchMedia = ((query: string) => {
+      const min = /min-width:\s*([\d.]+)/.exec(query)?.[1];
+      const max = /max-width:\s*([\d.]+)/.exec(query)?.[1];
+      return {
+        ...original(query),
+        matches: min ? width >= Number(min) : max ? width <= Number(max) : false,
+      };
+    }) as typeof window.matchMedia;
+    try {
+      signIn(['sales.invoice.read', 'sales.invoice.write']);
+      renderWithProviders(<InvoiceEditorPageContent documentId={null} />);
+      const fold = await screen.findByRole('button', { name: /More details/ });
+      expect(fold).toHaveTextContent(/\d{4}/); // the bill date
+    } finally {
+      window.matchMedia = original;
+    }
+  });
+});
+
 describe('the phone line card (QA S-D8)', () => {
   it('shows the line total with its ₹, since the card has no column header', async () => {
     signIn(['sales.invoice.read', 'sales.invoice.write']);

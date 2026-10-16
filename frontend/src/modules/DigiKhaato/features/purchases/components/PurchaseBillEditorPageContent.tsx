@@ -151,7 +151,7 @@ export function PurchaseBillEditorPageContent({
       </UbPageShell>
     );
   }
-  if (!context || (documentId && server.loadStatus !== 'succeeded')) {
+  if (!context || (documentId && server.loadStatus !== 'succeeded') || !editor.seeded) {
     return <UbPageSkeleton variant="card" />;
   }
 

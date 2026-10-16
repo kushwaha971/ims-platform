@@ -17,6 +17,7 @@ import {
   UbTextInput,
   useIsMobileLayer,
 } from 'src/design-system';
+import { useDocksEditorTotals } from 'src/hooks/useDocksEditorTotals';
 import { useTranslation } from 'src/hooks/useTranslation';
 import type { Locale } from 'src/types/domain.types';
 import { formatBusinessDate } from 'src/utils/dates';
@@ -59,6 +60,7 @@ export function InvoicePartySection({
 }>): React.JSX.Element {
   const { t } = useTranslation();
   const isMobileLayer = useIsMobileLayer();
+  const folds = useDocksEditorTotals();
   const { watch, setValue } = form;
   const mode = watch('mode');
   const partyName = watch('partyName');
@@ -222,12 +224,33 @@ export function InvoicePartySection({
             </UbText>
           </>
         );
-        if (!isMobileLayer) return details;
+        /* WP-05 extends the phone's fold to every width below 1536 px. A walk-in
+           bill on a laptop opens it, because the name is still to type; an
+           error inside forces it open, since a hidden error cannot be fixed. */
+        if (!folds) return details;
         const posLabel = stateOptions.find((option) => option.value === pos)?.label;
+        const dueOn = kind === 'invoice' && mode === 'party' ? form.getValues('dueOn') : '';
+        const { errors } = form.formState;
+        const mustOpen = !!(
+          errors.documentDate ??
+          errors.dueOn ??
+          errors.validUntil ??
+          errors.placeOfSupplyState ??
+          errors.walkInName ??
+          errors.walkInMobile
+        );
         return (
           <UbDisclosure
             label={t('sales.editor.moreDetails')}
-            hint={[formatBusinessDate(documentDate), posLabel].filter(Boolean).join(' · ')}
+            hint={[
+              formatBusinessDate(documentDate),
+              dueOn && `${t('sales.editor.dueOn')} ${formatBusinessDate(dueOn)}`,
+              posLabel,
+            ]
+              .filter(Boolean)
+              .join(' · ')}
+            defaultOpen={!isMobileLayer && mode !== 'party'}
+            open={mustOpen ? true : undefined}
           >
             <UbStack gap={3}>{details}</UbStack>
           </UbDisclosure>

@@ -502,3 +502,11 @@ Read this file, `git status`, current diff, root/frontend AGENTS, and the releva
 - Regression: `sales-recovery-look` and `purchase-recovery-look` all passed.
 - Gates: Jest 4186 passed; `tsc` and ESLint clean; build passed. Bundle: the sales editor routes 152.1 -> 152.4 KB for the measurement code; the reason is noted in `bundle-budgets.json`. The breakpoint hook lives in `src/hooks`, because in the design-system motion module it cost the landing page 0.9 KB.
 - Still owed for WP-05: the compact supplier/context summary and timed 1/10/50-line entry evidence. Railway deployment and 9/10 readiness are NOT claimed.
+
+### 16 October 2026 — WP-05: compact context on the counter editors (cloud session)
+
+- Below 1536 px the supplier details (purchase) and the date, due date and place of supply (sales) fold under "More details", with a one-line summary. A new bill or a walk-in sale opens the fold on a laptop, and an error or a duplicate warning inside forces it open; phones lacked that too.
+- Fail-before: `PurchaseBillEditor.test.tsx`, two "1280 laptop" cases, and `InvoiceEditor.test.tsx` "the bill details on a 1280 laptop".
+- Defect found by measuring, not by the tests: on every reopened purchase draft the fold opened itself. The page rendered one frame of an empty bill before the draft was reset into the form. `usePurchaseBillEditor` now reports `seeded`, and the page keeps its skeleton until then. The 10th line at 1280 is at 1,076 px (was 1,290).
+- Environment: a session restart wiped the sandbox's PostgreSQL cluster. The local synthetic dev database was recreated (default dev role, `migrate`, `seed_all`). No real data was involved.
+- Gates: Jest 4189 passed; `tsc` and ESLint clean; build passed; the bundle gate passed (sales editor routes 152.5, noted); locales in step.

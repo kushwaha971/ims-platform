@@ -77,6 +77,9 @@ Which layout should the counter editor use from 1024 to 1535 px: A (recommended)
 | Bill at 1024 and 768 | cards | still cards (796 px is under the bill's 824 px minimum, as the review expected) |
 
 - Every width: no overflow and no cut text. Alt+N and Alt+Backspace pass on the table at every width where it is drawn.
-- Not yet done:
-  - the compact context summary for the supplier block;
-  - timed 1/10/50-line entry evidence (keystrokes and time to Issue), which WP-05's exit criteria still ask for.
+- Compact context, also 16 October: below 1536 px the purchase bill's supplier details and the invoice's date, due date and place of supply fold under "More details", with a one-line summary such as "MW-1043 · 16/10/2026 · Due date 16/10/2026".
+  - A new bill (or a walk-in sale) on a laptop opens the fold, because there is something to type in it.
+  - An error inside the fold, or a duplicate-invoice warning, forces it open. Phones did not do this before.
+  - Measuring caught the fold opening on every reopened draft, because the page drew one frame before the draft was reset into the form. The purchase editor now holds its skeleton until the form is seeded.
+  - The 10th line of a purchase bill at 1280 now sits at 1,076 px (it was 1,290 px with layout A alone).
+- Not yet done: timed 1/10/50-line entry evidence (keystrokes and time to Issue), which WP-05's exit criteria still ask for.

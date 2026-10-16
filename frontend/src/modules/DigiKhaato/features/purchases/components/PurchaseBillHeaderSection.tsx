@@ -14,6 +14,7 @@ import {
   UbTextInput,
   useIsMobileLayer,
 } from 'src/design-system';
+import { useDocksEditorTotals } from 'src/hooks/useDocksEditorTotals';
 import { useTranslation } from 'src/hooks/useTranslation';
 import { ROUTES } from 'src/routes';
 import { formatBusinessDate } from 'src/utils/dates';
@@ -56,6 +57,7 @@ export function PurchaseBillHeaderSection({
 }>): React.JSX.Element {
   const { t } = useTranslation();
   const isMobileLayer = useIsMobileLayer();
+  const folds = useDocksEditorTotals();
   const { watch, setValue } = form;
   const partyName = watch('partyName');
   const partyId = watch('partyId');
@@ -63,6 +65,8 @@ export function PurchaseBillHeaderSection({
   const creditDays = watch('partyCreditDays');
   const itcEligible = watch('itcEligible');
   const reverseCharge = watch('reverseCharge');
+  const supplierInvoiceNumber = watch('supplierInvoiceNumber');
+  const dueOn = watch('dueOn');
   const dueHint = order
     ? t('purchases.order.expectedHint')
     : partyId
@@ -70,6 +74,29 @@ export function PurchaseBillHeaderSection({
           date: formatBusinessDate(defaultDueOn(documentDate, creditDays)),
         })
       : undefined;
+
+  /* WP-05 compact context — what the folded details hold, in one line:
+     "AT/778 · 18 Sep 2026 · Due date 3 Oct 2026". */
+  const due = dueOn || (partyId && !order ? defaultDueOn(documentDate, creditDays) : '');
+  const summary = [
+    !order && supplierInvoiceNumber.trim(),
+    formatBusinessDate(documentDate),
+    due &&
+      `${t(order ? 'purchases.order.expectedBy' : 'purchases.editor.dueOn')} ${formatBusinessDate(due)}`,
+  ]
+    .filter(Boolean)
+    .join(' · ');
+  /* An error or a duplicate warning in a section nobody can see is one nobody
+     can fix, so either forces the fold open. */
+  const { errors } = form.formState;
+  const mustOpen =
+    !!duplicate ||
+    !!(
+      errors.supplierInvoiceNumber ??
+      errors.supplierInvoiceDate ??
+      errors.documentDate ??
+      errors.dueOn
+    );
 
   return (
     <UbStack gap={3} className="p-4">
@@ -94,7 +121,9 @@ export function PurchaseBillHeaderSection({
       </UbField>
       {/* docs/mobile-redesign (A14) — on a phone the supplier's invoice number,
           the dates and the tax switches fold under one line that says what
-          they hold, so the items come first. A desktop renders them as before. */}
+          they hold, so the items come first. WP-05 extends the fold to every
+          width below 1536 px, where the lines now come before the totals; a
+          new bill on a laptop opens it, because its number is still to type. */}
       {(() => {
         const details = (
           <>
@@ -216,11 +245,13 @@ export function PurchaseBillHeaderSection({
             )}
           </>
         );
-        if (!isMobileLayer) return details;
+        if (!folds) return details;
         return (
           <UbDisclosure
             label={t('purchases.editor.moreDetails')}
-            hint={formatBusinessDate(documentDate)}
+            hint={summary}
+            defaultOpen={!isMobileLayer && !order && !supplierInvoiceNumber.trim()}
+            open={mustOpen ? true : undefined}
           >
             <UbStack gap={3}>{details}</UbStack>
           </UbDisclosure>

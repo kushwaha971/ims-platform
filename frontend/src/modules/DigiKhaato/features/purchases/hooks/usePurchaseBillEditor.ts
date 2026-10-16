@@ -86,6 +86,14 @@ const FORM_FIELDS: readonly string[] = [
  */
 export interface UsePurchaseBillEditorResult {
   readonly form: UseFormReturn<PurchaseBillFormValues>;
+  /**
+   * The form holds the opened draft (or a blank bill), not the defaults it was
+   * created with. The draft is reset into the form in an effect AFTER the load
+   * succeeds, so a page that renders on the load alone draws one frame of an
+   * empty bill: the supplier fold opened itself for a "new" bill on every
+   * reopened draft (WP-05, found by measuring).
+   */
+  readonly seeded: boolean;
   readonly values: PurchaseBillFormValues;
   readonly preview: EngineResult;
   readonly editor: PurchaseBillEditorState;
@@ -134,6 +142,7 @@ export const usePurchaseBillEditor = (
 
   // Seed the form ONCE per editor: from the draft, or from the shop's defaults.
   const seeded = useRef<string | null>(null);
+  const [seededFor, setSeededFor] = useState<string | null>(null);
 
   // Load: the shop's context always, the draft when editing one. A different
   // document, business or user is a new editor: queued saves are abandoned.
@@ -157,12 +166,14 @@ export const usePurchaseBillEditor = (
       if (document && document.id === documentId && seeded.current !== documentId) {
         seeded.current = documentId;
         form.reset(fromPurchaseBill(document));
+        setSeededFor(documentId);
       }
       return;
     }
     if (context && seeded.current !== 'new') {
       seeded.current = 'new';
       form.reset(emptyPurchaseForm(today, context.gstType === 'regular'));
+      setSeededFor('new');
     }
   }, [documentId, document, context, form, today]);
 
@@ -333,11 +344,13 @@ export const usePurchaseBillEditor = (
     dispatch(purchaseEditorReset());
     seeded.current = 'new';
     form.reset(emptyPurchaseForm(today, context?.gstType === 'regular'));
+    setSeededFor('new');
     idempotency.rotate();
   }, [dispatch, form, today, context, idempotency, saves]);
 
   return {
     form,
+    seeded: seededFor === (documentId ?? 'new'),
     values,
     preview,
     editor,

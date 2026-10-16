@@ -1,4 +1,4 @@
-import { act, screen, waitFor } from '@testing-library/react';
+import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { resetAllFeatureState } from 'src/redux/actions';
@@ -263,6 +263,66 @@ it('puts the duplicate supplier invoice under the number, with a link to the bil
     '/purchases/bills/b0'
   );
   expect(mockPush).not.toHaveBeenCalled();
+});
+
+/** Answers media queries as a screen of `width` px would. */
+const atWidth = (width: number): (() => void) => {
+  const original = window.matchMedia;
+  window.matchMedia = ((query: string) => {
+    const min = /min-width:\s*([\d.]+)/.exec(query)?.[1];
+    const max = /max-width:\s*([\d.]+)/.exec(query)?.[1];
+    return {
+      ...original(query),
+      matches: min ? width >= Number(min) : max ? width <= Number(max) : false,
+    };
+  }) as typeof window.matchMedia;
+  return () => {
+    window.matchMedia = original;
+  };
+};
+
+describe('the supplier details on a 1280 laptop (WP-05 compact context)', () => {
+  /* The review measured the supplier block at about 410 px before the first
+     line on a laptop. Once the bill has its supplier invoice number, the
+     details fold to one line that says what they hold. */
+  it('folds a filled draft to one line naming the invoice number and the dates', async () => {
+    const restore = atWidth(1280);
+    try {
+      renderWithProviders(<PurchaseBillEditorPageContent documentId="b1" />);
+      const fold = await screen.findByRole('button', { name: /More details/ });
+      expect(fold).toHaveAttribute('aria-expanded', 'false');
+      expect(fold).toHaveTextContent('AT/778');
+      expect(fold).toHaveTextContent('Due date');
+      expect(screen.queryByText('Input tax credit')).toBeNull();
+    } finally {
+      restore();
+    }
+  });
+
+  it('opens the folded details when the number is a duplicate, so the warning is seen', async () => {
+    service.recordPurchaseBill.mockRejectedValue({
+      code: 'duplicate_supplier_invoice',
+      message: 'Already recorded as PB/26-27/0003 on 12/08/2026.',
+      details: { existing: { id: 'b0', number: 'PB/26-27/0003', document_date: '2026-08-12' } },
+      requestId: null,
+      status: 409,
+    });
+    const restore = atWidth(1280);
+    try {
+      renderWithProviders(<PurchaseBillEditorPageContent documentId="b1" />);
+      await screen.findByRole('button', { name: /More details/ });
+      await userEvent.click(
+        within(screen.getByTestId('purchase-dock')).getByRole('button', { name: 'Record' })
+      );
+      expect(await screen.findByTestId('duplicate-warning')).toBeVisible();
+      expect(screen.getByRole('button', { name: /More details/ })).toHaveAttribute(
+        'aria-expanded',
+        'true'
+      );
+    } finally {
+      restore();
+    }
+  });
 });
 
 const RECORDED = {
