@@ -163,8 +163,14 @@ the server-prepared reference.
    which closes before a row acts; a guard fails on a hand-made one. D-04c is
    done (R-12): a void, cancel or reverse that takes a reason is
    `ReasonConfirmDialog` with the consequences as children; do not compose a
-   reason field in a dialog by hand. Next is D-04d (hand-built bordered boxes
-   to `UbCard`/`UbPanel`, and one pick-list component). D-05 is done (R-08).
+   reason field in a dialog by hand. D-04d is done (R-13): a bordered list of
+   rows is `UbPanel as="ul"`; a guard fails on a hand-built divided list.
+   D-04 is closed and D-05 is done (R-08).
+   Next: WP-06, the Shop dashboard. Start with a design review for the owner
+   (as WP-05 did in 12-counter-editor-design-review.md): what each figure
+   means and which server query owns it, separate customer and supplier
+   panels, and that every figure reconciles with its drill-down. Do not build
+   before the owner has chosen.
 4. Still owed to WP-02, needing the owner or a device: a physical
    network-interruption check on a phone, and the owner's SH-011 release
    review in the tracker. Do not wait on these.

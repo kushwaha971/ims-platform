@@ -537,3 +537,10 @@ Read this file, `git status`, current diff, root/frontend AGENTS, and the releva
 - Fail-before: `ReasonConfirmDialog.test.tsx`. Three of the old dialogs greyed the button silently, and all of them closed on Escape or ✕ mid-request, so the snackbar or the refusal arrived with the dialog gone.
 - Browser (`e2e/reason-dialog-look.mjs`, 360 and 1280): 12/12. Reversing a khata entry: caret in the reason, nothing red on opening, an empty reason says why and sends nothing, a written one reverses and the server's balance is zero. Screenshots looked at.
 - Gates: Jest 4202 passed; `tsc` clean; ESLint clean on the changed files; build passed. The bundle gate passed after `/lending/loans/new` 135.3 -> 135.8 (measured a few bytes over), noted in `bundle-budgets.json`. Railway deployment and 9/10 readiness are NOT claimed.
+
+### 16 October 2026 — WP-03 D-04d: one bill pick list, and a receipt number that broke on a phone (cloud session)
+
+- Consolidated (R-13): applying an advance, allocating a payment and applying a deposit share `UbPanel as="ul"` and `BillPickRow`, where each had hand-built the same bordered list and row. Fail-before: `UbPanel.test.tsx` (a `ul` panel holds only list items) and the new `sharedOwners` guard, which named all three files.
+- Defect found by looking (`e2e/pick-list-look.mjs`, 360 and 1280): on a phone the receipt sheet split its own number, "RCT/26-" over "27/0001". The check failed first (2 lines) and now passes; 14/14.
+- Left as they are, with the reason recorded in `10-reuse-inventory.md`: the paid-now drawers' mode rows, and the library and lending card rows.
+- Gates: Jest 4205 passed; `tsc` clean; ESLint clean on the changed files; build passed; the bundle gate passed with no budget change. Railway deployment and 9/10 readiness are NOT claimed.
