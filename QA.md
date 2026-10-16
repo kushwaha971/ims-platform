@@ -598,3 +598,10 @@ Read this file, `git status`, current diff, root/frontend AGENTS, and the releva
 - Looked: `e2e/dashboard-review.mjs` seeds one of each. At 360 and 1280: "1 customer order to deliver and bill · ₹700.00" = list 1 · ₹700.00; "1 challan not billed yet · ₹450.00" = list 1 · ₹450.00; "1 purchase order waiting for goods · ₹840.00" = list 1 · ₹840.00. Rows wrap on a phone, nothing cut. The purchase order had the supplier bill's truck icon; it has its own now.
 - Found by the architecture suite: 85a4e3a had broken rule D8 (the dashboard selector opened `transaction.atomic` and used `.update(`). Fixed here; the view passes the savepoint in.
 - Gates: backend reports, ledger, purchases, sales list and architecture tests pass; Jest 4224/4224; `tsc` clean; ESLint clean; i18n in step; build and bundle gate passed. Railway deployment and 9/10 readiness are NOT claimed.
+
+### 17 October 2026 — WP-06: due-this-week link and long names (cloud session)
+
+- Fixed (e7d85c6): the Suppliers panel's "due this week" opened every unpaid bill. The bill list now takes `due_from`/`due_to`, the link carries the week and the oldest bill's date, and the list shows "Due 17/10/2026 to 24/10/2026 ×" which drops the window in one tap. Fail-before: purchases list test (reproduces the dashboard's count and amount), view-model and page tests.
+- Fixed (e7d85c6): "Suresh Kumar General Store, Station R" cut mid-word at 360 px. Names on the dashboard wrap to two lines. Fail-before: page test.
+- Looked: `e2e/dashboard-review.mjs` seeds a bill due in three days and one in ten; at 360 and 1280 the figure reads 1 · ₹210.00 and the list it opens reads 1 · ₹210.00 with the chip (`*-due-week-list.png`). The measuring check finds nothing cut at any of the eight widths.
+- Gates: backend reports, ledger, purchases and architecture tests pass; Jest 4228/4228; `tsc` clean; ESLint clean; i18n in step; build and bundle gate passed (four routes raised by measured + 0.5, noted). Railway deployment and 9/10 readiness are NOT claimed.
