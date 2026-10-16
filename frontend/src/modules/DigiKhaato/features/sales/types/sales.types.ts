@@ -223,6 +223,7 @@ export interface Rule46Check {
 }
 
 export interface SalesDocumentEnvelope {
+  readonly draftRecovered?: boolean;
   readonly document: SalesDocument;
   readonly warnings: readonly SalesWarning[];
   readonly rule46: Rule46Check | null;

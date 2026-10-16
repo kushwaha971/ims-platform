@@ -89,30 +89,34 @@ Append: “Resume from the latest verified QA.md checkpoint and acceptance track
 
 Resume **WP-02**, functionality/data reliability with regression testing. Continue
 autonomously through authorized work; a passing checkpoint is not a reason to stop.
-Do not move pricing/contact onboarding ahead of WP-07.
+Do not move pricing/contact onboarding ahead of WP-07. Read the newest QA.md entry
+and git history/status for exact published commits and final gate results.
 
-Verified local changes for this handoff:
-- Owner resolved D-01: weighted-average supplier-return stock costing; original
-  bill price/tax still determines supplier credit. Documentation corrected;
-  180 purchases/inventory tests pass. No stock algorithm or history migration.
-- Shared draft URL preserves invoice/estimate/order/challan family on first save.
-- Autosave preserves newer edits made during a pending save and schedules the next
-  save even if its debounce expired. 159 sales tests, types and affected lint pass.
+Completed: owner resolved D-01 (weighted-average stock costing, original-bill
+supplier credit); corrected docs and numeric replay tests. Sales drafts preserve
+their route family on reload, retain newer typing during a slow save, and now
+have durable first-create identity/recovery. Read
+09-draft-recovery-contract.md and ADR-063 before touching that protocol.
 
-**SH-011 remains open.** Next implement durable first-create identity and recovery
-across lost POST response, retry and reload. Include tenant/user/family scoping,
-concurrent manual/autosave requests, stale-version protection, and deleted-draft
-tombstones so retry cannot resurrect discarded work. A recovered create must not
-overwrite newer server edits or reapply stale wrapper metadata. Preserve posted
-documents and invoice snapshots. The existing 24-hour idempotency cache alone does
-not cover the seven-day local-draft recovery window.
+**Next: purchase bill/order recovery**, still in WP-02. Source inspection found
+unprotected first draft POSTs and the same unconditional autosave dirty reset in
+purchases/hooks/usePurchaseBillEditor.ts. Demonstrate failures, then reuse shared
+lifecycle mechanics with typed domain adapters. Do not copy the whole sales
+editor or import the sales financial model into purchases. Preserve payable,
+stock receipt, recording and supplier duplicate-number rules.
 
-Inspect shared owners first: sales/hooks/useInvoiceEditor.ts, useDraftAutosave.ts,
-redux/salesThunk.ts, salesFlowThunk.ts, api/salesService.ts, estimateService.ts,
-src/utils/localDrafts.ts and backend/apps/sales/services/documents.py with its
-estimate/order/challan adapters. Keep one recovery protocol; no duplicated logic
-per screen. Keep newer edits dirty after saving an older snapshot.
+Sales recovery owners: hooks/useInvoiceEditor.ts and its first-save lazy helper
+hooks/draftRecovery.ts, useDraftAutosave.ts, invoiceEditorSlice.ts,
+src/utils/localDrafts.ts, backend/apps/sales/services/documents.py and its thin
+estimate/order/challan adapters. Claims/tombstones survive short cache expiry;
+recovery reads current server data without applying stale request contents.
+Version-1 recovery saves current typing by explicit optimistic PATCH; newer
+versions require conflict review. Never replay posting as part of recovery.
 
-Use isolated fixtures. Preserve unrelated untracked files. Push this tested
-checkpoint to dev only when requested; distinguish push from verified deployment.
-Keep QA.md and the acceptance tracker truthful, with open work explicit.
+Use isolated fixtures and preserve unrelated work. The owner requested pushing
+tested code to dev and a continuation prompt; inspect current publication status
+before repeating a push. Do not claim Railway deployed without verification.
+Never wipe real databases, send real messages or access phone contacts in QA.
+Keep QA.md, the acceptance tracker and this handoff current. Full release/device
+sign-off, purchase recovery and multiple unsynced new-tab behavior are not proved
+by sales unit tests. Design/UX readiness is not yet 9/10.

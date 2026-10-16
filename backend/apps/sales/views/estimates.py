@@ -35,7 +35,7 @@ from apps.sales.services import documents as drafts
 from apps.sales.services import estimates as service
 from apps.sales.services.estimate_convert import convert_estimate
 from apps.sales.services.share import create_share_link, revoke_share_link
-from apps.sales.views.common import created, ok, tabbed_list
+from apps.sales.views.common import created, draft_created, ok, tabbed_list
 
 KINDS = service.ESTIMATE_KINDS
 
@@ -78,7 +78,7 @@ class EstimateViewSet(
         serializer.is_valid(raise_exception=True)
         payload = {k: v for k, v in serializer.validated_data.items() if k != "kind"}
         result = service.create_estimate(ctx=Ctx.from_request(request), payload=payload)
-        return created(result["document"], warnings=result["warnings"])
+        return draft_created(result)
 
     def partial_update(self, request: Any, *args: Any, **kwargs: Any) -> Any:
         serializer = EstimateWriteSerializer(data=request.data)

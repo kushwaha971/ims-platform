@@ -6,9 +6,15 @@ import { sessionLoaded } from 'src/redux/slice/sessionSlice';
 import { store } from 'src/redux/store';
 import { renderWithProviders } from 'src/tests/renderWithProviders';
 import type { PermissionCode } from 'src/types/domain.types';
+import { localDraftKey, readLocalDraft } from 'src/utils/localDrafts';
+
+import { useInvoiceEditor, type UseInvoiceEditorResult } from '../hooks/useInvoiceEditor';
+import { wireDocument } from '../testing/salesFixtures';
 
 import { InvoiceEditorPageContent } from './InvoiceEditorPageContent';
 import { InvoicePaymentDrawer } from './InvoicePaymentDrawer';
+
+import type { InvoiceFormValues } from '../view-model/invoiceForm';
 
 /**
  * SAL-02 / SAL-07 on screen. The editor's context (the shop's GST type and
@@ -69,6 +75,7 @@ jest.mock('next/navigation', () => ({
 
 const sales = jest.requireMock('../api/salesService') as {
   createInvoice: jest.Mock;
+  updateInvoice: jest.Mock;
   issueInvoice: jest.Mock;
 };
 
@@ -316,4 +323,130 @@ it('asks only for customers when choosing who a sales bill is for', async () => 
       expect.anything()
     )
   );
+});
+
+describe('draft creation recovery', () => {
+  let editor: UseInvoiceEditorResult;
+  function Probe() {
+    editor = useInvoiceEditor(null);
+    return null;
+  }
+  const envelope = (version = 1, recovered = false) =>
+    jest.requireActual('../api/salesService').toEnvelope({
+      data: wireDocument({ status: 'draft', number: null, version }),
+      meta: { draft_recovered: recovered },
+    });
+  const open = async () => {
+    signIn(['sales.invoice.read', 'sales.invoice.write']);
+    const view = renderWithProviders(<Probe />);
+    await waitFor(() => expect(editor.editor.context).not.toBeNull());
+    return view;
+  };
+
+  it('persists the same creation key before POST and reuses it after response loss/remount', async () => {
+    const view = await open();
+    sales.createInvoice.mockRejectedValueOnce(new Error('lost response'));
+    await act(async () => {
+      await editor.save(false);
+    });
+    const key = localDraftKey('t1', 'invoice', 'new', 'u1');
+    const stored = readLocalDraft<InvoiceFormValues>(key);
+    if (!stored) throw new Error('Expected the draft to be persisted before POST');
+    const sentKey = sales.createInvoice.mock.calls[0][0].client_draft_key;
+    expect(stored.form.clientDraftKey).toBe(sentKey);
+    expect(sentKey).toBeTruthy();
+    view.unmount();
+    await open();
+    act(() =>
+      editor.form.reset({ ...stored.form, notes: 'new local text' }, { keepDefaultValues: true })
+    );
+    sales.createInvoice.mockResolvedValueOnce(envelope(1, true));
+    sales.updateInvoice.mockResolvedValueOnce(envelope(2));
+    await act(async () => {
+      await editor.save(false);
+    });
+    expect(sales.createInvoice.mock.calls[1][0].client_draft_key).toBe(sentKey);
+    expect(editor.editor.documentId).toBe('d1');
+    expect(sales.updateInvoice).toHaveBeenCalledWith(
+      'd1',
+      expect.objectContaining({ version: 1, notes: 'new local text' }),
+      expect.anything()
+    );
+  });
+
+  it('queues an overlapping save using the acknowledged id/version and newest typing', async () => {
+    await open();
+    let complete!: (value: unknown) => void;
+    sales.createInvoice.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          complete = resolve;
+        })
+    );
+    sales.updateInvoice.mockResolvedValueOnce(envelope(2));
+    let first!: Promise<unknown>;
+    act(() => {
+      first = editor.save(true);
+    });
+    await waitFor(() => expect(sales.createInvoice).toHaveBeenCalledTimes(1));
+    act(() => editor.form.setValue('notes', 'typed during save', { shouldDirty: true }));
+    let second!: Promise<unknown>;
+    act(() => {
+      second = editor.save(false);
+    });
+    expect(sales.updateInvoice).not.toHaveBeenCalled();
+    await act(async () => {
+      complete(envelope());
+      await first;
+      await second;
+    });
+    expect(sales.createInvoice).toHaveBeenCalledTimes(1);
+    expect(sales.updateInvoice).toHaveBeenCalledWith(
+      'd1',
+      expect.objectContaining({
+        version: 1,
+        notes: 'typed during save',
+      }),
+      expect.anything()
+    );
+  });
+
+  it('requires conflict review when a recovered first create already has newer edits', async () => {
+    await open();
+    sales.createInvoice.mockResolvedValueOnce(envelope(3, true));
+    let result: unknown;
+    await act(async () => {
+      result = await editor.save(false);
+    });
+    expect(result).toBeNull();
+    expect(editor.editor.saveState).toBe('conflict');
+    await act(async () => {
+      await editor.save(true);
+    });
+    expect(sales.updateInvoice).not.toHaveBeenCalled();
+    expect(readLocalDraft(localDraftKey('t1', 'invoice', 'd1', 'u1'))?.version).toBe(1);
+  });
+
+  it('ignores a late save response after feature/account teardown', async () => {
+    const view = await open();
+    let complete!: (value: unknown) => void;
+    sales.createInvoice.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          complete = resolve;
+        })
+    );
+    act(() => {
+      void editor.save(false);
+    });
+    await waitFor(() => expect(sales.createInvoice).toHaveBeenCalledTimes(1));
+    view.unmount();
+    act(() => {
+      store.dispatch(resetAllFeatureState());
+    });
+    await act(async () => {
+      complete(envelope());
+    });
+    expect(store.getState().invoiceEditor?.documentId).toBeNull();
+  });
 });

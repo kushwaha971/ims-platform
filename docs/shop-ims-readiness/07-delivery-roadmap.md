@@ -57,3 +57,8 @@ Owner explicitly requested keeping the roadmap order, without reprioritizing the
 - Reuse the existing selected-phone-contact prefill for Customer/Supplier/Udhaar onboarding and appropriate inline-add flows. Keep role/book/tenant context, explicit save and duplicate checks; preserve manual entry and unsupported/cancel behavior. Selecting a contact does not itself create a person or send a message.
 
 These are queued requirements, not implemented features. The next implementation work remains WP-02 recovery hardening.
+
+
+## WP-02 continuation — 16 October 2026
+
+Sales SH-011 is implemented with the [durable recovery contract](09-draft-recovery-contract.md). Do not reimplement it. Next inspect purchase bills/orders: their first draft POST currently has no durable creation key; the purchase autosave completion resets current typing unconditionally. Treat these as remaining WP-02 work, with fail-before tests and reuse review before extending the protocol. Shared lifecycle mechanics should have one owner with typed sales/purchase adapters; preserve their distinct financial/stock/posting rules. WP-03 reuse inventory accompanies this work. WP-04 communications and WP-05/06 design follow; pricing/contacts stay in WP-07.

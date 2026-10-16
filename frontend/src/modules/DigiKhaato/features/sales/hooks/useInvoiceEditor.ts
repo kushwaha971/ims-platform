@@ -3,16 +3,23 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 
 import { useForm, useWatch, type UseFormReturn } from 'react-hook-form';
+import { useStore } from 'react-redux';
 
 import { useAppDispatch, useAppSelector } from 'src/hooks/useAppStore';
 import { useIdempotencyKey } from 'src/hooks/useIdempotencyKey';
 import { usePermissions } from 'src/hooks/usePermissions';
 import { useTranslation } from 'src/hooks/useTranslation';
-import { selectTenantTimezone } from 'src/redux/slice/sessionSlice';
+import {
+  selectActiveTenant,
+  selectSessionUser,
+  selectTenantTimezone,
+} from 'src/redux/slice/sessionSlice';
+import type { RootState } from 'src/redux/store';
 import { todayInTenantTz } from 'src/utils/dates';
 
 import {
   editorReset,
+  saveUnavailable,
   selectInvoiceEditor,
   type InvoiceEditorState,
 } from '../redux/invoiceEditorSlice';
@@ -30,7 +37,6 @@ import {
   fromDocument,
   paymentWireBody,
   previewInput,
-  toWireBody,
   type InvoiceFormValues,
   type PaymentRowForm,
 } from '../view-model/invoiceForm';
@@ -53,23 +59,6 @@ export const isQuoteKind = (
   kind: EditorKind
 ): kind is 'estimate' | 'sales_order' | 'delivery_challan' => kind !== 'invoice';
 
-/** The draft body for the kind: an estimate adds its validity; neither has a due date. */
-const wireBodyFor = (kind: EditorKind, values: InvoiceFormValues): Record<string, unknown> =>
-  kind === 'estimate'
-    ? { ...toWireBody(values), due_on: null, valid_until: values.validUntil || null }
-    : kind === 'sales_order'
-      ? { ...toWireBody(values), due_on: null }
-      : kind === 'delivery_challan'
-        ? {
-            ...toWireBody(values),
-            due_on: null,
-            challan_type: values.challanType || 'other',
-            transporter: values.transporter.trim(),
-            vehicle_number: values.vehicleNumber.trim(),
-            eway_bill_number: values.ewayBillNumber.trim(),
-          }
-        : toWireBody(values);
-
 export interface UseInvoiceEditorResult {
   readonly kind: EditorKind;
   readonly form: UseFormReturn<InvoiceFormValues>;
@@ -91,6 +80,14 @@ export const useInvoiceEditor = (
   kind: EditorKind = 'invoice'
 ): UseInvoiceEditorResult => {
   const dispatch = useAppDispatch();
+  const store = useStore<RootState>();
+  const tenant = useAppSelector(selectActiveTenant);
+  const user = useAppSelector(selectSessionUser);
+  const tenantId = tenant?.id;
+  const userId = user?.id;
+  const saveQueue = useRef<Promise<unknown>>(Promise.resolve());
+  const generation = useRef(0);
+  const activeSave = useRef<{ abort: () => void } | null>(null);
   const editor = useAppSelector(selectInvoiceEditor);
   const timezone = useAppSelector(selectTenantTimezone);
   const { can, hasModule } = usePermissions();
@@ -127,8 +124,12 @@ export const useInvoiceEditor = (
   });
   const values = useWatch({ control: form.control }) as InvoiceFormValues;
 
+  const seeded = useRef<string | null>(null);
+
   // Load: the shop's context always, the draft when editing one.
   useEffect(() => {
+    generation.current += 1;
+    seeded.current = null;
     dispatch(editorReset());
     const context = dispatch(fetchSalesContext(today));
     const draft = !documentId
@@ -137,13 +138,14 @@ export const useInvoiceEditor = (
         ? dispatch(fetchFlowDocument({ kind, id: documentId }))
         : dispatch(fetchInvoice(documentId));
     return () => {
+      generation.current += 1;
+      activeSave.current?.abort();
       context.abort();
       draft?.abort();
     };
-  }, [dispatch, documentId, today, kind]);
+  }, [dispatch, documentId, today, kind, tenantId, userId]);
 
   // Seed the form ONCE per editor: from the draft, or from the shop's defaults.
-  const seeded = useRef<string | null>(null);
   const { context, document } = editor;
   useEffect(() => {
     if (documentId) {
@@ -186,31 +188,62 @@ export const useInvoiceEditor = (
     [values, context]
   );
 
-  const { documentId: savedId, version } = editor;
   const save = useCallback(
-    async (quiet: boolean): Promise<SalesDocumentEnvelope | null> => {
-      const arg = { id: savedId, version, body: wireBodyFor(kind, form.getValues()), quiet };
-      const result = isQuoteKind(kind)
-        ? await dispatch(saveEstimateDraft({ ...arg, kind }))
-        : await dispatch(saveInvoiceDraft(arg));
-      if (!(
-        saveInvoiceDraft.fulfilled.match(result) || saveEstimateDraft.fulfilled.match(result)
-      )) {
-        return null;
-      }
-      // FR-5 — the server resolved the place of supply for a freshly picked party.
-      if (!form.getValues('placeOfSupplyState')) {
-        form.setValue('placeOfSupplyState', result.payload.document.placeOfSupplyState);
-      }
-      return result.payload;
+    (quiet: boolean): Promise<SalesDocumentEnvelope | null> => {
+      const epoch = generation.current;
+      const currentScope = () => {
+        const session = store.getState().session;
+        return (
+          epoch === generation.current &&
+          tenantId === session.activeTenant?.id &&
+          userId === session.user?.id
+        );
+      };
+      const run = async (): Promise<SalesDocumentEnvelope | null> => {
+        try {
+          const { saveDraftWithRecovery } = await import('./draftRecovery');
+          return await saveDraftWithRecovery({
+            form,
+            kind,
+            documentId,
+            tenantId,
+            userId,
+            quiet,
+            currentScope,
+            getEditor: () => selectInvoiceEditor(store.getState()),
+            send: async (arg) => {
+              const pending = isQuoteKind(kind)
+                ? dispatch(saveEstimateDraft({ ...arg, kind }))
+                : dispatch(saveInvoiceDraft(arg));
+              activeSave.current = pending;
+              const result = await pending;
+              return saveInvoiceDraft.fulfilled.match(result) ||
+                saveEstimateDraft.fulfilled.match(result)
+                ? result.payload
+                : null;
+            },
+          });
+        } catch {
+          // A deferred chunk can be unavailable offline. Keep the device copy
+          // and show the existing save error instead of rejecting the UI event.
+          if (currentScope()) dispatch(saveUnavailable());
+          return null;
+        }
+      };
+      // Manual save, autosave and save-before-issue share this queue. Each task
+      // reads the latest server id/version and current form when it starts.
+      const pending = saveQueue.current.then(run, run);
+      saveQueue.current = pending;
+      return pending;
     },
-    [dispatch, savedId, version, form, kind]
+    [dispatch, documentId, form, kind, store, tenantId, userId]
   );
 
   const issue = useCallback(
     async (payment: readonly PaymentRowForm[] | null, override = false) => {
       const saved = await save(false);
       if (!saved) return null;
+      if (saved.document.status !== 'draft') return saved;
       if (isQuoteKind(kind)) {
         // SAL-01 FR-2 — an estimate's "issue" is `mark-sent`, which numbers it; a sales
         // order's is `confirm` (Shop item 3).
@@ -244,6 +277,8 @@ export const useInvoiceEditor = (
 
   /** "New bill" after an issue on `/new`: a blank editor without a page load (Ctrl+N, §6). */
   const restart = useCallback(() => {
+    generation.current += 1;
+    activeSave.current?.abort();
     dispatch(editorReset());
     seeded.current = 'new';
     form.reset(

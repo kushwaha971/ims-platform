@@ -27,15 +27,11 @@ from apps.sales.models import SalesDocument
 from apps.sales.permissions import DeliveryChallanPermissions
 from apps.sales.selectors.documents import ORDERING_FIELDS, detail_queryset, list_documents
 from apps.sales.serializers.document import DocumentReadSerializer, ShareLinkSerializer
-from apps.sales.serializers.flows import (
-    CancelSerializer,
-    ChallanWriteSerializer,
-    VersionSerializer,
-)
-from apps.sales.services import documents as drafts
+from apps.sales.serializers.flows import CancelSerializer, ChallanWriteSerializer, VersionSerializer
 from apps.sales.services import challans as service
+from apps.sales.services import documents as drafts
 from apps.sales.services.share import create_share_link, revoke_share_link
-from apps.sales.views.common import created, ok, tabbed_list
+from apps.sales.views.common import created, draft_created, ok, tabbed_list
 
 KINDS = service.CHALLAN_KINDS
 
@@ -82,7 +78,7 @@ class DeliveryChallanViewSet(
         result = service.create_challan(
             ctx=Ctx.from_request(request), payload=self._payload(request)
         )
-        return created(result["document"], warnings=result["warnings"])
+        return draft_created(result)
 
     def partial_update(self, request: Any, *args: Any, **kwargs: Any) -> Any:
         result = service.update_challan(

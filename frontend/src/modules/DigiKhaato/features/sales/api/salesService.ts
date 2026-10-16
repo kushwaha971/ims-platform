@@ -157,6 +157,7 @@ export const toEnvelope = (body: EnvelopeWire): SalesDocumentEnvelope => {
   const meta = body.meta ?? {};
   return {
     document: toDocument(body.data),
+    draftRecovered: meta.draft_recovered === true,
     warnings: (meta.warnings ?? []) as SalesDocumentEnvelope['warnings'],
     rule46: (meta.rule46 ?? null) as SalesDocumentEnvelope['rule46'],
     partyBalance: sn(meta.party_balance),

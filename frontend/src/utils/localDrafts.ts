@@ -7,7 +7,7 @@ import { listLocalKeys, readLocal, removeLocal, writeLocal } from './storage';
  * `localDraftId` is the server id once the draft has one, or a client id
  * before its first save. Entries older than seven days are purged on read.
  * The draft namespace deliberately survives logout and tenant switch
- * (`storage.clearLocalExceptDrafts`): the keys are per tenant, so another
+ * (`storage.clearLocalExceptDrafts`): new editor keys are per tenant AND user, so another
  * tenant never sees them, and a phone that logged out mid-bill keeps the bill.
  */
 
@@ -19,10 +19,15 @@ export interface LocalDraft<TForm> {
   readonly form: TForm;
 }
 
-const prefixFor = (tenantId: string, kind: string): string => `sales.draft.${tenantId}.${kind}.`;
+const prefixFor = (tenantId: string, kind: string, userId?: string): string =>
+  `sales.draft.${tenantId}.${kind}.${userId ? `user.${userId}.` : ''}`;
 
-export const localDraftKey = (tenantId: string, kind: string, draftId: string): string =>
-  `${prefixFor(tenantId, kind)}${draftId}`;
+export const localDraftKey = (
+  tenantId: string,
+  kind: string,
+  draftId: string,
+  userId?: string
+): string => `${prefixFor(tenantId, kind, userId)}${draftId}`;
 
 export const writeLocalDraft = <TForm>(
   key: string,
@@ -52,9 +57,10 @@ export const removeLocalDraft = (key: string): void => removeLocal(key);
 export const listLocalDrafts = <TForm>(
   tenantId: string,
   kind: string,
-  now: Date = new Date()
+  now: Date = new Date(),
+  userId?: string
 ): { readonly key: string; readonly draftId: string; readonly draft: LocalDraft<TForm> }[] => {
-  const prefix = prefixFor(tenantId, kind);
+  const prefix = prefixFor(tenantId, kind, userId);
   return listLocalKeys(prefix).flatMap((key) => {
     const draft = readLocalDraft<TForm>(key, now);
     return draft ? [{ key, draftId: key.slice(prefix.length), draft }] : [];

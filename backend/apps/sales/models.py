@@ -174,6 +174,29 @@ class SalesDocument(TenantModel):
         return self.number or f"draft {self.id}"
 
 
+class DraftCreation(TenantModel):
+    """Durable retry identity. A null document is a discarded-draft tombstone.
+
+    Keep the actor's immutable identifier after account deletion; a new account
+    must never inherit its retry namespace. No form/price/contact data is copied.
+    """
+
+    actor_key = models.CharField(max_length=64)
+    family = models.CharField(max_length=24)
+    key = models.CharField(max_length=64)
+    document = models.OneToOneField(
+        SalesDocument, on_delete=models.SET_NULL, null=True, related_name="draft_creation"
+    )
+
+    class Meta:
+        db_table = "sales_draft_creation"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["tenant", "actor_key", "family", "key"], name="uq_sales_draft_creation"
+            ),
+        ]
+
+
 class SalesDocumentLine(models.Model):
     """A line; `taxable_value` is post-both-discounts (BR-5, the Rule 46 figure)."""
 

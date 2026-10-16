@@ -60,8 +60,8 @@ Status values: Not started, In progress, Needs acceptance review, Pass, Fail, Bl
 | REUSE-03 | [engineering-and-code-reuse](04-engineering-and-code-reuse.md) | Engineering | Needs acceptance review | — | — |
 | REUSE-04 | [engineering-and-code-reuse](04-engineering-and-code-reuse.md) | Engineering | Needs acceptance review | — | — |
 | REUSE-05 | [engineering-and-code-reuse](04-engineering-and-code-reuse.md) | Engineering | Needs acceptance review | — | — |
-| ENG-05 | [engineering-and-code-reuse](04-engineering-and-code-reuse.md) | Engineering | Needs acceptance review | — | — |
-| ENG-06 | [engineering-and-code-reuse](04-engineering-and-code-reuse.md) | Engineering | Needs acceptance review | — | — |
+| ENG-05 | [engineering-and-code-reuse](04-engineering-and-code-reuse.md) | Engineering | Needs acceptance review | Sales durable recovery: 8 backend scenarios; lost-response/remount, overlapping-save and stale-copy frontend coverage; desktop/390px save/reload | Purchase recovery, physical network-loss/storage and multi-new-tab cases remain |
+| ENG-06 | [engineering-and-code-reuse](04-engineering-and-code-reuse.md) | Engineering | Needs acceptance review | Sales save/load request identities ignore late results after reset; actor/tenant/family recovery isolation | Whole-module review remains |
 | ENG-07 | [engineering-and-code-reuse](04-engineering-and-code-reuse.md) | Engineering | Needs acceptance review | — | — |
 | ENG-08 | [engineering-and-code-reuse](04-engineering-and-code-reuse.md) | Engineering | Needs acceptance review | — | — |
 | MSG-01 | [editable-messages-and-reminders](05-editable-messages-and-reminders.md) | Product/messaging | Needs acceptance review | — | — |
@@ -85,7 +85,7 @@ Status values: Not started, In progress, Needs acceptance review, Pass, Fail, Bl
 | Supported business/capability scope | Not frozen; see D-02 |
 | Design/UX weighted score | Not evaluated; target at least9.0 |
 | Functionality/business weighted score | Not evaluated; target at least9.0 |
-| Lowest dimension / unresolved defects | Not evaluated; D-01 approved16 Oct; SH-011 durable draft recovery remains open |
+| Lowest dimension / unresolved defects | Not evaluated; D-01 approved16 Oct; sales SH-011 implemented; purchase recovery and release/device evidence remain open |
 | Mobile/desktop/device evidence | Link evidence for declared matrix |
 | Message inventory completion | Not audited against MSG-01 universal target |
 | Duplication baseline / high-risk exceptions | Not measured; REUSE audit required |

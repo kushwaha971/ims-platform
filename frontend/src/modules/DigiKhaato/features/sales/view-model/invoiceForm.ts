@@ -32,6 +32,8 @@ export interface InvoiceLineForm {
 }
 
 export interface InvoiceFormValues {
+  /** Internal first-create identity, persisted with the local copy; never printed. */
+  clientDraftKey?: string;
   mode: BillingMode;
   partyId: string | null;
   partyName: string;

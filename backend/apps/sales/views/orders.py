@@ -26,15 +26,11 @@ from apps.sales.models import SalesDocument
 from apps.sales.permissions import SalesOrderConvertPermissions, SalesOrderPermissions
 from apps.sales.selectors.documents import ORDERING_FIELDS, detail_queryset, list_documents
 from apps.sales.serializers.document import DocumentReadSerializer, ShareLinkSerializer
-from apps.sales.serializers.flows import (
-    CancelSerializer,
-    InvoiceWriteSerializer,
-    VersionSerializer,
-)
+from apps.sales.serializers.flows import CancelSerializer, InvoiceWriteSerializer, VersionSerializer
 from apps.sales.services import documents as drafts
 from apps.sales.services import sales_orders as service
 from apps.sales.services.share import create_share_link, revoke_share_link
-from apps.sales.views.common import created, ok, tabbed_list
+from apps.sales.views.common import created, draft_created, ok, tabbed_list
 
 KINDS = service.ORDER_KINDS
 
@@ -80,7 +76,7 @@ class SalesOrderViewSet(
 
     def create(self, request: Any, *args: Any, **kwargs: Any) -> Any:
         result = service.create_order(ctx=Ctx.from_request(request), payload=self._payload(request))
-        return created(result["document"], warnings=result["warnings"])
+        return draft_created(result)
 
     def partial_update(self, request: Any, *args: Any, **kwargs: Any) -> Any:
         result = service.update_order(

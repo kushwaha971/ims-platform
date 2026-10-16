@@ -51,6 +51,8 @@ def _no_receivable(document: Any) -> None:
 @transaction.atomic
 def create_order(*, ctx: Ctx, payload: dict) -> dict:
     result = drafts.create_draft(ctx=ctx, payload=payload, kind=DocumentKind.SALES_ORDER)
+    if result.get("recovered"):
+        return result
     _no_receivable(result["document"])
     result["document"].save(update_fields=["due_on", "valid_until", "updated_at"])
     return result

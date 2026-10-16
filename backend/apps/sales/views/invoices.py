@@ -39,7 +39,7 @@ from apps.sales.services import documents as drafts
 from apps.sales.services.issue import issue_invoice
 from apps.sales.services.share import create_share_link, revoke_share_link, upi_intent
 from apps.sales.services.void import void_invoice
-from apps.sales.views.common import created, envelope, ok, tabbed_list
+from apps.sales.views.common import draft_created, envelope, ok, tabbed_list
 
 
 def _require_key(request: Any) -> None:
@@ -87,7 +87,7 @@ class InvoiceViewSet(
         result = drafts.create_draft(
             ctx=Ctx.from_request(request), payload=dict(serializer.validated_data)
         )
-        return created(result["document"], warnings=result["warnings"])
+        return draft_created(result)
 
     @idempotent("sales_invoice_issue")
     def _create_and_issue(self, request: Any) -> Any:
@@ -97,6 +97,7 @@ class InvoiceViewSet(
         serializer.is_valid(raise_exception=True)
         payload = dict(serializer.validated_data)
         ctx = Ctx.from_request(request)
+        payload.pop("client_draft_key", None)  # direct issue uses its existing issue key
         with transaction.atomic():
             draft = drafts.create_draft(ctx=ctx, payload=payload)["document"]
             result = issue_invoice(

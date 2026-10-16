@@ -88,3 +88,13 @@ def tabbed_list(view: Any, request: Any, tabs: dict[str, tuple[str, ...]]) -> An
         "has_any": bool(rows) or view.get_queryset().exists(),
     }
     return StandardResponse.ok(data, meta=meta)
+
+
+def draft_created(result: dict) -> Any:
+    """Recovered creates return the current document; never replay stale form data."""
+    respond = ok if result.get("recovered") else created
+    return respond(
+        result["document"],
+        warnings=result["warnings"],
+        extra={"draft_recovered": bool(result.get("recovered"))},
+    )

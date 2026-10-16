@@ -68,6 +68,8 @@ def apply_validity(document: Any, payload: dict) -> None:
 @transaction.atomic
 def create_estimate(*, ctx: Ctx, payload: dict) -> dict:
     result = drafts.create_draft(ctx=ctx, payload=payload, kind=DocumentKind.ESTIMATE)
+    if result.get("recovered"):
+        return result
     document = result["document"]
     apply_validity(document, payload)
     document.save(update_fields=["valid_until", "due_on", "updated_at"])

@@ -18,7 +18,7 @@ from apps.common.audit import AuditAction, write_audit
 from apps.common.context import Ctx
 from apps.common.exceptions import BusinessRuleViolation, NotFound, PermissionDenied, StaleVersion
 from apps.sales.constants import INVOICE_KINDS, DocumentKind, DocumentStatus
-from apps.sales.models import SalesDocument, SalesDocumentLine
+from apps.sales.models import DraftCreation, SalesDocument, SalesDocumentLine
 from apps.sales.services import settings as sales_settings
 from apps.sales.services.payload import apply_payload, kind_for
 
@@ -82,16 +82,37 @@ def _snapshot(document: SalesDocument) -> dict:
 def create_draft(*, ctx: Ctx, payload: dict, kind: str | None = None) -> dict:
     """A new draft. `kind` is the route's (estimate); None means the tenant's tax kind."""
     tenant = ctx.tenant
+    resolved_kind = kind or kind_for(tenant, payload.get("kind"))
+    creation = None
+    if key := payload.get("client_draft_key"):
+        # get_or_create's unique insert waits for a competing transaction. The
+        # claim and document commit together; failed creates never burn a key.
+        creation, claimed = DraftCreation.objects.get_or_create(
+            tenant=tenant,
+            actor_key=str(ctx.actor.pk) if ctx.actor else ctx.actor_type,
+            family="invoice" if resolved_kind in INVOICE_KINDS else resolved_kind,
+            key=key,
+            defaults={"created_by": _actor(ctx)},
+        )
+        if not claimed:
+            document = SalesDocument.objects.filter(tenant=tenant, pk=creation.document_id).first()
+            if document is None:
+                raise NotFound("This draft was discarded. Start a new document.")
+            # A retry is a lookup, never an update, including posted documents.
+            return {"document": document, "warnings": [], "recovered": True}
     document = SalesDocument(
         tenant=tenant,
         created_by=_actor(ctx),
-        kind=kind or kind_for(tenant, payload.get("kind")),
+        kind=resolved_kind,
         status=DocumentStatus.DRAFT,
         round_off_enabled=sales_settings.round_off_default(tenant),
         terms=sales_settings.default_terms(tenant),
     )
     outcome = apply_payload(ctx, document, payload, strict=False)
     document.save()
+    if creation is not None:
+        creation.document = document
+        creation.save(update_fields=["document", "updated_at"])
     replace_lines(document, outcome["rows"])
     write_audit(
         ctx=ctx,

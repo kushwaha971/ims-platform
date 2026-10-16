@@ -1391,3 +1391,16 @@ Any ADR change that contradicts canon §0.4 must amend canon §0.4 in the same c
 ---
 
 **End of Part 38.**
+
+
+## ADR-063 — Durable sales draft identity is separate from posting idempotency
+
+**Date:** 16 October 2026. **Status:** implemented; release acceptance remains evidence-gated.
+
+**Context.** A lost first-create response followed by a retry/remount could create another draft. The 24-hour response cache is shorter than the seven-day local recovery window and a stored response would become stale after another device edits or posts the document. Hard-deleting a draft must not make its old retry key reusable.
+
+**Decision.** Use one sales-domain `DraftCreation` claim table across invoices/bills-of-supply, estimates, orders and challans, scoped by tenant, immutable actor identifier, family and client key. The unique insertion and document write share a transaction. Retry reads the current document without applying incoming contents. A nullable one-to-one `SET_NULL` relation makes deletion retain a tombstone. The shared editor persists the key before POST, serializes saves, and uses versioned PATCH/conflict review for current typing. Posting's existing idempotency rules are unchanged.
+
+**Alternatives.** Extending the global cache lifetime changes unrelated writes and still replays stale contents. Storing only a key on the document loses identity on hard deletion. A generic polymorphic identity table would require every deletion path to maintain tombstones manually; the domain FK makes this invariant enforceable now. Purchase recovery should reuse protocol logic with a typed domain adapter when implemented, rather than copying the sales editor or importing its financial model into purchases.
+
+**Consequences.** One small additive table/migration; no new dependency or infrastructure. Claims retain no form or financial snapshot. Tombstones grow with discarded keyed drafts and require an explicit future retention policy, not the short-lived posting-cache purge. Unowned legacy device copies are not attributed to another user. The full contract and documented limits are in `docs/shop-ims-readiness/09-draft-recovery-contract.md`.

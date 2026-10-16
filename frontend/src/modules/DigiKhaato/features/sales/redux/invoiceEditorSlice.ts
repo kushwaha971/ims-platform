@@ -42,6 +42,8 @@ export interface InvoiceEditorState {
   /** The document as the server last returned it (drives form init on edit). */
   document: SalesDocument | null;
   loadStatus: RequestStatus;
+  loadRequestId: string | null;
+  saveRequestId: string | null;
   context: SalesContext | null;
   saveState: SaveState;
   savedAt: string | null;
@@ -58,6 +60,8 @@ const initialState: InvoiceEditorState = {
   serverUpdatedAt: null,
   document: null,
   loadStatus: 'idle',
+  loadRequestId: null,
+  saveRequestId: null,
   context: null,
   saveState: 'idle',
   savedAt: null,
@@ -77,6 +81,13 @@ const accept = (state: Draft<InvoiceEditorState>, envelope: SalesDocumentEnvelop
   state.rule46 = envelope.rule46 as Draft<Rule46Check> | null;
 };
 
+const markConflict = (state: Draft<InvoiceEditorState>) => {
+  state.saveState = 'conflict';
+  // The current version is already in state; the localized conflict dialog
+  // reads it directly when this conflict did not come from an API rejection.
+  state.error = null;
+};
+
 const invoiceEditorSlice = createSlice({
   name: 'invoiceEditor',
   initialState,
@@ -84,6 +95,12 @@ const invoiceEditorSlice = createSlice({
     /** A fresh editor (new bill, or leaving one): everything but the loaded context goes. */
     editorReset(state) {
       return { ...initialState, context: state.context };
+    },
+    saveUnavailable(state) {
+      state.saveState = 'error';
+    },
+    restoreConflict(state) {
+      markConflict(state);
     },
     /** SAL-06 FR-9 — "Use server version": the conflict is resolved by reloading it. */
     conflictResolved(state, action: PayloadAction<{ version: number }>) {
@@ -128,26 +145,41 @@ const invoiceEditorSlice = createSlice({
         state.issuing = false;
         state.error = (action.payload ?? null) as Draft<ApiErrorShape> | null;
       })
-      .addMatcher(isAnyOf(fetchInvoice.pending, fetchFlowDocument.pending), (state) => {
+      .addMatcher(isAnyOf(fetchInvoice.pending, fetchFlowDocument.pending), (state, action) => {
+        state.loadRequestId = action.meta.requestId;
         state.loadStatus = 'loading';
         state.error = null;
       })
       .addMatcher(isAnyOf(fetchInvoice.fulfilled, fetchFlowDocument.fulfilled), (state, action) => {
+        if (state.loadRequestId !== action.meta.requestId) return;
         accept(state, action.payload);
         state.loadStatus = 'succeeded';
       })
       .addMatcher(isAnyOf(fetchInvoice.rejected, fetchFlowDocument.rejected), (state, action) => {
-        if (action.meta.aborted) return;
+        if (action.meta.aborted || state.loadRequestId !== action.meta.requestId) return;
         state.loadStatus = 'failed';
         state.error = (action.payload ?? null) as Draft<ApiErrorShape> | null;
       })
-      .addMatcher(isAnyOf(saveInvoiceDraft.pending, saveEstimateDraft.pending), (state) => {
+      .addMatcher(isAnyOf(saveInvoiceDraft.pending, saveEstimateDraft.pending), (state, action) => {
+        state.saveRequestId = action.meta.requestId;
         state.saveState = 'saving';
       })
       .addMatcher(
         isAnyOf(saveInvoiceDraft.fulfilled, saveEstimateDraft.fulfilled),
         (state, action) => {
+          if (state.saveRequestId !== action.meta.requestId) return;
           accept(state, action.payload);
+          if (action.payload.document.status !== 'draft') {
+            state.issued = action.payload as Draft<SalesDocumentEnvelope>;
+          }
+          if (
+            action.payload.draftRecovered &&
+            action.payload.document.status === 'draft' &&
+            action.payload.document.version > 1
+          ) {
+            markConflict(state);
+            return;
+          }
           state.saveState = 'saved';
           state.savedAt = action.payload.document.updatedAt;
         }
@@ -155,6 +187,7 @@ const invoiceEditorSlice = createSlice({
       .addMatcher(
         isAnyOf(saveInvoiceDraft.rejected, saveEstimateDraft.rejected),
         (state, action) => {
+          if (state.saveRequestId !== action.meta.requestId) return;
           const code = action.payload?.code;
           state.saveState = code === 'stale_version' ? 'conflict' : 'error';
           state.error = (action.payload ?? null) as Draft<ApiErrorShape> | null;
@@ -163,7 +196,8 @@ const invoiceEditorSlice = createSlice({
   },
 });
 
-export const { editorReset, conflictResolved } = invoiceEditorSlice.actions;
+export const { editorReset, conflictResolved, restoreConflict, saveUnavailable } =
+  invoiceEditorSlice.actions;
 export const invoiceEditorReducer = invoiceEditorSlice.reducer;
 
 declare module 'src/redux/store' {

@@ -37,6 +37,15 @@ describe('localDrafts', () => {
     expect(listLocalDrafts('t1', 'invoice').map((d) => d.draftId)).toEqual(['a']);
   });
 
+  it('does not offer another user or unowned legacy copy to the current user', () => {
+    writeLocalDraft(localDraftKey('t1', 'invoice', 'new', 'u1'), { clientDraftKey: 'a' }, null);
+    writeLocalDraft(localDraftKey('t1', 'invoice', 'new'), { clientDraftKey: 'legacy' }, null);
+    expect(readLocalDraft(localDraftKey('t1', 'invoice', 'new', 'u2'))).toBeNull();
+    expect(listLocalDrafts('t1', 'invoice', new Date(), 'u1').map((d) => d.draftId)).toEqual([
+      'new',
+    ]);
+  });
+
   it('offers a restore only when the local copy is newer than the server', () => {
     const local = { savedAt: '2026-09-24T10:00:00Z', version: 1, form: {} };
     expect(isLocalNewer(local, '2026-09-24T09:00:00Z')).toBe(true);

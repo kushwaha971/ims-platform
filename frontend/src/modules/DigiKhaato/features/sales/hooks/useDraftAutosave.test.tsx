@@ -8,10 +8,16 @@ import { useDraftAutosave } from './useDraftAutosave';
 
 import type { UseInvoiceEditorResult } from './useInvoiceEditor';
 
-jest.mock('src/hooks/useAppStore', () => ({ useAppSelector: () => false }));
+const mockDispatch = jest.fn();
+
+jest.mock('src/hooks/useAppStore', () => ({
+  useAppSelector: () => false,
+  useAppDispatch: () => mockDispatch,
+}));
 jest.mock('src/utils/localDrafts', () => ({
   localDraftKey: () => 'test-draft',
-  readLocalDraft: () => null,
+  isLocalNewer: jest.requireActual('src/utils/localDrafts').isLocalNewer,
+  readLocalDraft: jest.fn(() => null),
   writeLocalDraft: jest.fn(),
   removeLocalDraft: jest.fn(),
 }));
@@ -55,6 +61,44 @@ it('keeps edits made during an in-flight save dirty and saves them next', async 
   expect(result.current.autosave.dirty).toBe(true);
   act(() => jest.advanceTimersByTime(SERVER_AUTOSAVE_MS));
   expect(save).toHaveBeenCalledTimes(2);
+  unmount();
+  jest.useRealTimers();
+});
+
+it('requires review before restoring a device copy based on an older server version', () => {
+  jest.useFakeTimers();
+  const local = {
+    savedAt: new Date().toISOString(),
+    version: 1,
+    form: { ...emptyInvoiceForm('2026-10-16', 'party', ''), notes: 'device edits' },
+  };
+  jest.requireMock('src/utils/localDrafts').readLocalDraft.mockReturnValueOnce(local);
+  const { result, unmount } = renderHook(() => {
+    const form = useForm({ defaultValues: emptyInvoiceForm('2026-10-16', 'party', '') });
+    const values = useWatch({ control: form.control });
+    return useDraftAutosave(
+      {
+        form,
+        values,
+        save: jest.fn(),
+        kind: 'invoice',
+        editor: {
+          documentId: 'draft-id',
+          version: 2,
+          loadStatus: 'succeeded',
+          saveState: 'idle',
+          serverUpdatedAt: '2026-10-15T00:00:00Z',
+        },
+      } as unknown as UseInvoiceEditorResult,
+      'draft-id'
+    );
+  });
+  act(() => jest.advanceTimersByTime(0));
+  expect(result.current.restore?.version).toBe(1);
+  act(() => result.current.acceptRestore());
+  expect(mockDispatch).toHaveBeenCalledWith(
+    expect.objectContaining({ type: 'invoiceEditor/restoreConflict' })
+  );
   unmount();
   jest.useRealTimers();
 });

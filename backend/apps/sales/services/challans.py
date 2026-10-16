@@ -82,6 +82,8 @@ def _apply_challan_fields(document: Any, payload: dict) -> None:
 @transaction.atomic
 def create_challan(*, ctx: Ctx, payload: dict) -> dict:
     result = drafts.create_draft(ctx=ctx, payload=payload, kind=DocumentKind.DELIVERY_CHALLAN)
+    if result.get("recovered"):
+        return result
     _apply_challan_fields(result["document"], payload)
     result["document"].save(update_fields=["meta", "due_on", "valid_until", "updated_at"])
     return result

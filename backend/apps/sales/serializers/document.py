@@ -52,6 +52,7 @@ class PaymentInputSerializer(serializers.Serializer):
 
 
 class InvoiceWriteSerializer(serializers.Serializer):
+    client_draft_key = serializers.RegexField(r"^[A-Za-z0-9_-]{1,64}$", required=False)
     kind = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     party_id = serializers.UUIDField(required=False, allow_null=True)
     walk_in_name = serializers.CharField(
