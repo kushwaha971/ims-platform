@@ -88,6 +88,35 @@ def test_dashboard_tiles_follow_the_readers_permissions(tenant: Any, api_as: Any
     assert "cash_in_hand" in accountant.get(reverse(DASHBOARD)).json()["data"]["tiles"]
 
 
+def test_the_dues_tiles_add_up_to_the_lists_they_open(tenant: Any, api_as: Any) -> None:
+    """WP-06 DASH-01/DASH-02 — "To collect, from all your customers" opens the
+    customers who owe you, and "To pay, to all your suppliers" the suppliers you
+    owe. On the live stack the tiles summed every party whatever its role: a
+    supplier paid ₹300 ahead put To collect at ₹2,100 over a ₹1,800 list, and a
+    customer's ₹700 advance put To pay at ₹700 over an EMPTY supplier list. Each
+    tile is now the list's own total, and the money held the other way round is
+    sent beside it under its own name rather than folded in."""
+    b.party(tenant, "Ramesh", shop_balance=Decimal("1800"))
+    b.party(tenant, "Asha", shop_balance=Decimal("-700"))
+    b.party(tenant, "Gupta", shop_balance=Decimal("300"), is_supplier=True, is_customer=False)
+    b.party(tenant, "Agro", shop_balance=Decimal("-450"), is_supplier=True, is_customer=False)
+    owner, _ = api_as(tenant)
+    data = owner.get(reverse(DASHBOARD) + "?refresh=true").json()["data"]
+    tiles = data["tiles"]
+    # "Who has to give you the most" is the top of the same customer list its
+    # "View all" opens, so a supplier paid ahead is not in it.
+    assert [row["name"] for row in data["top_debtors"]] == ["Ramesh"]
+
+    def listed(kind: str, balance: str) -> dict:
+        query = f"?type={kind}&balance={balance}&book=shop&status=active"
+        return owner.get(reverse("v1:party-list") + query).json()["meta"]["totals"]
+
+    assert tiles["to_collect"]["amount"] == listed("customer", "owes_me")["receivable"] == "1800.00"
+    assert tiles["to_pay"]["amount"] == listed("supplier", "i_owe")["payable"] == "450.00"
+    assert tiles["to_collect"]["advances"] == "700.00"
+    assert tiles["to_pay"]["advances"] == "300.00"
+
+
 def test_dashboard_omits_low_stock_when_inventory_is_off(tenant: Any, api_as: Any) -> None:
     """T-RPT01-4 / FR-6 — a module switched off takes its tile with it."""
     b.stocked_item(tenant, "Dal", on_hand=0, reorder_point=2)

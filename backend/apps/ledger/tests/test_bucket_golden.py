@@ -46,8 +46,22 @@ CAPTURED_ON = dt.date(2026, 9, 30)
 #: `bucket` (A2, every ledger row) and `sections` (A10, `GET /reports/dashboard`'s registered
 #: module sections, `[]` for a tenant with no module that registers one) and `has_any` (the
 #: empty-book flag of 12 Oct 2026 on `/ledger/aging` and `/ledger/summary`'s `meta`) and
-#: `shop_balance` (DEC-019, the party detail's Shop figure, sent while the Shop is on).
-ADDED_SINCE_CAPTURE: frozenset[str] = frozenset({"bucket", "sections", "has_any", "shop_balance"})
+#: `shop_balance` (DEC-019, the party detail's Shop figure, sent while the Shop is on), and
+#: WP-06's layout A on the dashboard (16 Oct 2026): `advances` beside To collect / To pay,
+#: `today_received`, `supplier_bills`, `top_creditors` and an overdue line's `oldest_days_late`.
+ADDED_SINCE_CAPTURE: frozenset[str] = frozenset(
+    {
+        "bucket",
+        "sections",
+        "has_any",
+        "shop_balance",
+        "advances",
+        "today_received",
+        "supplier_bills",
+        "top_creditors",
+        "oldest_days_late",
+    }
+)
 
 _UUID = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
 #: Values that differ run to run for reasons that have nothing to do with the ledger.

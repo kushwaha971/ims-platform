@@ -33,7 +33,7 @@ import datetime as dt
 from decimal import Decimal
 from typing import Any
 
-from django.db.models import Count, DecimalField, Q, Sum
+from django.db.models import Count, DecimalField, Min, Q, Sum
 from django.db.models.functions import Coalesce
 
 from apps.common.constants import LedgerBucket
@@ -65,20 +65,39 @@ def _sum(field: str, predicate: Q) -> Any:
 
 
 def party_tiles(*, tenant: Any, today: dt.date) -> dict[str, dict[str, Any]]:
-    """To collect and To pay on the Shop's bills (FR-2, DEC-019).
+    """To collect and To pay on the Shop's bills (FR-2, DEC-019, WP-06 DASH-02).
 
     The dashboard is the SHOP's home, and DEC-019 (owner, 12 Oct 2026) keeps each
     app's money to itself: these are `shop_balance`, what is due on bills, never
     the Udhaar book's figure. Due today, Upcoming and the party half of Overdue
     were the udhaar book's promise dates (`collection_buckets`) and went with it
     to that app's Reminders; the Shop's overdue is its overdue BILLS.
-    """
-    from apps.ledger.selectors.aging import ledger_summary
 
-    summary = ledger_summary(tenant=tenant, field="shop_balance")
+    Each tile is the total of the list it opens, by that list's own query
+    (`party_totals` over the customers, or the suppliers). Summing every party
+    whatever its role made "To pay, to all your suppliers" a customer's advance
+    over an empty supplier list. The money held the other way round (a
+    customer's advance, a supplier paid ahead) rides beside each tile as
+    `advances`, named, rather than vanishing or being folded in. A party who is
+    both is in both lists, as the lists already show them; their net position
+    is decision D-03's and nothing here invents one.
+    """
+    from apps.parties.constants import PartyStatus
+    from apps.parties.models import Party
+    from apps.parties.selectors.party import party_totals
+
+    active = Party.objects.for_tenant(tenant).filter(status=PartyStatus.ACTIVE)
+    customers = party_totals(active.filter(is_customer=True), field="shop_balance")
+    suppliers = party_totals(active.filter(is_supplier=True), field="shop_balance")
     return {
-        "to_collect": {"amount": _money(summary["receivable"])},
-        "to_pay": {"amount": _money(summary["payable"])},
+        "to_collect": {
+            "amount": _money(customers["receivable"]),
+            "advances": _money(customers["payable"]),
+        },
+        "to_pay": {
+            "amount": _money(suppliers["payable"]),
+            "advances": _money(suppliers["receivable"]),
+        },
     }
 
 
@@ -104,6 +123,7 @@ def document_tiles(*, tenant: Any, today: dt.date) -> dict[str, Any]:
         credit_yesterday=_sum("grand_total", credit & Q(document_date=yesterday)),
         overdue_count=Count("id", filter=overdue),
         overdue_due=_sum("amount_due", overdue),
+        overdue_since=Min("due_on", filter=overdue),
     )
     return {
         "today_sales": {
@@ -114,7 +134,55 @@ def document_tiles(*, tenant: Any, today: dt.date) -> dict[str, Any]:
         "overdue_invoices": {
             "count": row["overdue_count"],
             "amount": _money(row["overdue_due"]),
+            # WP-06 — Needs attention says how old: the oldest bill's days past due.
+            **_age(row["overdue_since"], today),
         },
+    }
+
+
+def _age(since: dt.date | None, today: dt.date) -> dict[str, int]:
+    """`{"oldest_days_late": n}` for the oldest due date, or nothing when none is set."""
+    return {"oldest_days_late": (today - since).days} if since else {}
+
+
+def money_received_today(*, tenant: Any, today: dt.date) -> dict[str, Any]:
+    """WP-06 layout A — the Today row's "Money received": the Shop's receipts dated
+    today. Not sales (a bill issued and not paid is no money), not a void receipt,
+    and not another app's money (`bucket`, DEC-019)."""
+    from apps.payments.models import Payment
+
+    row = Payment.objects.filter(
+        tenant=tenant,
+        bucket=LedgerBucket.SHOP,
+        direction="in",
+        payment_date=today,
+    ).exclude(status=VOID).aggregate(amount=_sum("amount", Q()), count=Count("id"))
+    return {"amount": _money(row["amount"]), "count": row["count"]}
+
+
+def supplier_bills(*, tenant: Any, today: dt.date) -> dict[str, Any]:
+    """WP-06 spec order 3 — the Suppliers panel's bills: overdue (the purchase
+    list's own `overdue` tab, with the oldest's age) and those falling due in the
+    next seven days that are still open (the `unpaid` tab, by due date)."""
+    from apps.purchases.constants import OPEN_STATUSES
+    from apps.purchases.models import PurchaseDocument
+
+    overdue = Q(status="overdue")
+    week = Q(status__in=OPEN_STATUSES, due_on__gte=today, due_on__lte=today + dt.timedelta(days=7))
+    row = PurchaseDocument.objects.filter(tenant=tenant, kind="purchase_bill").aggregate(
+        overdue_count=Count("id", filter=overdue),
+        overdue_due=_sum("amount_due", overdue),
+        overdue_since=Min("due_on", filter=overdue),
+        week_count=Count("id", filter=week),
+        week_due=_sum("amount_due", week),
+    )
+    return {
+        "overdue": {
+            "count": row["overdue_count"],
+            "amount": _money(row["overdue_due"]),
+            **_age(row["overdue_since"], today),
+        },
+        "due_week": {"count": row["week_count"], "amount": _money(row["week_due"])},
     }
 
 
@@ -178,14 +246,18 @@ def low_stock(*, tenant: Any) -> dict[str, Any]:
 
 
 def top_debtors(*, tenant: Any) -> list[dict[str, Any]]:
-    """FR-4 — the five biggest positive balances, largest first."""
+    """FR-4 — the five customers who owe the Shop most, largest first.
+
+    WP-06 — the top of the list its "View all" opens (`/customers?balance=owes_me`),
+    so a supplier paid ahead is the To pay tile's `advances`, not a debtor here.
+    """
     from apps.parties.constants import PartyStatus
     from apps.parties.models import Party
 
     rows = (
         Party.objects.for_tenant(tenant)
         # DEC-019 — who owes the SHOP most, on bills.
-        .filter(status=PartyStatus.ACTIVE, shop_balance__gt=ZERO)
+        .filter(status=PartyStatus.ACTIVE, is_customer=True, shop_balance__gt=ZERO)
         .order_by("-shop_balance", "name", "id")
         .only("id", "name", "shop_balance", "collection_date", "mobile")[:TOP_DEBTORS_LIMIT]
     )
@@ -199,6 +271,23 @@ def top_debtors(*, tenant: Any) -> list[dict[str, Any]]:
             ),
             "mobile": party.mobile or None,
         }
+        for party in rows
+    ]
+
+
+def top_creditors(*, tenant: Any) -> list[dict[str, Any]]:
+    """WP-06 — the five suppliers the Shop owes most: the top of `/suppliers?balance=i_owe`."""
+    from apps.parties.constants import PartyStatus
+    from apps.parties.models import Party
+
+    rows = (
+        Party.objects.for_tenant(tenant)
+        .filter(status=PartyStatus.ACTIVE, is_supplier=True, shop_balance__lt=ZERO)
+        .order_by("shop_balance", "name", "id")
+        .only("id", "name", "shop_balance")[:TOP_DEBTORS_LIMIT]
+    )
+    return [
+        {"id": str(party.id), "name": party.name, "balance": _money(-party.shop_balance)}
         for party in rows
     ]
 
@@ -450,6 +539,8 @@ def build_dashboard(*, tenant: Any, today: dt.date) -> dict[str, Any]:
         "today_sales": documents["today_sales"],
         "overdue_invoices": documents["overdue_invoices"],
         "cash_in_hand": {"amount": _money(cash_in_hand(tenant=tenant, today=today))},
+        "today_received": money_received_today(tenant=tenant, today=today),
+        "supplier_bills": supplier_bills(tenant=tenant, today=today),
         "low_stock": stock["tile"],
     }
     return {
@@ -457,6 +548,7 @@ def build_dashboard(*, tenant: Any, today: dt.date) -> dict[str, Any]:
         "tiles": tiles,
         "recent_activity": recent_activity(tenant=tenant),
         "top_debtors": top_debtors(tenant=tenant),
+        "top_creditors": top_creditors(tenant=tenant),
         "low_stock_items": stock["items"],
         "first_use": first_use(tenant=tenant),
     }
@@ -485,6 +577,7 @@ def project(
             "tiles": {},
             "recent_activity": [],
             "top_debtors": [],
+            "top_creditors": [],
             "low_stock_items": [],
             "first_use": payload["first_use"],
         }
@@ -502,6 +595,10 @@ def project(
             tiles["overdue"] = {"count": 0, "amount": bills["amount"], "invoices": bills}
     if sales:
         tiles["today_sales"] = dict(source["today_sales"])
+    if "payments.payment.read" in granted and "today_received" in source:
+        tiles["today_received"] = dict(source["today_received"])
+    if "purchases.bill.read" in granted and "supplier_bills" in source:
+        tiles["supplier_bills"] = {key: dict(value) for key, value in source["supplier_bills"].items()}
     if "reports.financial.read" in granted and {"payments", "expenses"} <= modules:
         tiles["cash_in_hand"] = dict(source["cash_in_hand"])
     stock = "inventory.stock.read" in granted
@@ -530,6 +627,7 @@ def project(
         "tiles": tiles,
         "recent_activity": activity,
         "top_debtors": debtors,
+        "top_creditors": list(payload.get("top_creditors", [])) if parties else [],
         "low_stock_items": list(payload["low_stock_items"]) if stock else [],
         "first_use": payload["first_use"],
     }

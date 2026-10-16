@@ -20,10 +20,16 @@ export interface CountAmount {
  * the tiles it was sent — an absent tile is never drawn as ₹0.
  */
 export interface DashboardTiles {
-  readonly toCollect?: { readonly amount: MoneyString };
-  readonly toPay?: { readonly amount: MoneyString };
+  /**
+   * WP-06 DASH-02 — each is the total of the list it opens (customers who owe
+   * you; suppliers you owe). `advances` is the money held the other way round
+   * in that same list (a customer's advance; a supplier paid ahead), said
+   * beside the tile rather than folded into the other one.
+   */
+  readonly toCollect?: { readonly amount: MoneyString; readonly advances?: MoneyString };
+  readonly toPay?: { readonly amount: MoneyString; readonly advances?: MoneyString };
   readonly dueToday?: CountAmount;
-  readonly overdue?: CountAmount & { readonly invoices?: CountAmount };
+  readonly overdue?: CountAmount & { readonly invoices?: AgedCountAmount };
   readonly upcoming7d?: CountAmount;
   readonly todaySales?: {
     readonly amount: MoneyString;
@@ -31,7 +37,27 @@ export interface DashboardTiles {
     readonly yesterdayAmount: MoneyString;
   };
   readonly cashInHand?: { readonly amount: MoneyString };
+  /** WP-06 — the Shop's receipts dated today (sales is not cash). */
+  readonly todayReceived?: CountAmount;
+  /** WP-06 — purchase bills overdue (with the oldest's age) and due this week. */
+  readonly supplierBills?: {
+    readonly overdue: AgedCountAmount;
+    readonly dueWeek: CountAmount;
+  };
   readonly lowStock?: { readonly count: number; readonly outCount: number };
+}
+
+/** A count and amount with the oldest one's days past due, when any has a due date. */
+export interface AgedCountAmount extends CountAmount {
+  readonly oldestDays?: number;
+}
+
+/** WP-06 — a supplier the Shop owes, for the Suppliers panel. */
+export interface TopCreditor {
+  readonly id: string;
+  readonly name: string;
+  /** What the Shop owes them, as a positive figure. */
+  readonly balance: MoneyString;
 }
 
 /** Where a row leads (FR-3 "link"). The client builds the path from these. */
@@ -105,6 +131,7 @@ export interface DashboardData {
   readonly tiles: DashboardTiles;
   readonly recentActivity: readonly ActivityItem[];
   readonly topDebtors: readonly TopDebtor[];
+  readonly topCreditors: readonly TopCreditor[];
   readonly lowStockItems: readonly LowStockRow[];
   readonly firstUse: FirstUse;
   readonly sections: readonly DashboardSection[];

@@ -187,6 +187,23 @@ it('offers Add expense only to a role that can record', async () => {
   expect(await screen.findByRole('button', { name: 'Add expense' })).toBeInTheDocument();
 });
 
+it("opens the form when the dashboard's Add expense sends ?add=1 (WP-06)", async () => {
+  // The Shop home's More menu offers Add expense. A link that only lands on
+  // this list would be a link pretending to be an action.
+  mockSearch = 'add=1';
+  signIn(['expenses.expense.read', 'expenses.expense.write']);
+  renderWithProviders(<ExpensesPageContent />);
+  expect(await screen.findByRole('dialog')).toBeInTheDocument();
+});
+
+it('ignores ?add=1 for a role that cannot record', async () => {
+  mockSearch = 'add=1';
+  signIn(['expenses.expense.read']);
+  renderWithProviders(<ExpensesPageContent />);
+  await screen.findByText('Tea for staff');
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+});
+
 it('tells a member without access so, and asks nothing', () => {
   signIn([]);
   renderWithProviders(<ExpensesPageContent />);

@@ -35,6 +35,7 @@ import {
 } from 'src/design-system/UbDataGrid';
 import { useAppSelector } from 'src/hooks/useAppStore';
 import { useDebounce } from 'src/hooks/useDebounce';
+import { useOpenOnAddQuery } from 'src/hooks/useOpenOnAddQuery';
 import { useTranslation } from 'src/hooks/useTranslation';
 import { selectActiveApp } from 'src/redux/slice/sessionSlice';
 import { ROUTES } from 'src/routes';
@@ -121,6 +122,7 @@ export function ExpensesPageContent(): React.JSX.Element {
 
   const { refetch, clearFilters, error } = list;
   const { canWrite, openDrawer } = form;
+  useOpenOnAddQuery(openDrawer, canWrite);
   const emptyStates = useMemo<UbDataGridEmptyStates>(
     () => ({
       firstUse: {

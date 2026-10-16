@@ -1,3 +1,4 @@
+import type { TranslateFn } from 'src/hooks/useTranslation';
 import { ROUTES } from 'src/routes';
 import { formatInr, isNegativeAmount, toDecimal, type MoneyString } from 'src/utils/money';
 
@@ -70,25 +71,32 @@ export const TILE_HREF: Readonly<Record<TileKey, string>> = {
   toCollect: `${ROUTES.CUSTOMERS}?balance=owes_me`,
   toPay: `${ROUTES.SUPPLIERS}?balance=i_owe`,
   dueToday: `${ROUTES.PARTIES}?collection=today`,
-  overdue: `${ROUTES.PARTIES}?collection=overdue`,
+  // WP-06 / DEC-019 — the Shop's overdue is its bills; the server sends no
+  // party count, so there is no Udhaar list to fall back to.
+  overdue: `${ROUTES.SALES_INVOICES}?tab=overdue`,
   upcoming7d: `${ROUTES.PARTIES}?collection=upcoming`,
   todaySales: `${ROUTES.SALES_INVOICES}?period=today`,
   cashInHand: ROUTES.CASHBOOK,
   lowStock: ROUTES.STOCK_LOW,
 };
 
-/** BR-6's secondary line leads to the bills themselves. */
-export const OVERDUE_BILLS_HREF = `${ROUTES.SALES_INVOICES}?tab=overdue`;
+/** Where a tap on a tile goes: the list that makes it up. */
+export const tileHref = (key: TileKey, _tiles: DashboardTiles): string => TILE_HREF[key];
 
 /**
- * Where a tap on a tile goes. Overdue is the one with two lists behind it: the
- * parties whose promised date has passed (BR-6's primary figure) — unless no
- * party is overdue and only BILLS are, when the bills list is the useful one.
+ * WP-06 DASH-02 — the line under To collect / To pay naming the money held the
+ * other way round in that list, or null when there is none: "Customers paid
+ * ₹700.00 ahead". A zero advance is not news and is not drawn.
  */
-export const tileHref = (key: TileKey, tiles: DashboardTiles): string =>
-  key === 'overdue' && !tiles.overdue?.count && (tiles.overdue?.invoices?.count ?? 0) > 0
-    ? OVERDUE_BILLS_HREF
-    : TILE_HREF[key];
+export const advancesLine = (
+  key: 'toCollect' | 'toPay',
+  tiles: DashboardTiles,
+  t: TranslateFn
+): string | null => {
+  const advances = tiles[key]?.advances;
+  if (!advances || toDecimal(advances).lte(0)) return null;
+  return t(`reports.dashboard.tile.${key}.advances`, { amount: formatInr(advances) });
+};
 
 /** UX §8 — receivable and overdue in the error tone, payable in success. */
 export const tileTone = (

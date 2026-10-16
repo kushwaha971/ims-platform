@@ -63,6 +63,12 @@ const today1 = await invoice(meena, [{ item_id: rice.id, qty: '2', unit_price: '
 await invoice(ramesh, [{ item_id: dal.id, qty: '2', unit_price: '140.00' }, { item_id: sugar.id, qty: '2', unit_price: '48.00' }], iso(0));
 await api('POST', '/payments', { direction: 'in', document_id: today1.id, payment_date: iso(0), mode_breakup: [{ mode: 'cash', amount: '500.00' }] }, T);
 await api('POST', '/payments', { direction: 'in', party_id: suresh.id, payment_date: iso(0), amount: '200.00', mode_breakup: [{ mode: 'upi', amount: '200.00' }] }, T);
+// A customer's advance and a supplier paid ahead: money held the other way round,
+// which each dues tile must name rather than fold into the other one.
+const asha = await customer('Asha Rao', '9822022222');
+await must('POST', '/payments', { direction: 'in', party_id: asha.id, payment_date: iso(0), amount: '700.00', mode_breakup: [{ mode: 'cash', amount: '700.00' }] }, T);
+const agro = await must('POST', '/parties', { name: 'Agro Traders', is_supplier: true, is_customer: false, state_code: '27' }, T);
+await must('POST', '/payments', { direction: 'out', party_id: agro.id, payment_date: iso(0), amount: '300.00', mode_breakup: [{ mode: 'cash', amount: '300.00' }] }, T);
 const bill = await api('POST', '/purchases/bills?record=true', { party_id: gupta.id, supplier_invoice_number: `GW-${Date.now() % 10000}`, supplier_invoice_date: iso(12), document_date: iso(12), due_on: iso(2), lines: [{ item_id: rice.id, qty: '10', unit_cost: '300.00', tax_code: 'GST5' }] }, T);
 console.log('purchase bill', bill.status);
 const cats = await api('GET', '/expense-categories', null, T);
@@ -107,6 +113,28 @@ for (const [size, viewport] of WIDTHS) {
   await page.screenshot({ path: `${ROOT}/${size}-fold.png` });
   await page.screenshot({ path: `${ROOT}/${size}-full.png`, fullPage: true });
   report[size] = { ...(await measure(page)), errors };
+  // The dues tiles must add up to the lists they open (DASH-01, DASH-02).
+  if (size === '360' || size === '1280') {
+    const list = async (q) => (await api('GET', `/parties?${q}&book=shop&status=active`, null, T)).body.meta.totals;
+    const dash = (await api('GET', '/reports/dashboard?refresh=true', null, T)).body.data.tiles;
+    const owe = await list('type=customer&balance=owes_me');
+    const due = await list('type=supplier&balance=i_owe');
+    report[size].dues = { toCollect: dash.to_collect, customers: owe.receivable, toPay: dash.to_pay, suppliers: due.payable };
+    console.log(`${size}: To collect ${dash.to_collect.amount} vs customers ${owe.receivable}; To pay ${dash.to_pay.amount} vs suppliers ${due.payable}; advances ${dash.to_collect.advances} / ${dash.to_pay.advances}`);
+    console.log(`   texts: ${JSON.stringify(await page.locator('text=/paid .* ahead/').allInnerTexts())}`);
+    for (const name of ['Today', 'Customers', 'Suppliers', 'Needs attention']) {
+      console.log(`   region "${name}": ${await page.getByRole('region', { name }).count()}`);
+    }
+  }
+  if (size === '360') {
+    // More → Record payment must open the payment form, not just the list.
+    await page.getByRole('button', { name: 'More actions' }).click();
+    await page.getByRole('dialog', { name: 'More actions' }).getByRole('link', { name: 'Record payment' }).click();
+    await page.waitForURL(/\/payments/, { timeout: 20000 });
+    const form = await page.getByRole('dialog').first().waitFor({ timeout: 20000 }).then(() => true).catch(() => false);
+    console.log(`   Record payment opens the form: ${form}`);
+    await page.screenshot({ path: `${ROOT}/${size}-record-payment.png` });
+  }
   const r = report[size];
   console.log(`${size}: height ${r.height}px, overflow ${r.overflow}px, cut ${r.clipped.length}${r.clipped.length ? ` [${r.clipped.join(' | ')}]` : ''}${errors.length ? `, errors ${errors.join(' | ')}` : ''}`);
   console.log(`   sections: ${r.sections.map((s) => `${s.text}@${s.top}`).join(', ')}`);

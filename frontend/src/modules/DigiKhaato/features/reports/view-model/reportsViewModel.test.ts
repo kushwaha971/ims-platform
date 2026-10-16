@@ -99,15 +99,15 @@ describe('the dashboard tiles', () => {
     expect(tileHref('cashInHand', {})).toBe(ROUTES.CASHBOOK);
   });
 
-  it('sends Overdue to the bills when only bills are overdue (BR-6)', () => {
+  it("sends Overdue to the Shop's overdue bills, never the Udhaar book (DEC-019)", () => {
+    // WP-06 — the server sends no party count any more (BR-6's party half went
+    // to the Udhaar book), so the old fallback opened `/parties?collection=…`,
+    // another app's list, whenever no bill was overdue.
     const onlyBills = {
       overdue: { count: 0, amount: '0.00', invoices: { count: 2, amount: '900.00' } },
     };
     expect(tileHref('overdue', onlyBills)).toBe(`${ROUTES.SALES_INVOICES}?tab=overdue`);
-    const parties = {
-      overdue: { count: 1, amount: '500.00', invoices: { count: 2, amount: '900.00' } },
-    };
-    expect(tileHref('overdue', parties)).toBe(`${ROUTES.PARTIES}?collection=overdue`);
+    expect(tileHref('overdue', {})).toBe(`${ROUTES.SALES_INVOICES}?tab=overdue`);
   });
 
   it('paints receivable and overdue as the debit tone, payable as success (UX §8)', () => {

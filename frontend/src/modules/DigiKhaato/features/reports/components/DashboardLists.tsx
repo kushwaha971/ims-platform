@@ -101,12 +101,12 @@ export function RecentActivityList({
 }
 
 /**
- * RPT-01 FR-4 — the five biggest balances, each with Remind: the khata's own
+ * RPT-01 FR-4 — the five customers who owe most, each with Remind: the khata's own
  * reminder sheet (LED-06), with the server's message, opened here. The
  * number is masked in the list (§19); the sheet gets the real one only when
  * the server sent it, which it does for a reader who may send reminders.
  */
-export function TopDebtorsCard({
+export function TopDebtorsList({
   debtors,
   t,
 }: Readonly<{ debtors: readonly TopDebtor[]; t: TranslateFn }>): React.JSX.Element {
@@ -125,18 +125,10 @@ export function TopDebtorsCard({
   const { openSheet } = reminder;
 
   return (
-    <UbCard
-      title={t('reports.dashboard.debtors.title')}
-      action={
-        <UbLink href={`${ROUTES.PARTIES}?balance=owes_me`} variant="body-sm-medium">
-          {t('reports.dashboard.viewAll')}
-        </UbLink>
-      }
-      padded
-    >
+    <>
       {debtors.length === 0 ? (
         <UbText variant="body-sm" tone="tertiary">
-          {t('reports.dashboard.debtors.empty')}
+          {t('reports.dashboard.customers.none')}
         </UbText>
       ) : (
         <UbStack as="ul" gap={0} aria-label={t('reports.dashboard.debtors.title')}>
@@ -209,7 +201,7 @@ export function TopDebtorsCard({
           labels={reminder.labels}
         />
       )}
-    </UbCard>
+    </>
   );
 }
 

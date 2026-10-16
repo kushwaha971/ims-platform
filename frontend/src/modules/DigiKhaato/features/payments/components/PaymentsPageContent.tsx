@@ -31,6 +31,7 @@ import {
   type UbGridState,
 } from 'src/design-system/UbDataGrid';
 import { useDebounce } from 'src/hooks/useDebounce';
+import { useOpenOnAddQuery } from 'src/hooks/useOpenOnAddQuery';
 import { usePermissions } from 'src/hooks/usePermissions';
 import { useTranslation } from 'src/hooks/useTranslation';
 import { ROUTES } from 'src/routes';
@@ -83,6 +84,7 @@ export function PaymentsPageContent(): React.JSX.Element {
 
   const columns = useMemo(() => createPaymentColumns({ t }), [t]);
   const openDrawer = useCallback(() => setDrawer({ direction: 'in', entry: 'list' }), []);
+  useOpenOnAddQuery(openDrawer, canWrite);
 
   const labels = useMemo<UbDataGridLabels>(
     () => ({

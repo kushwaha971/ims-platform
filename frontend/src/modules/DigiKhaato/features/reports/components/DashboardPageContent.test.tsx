@@ -50,10 +50,19 @@ const DATA = (over: Partial<DashboardData> = {}): DashboardData => ({
     toCollect: { amount: '7000.00' },
     toPay: { amount: '1500.00' },
     dueToday: { count: 1, amount: '1772.00' },
-    overdue: { count: 1, amount: '500.00', invoices: { count: 2, amount: '900.00' } },
+    overdue: {
+      count: 0,
+      amount: '900.00',
+      invoices: { count: 2, amount: '900.00', oldestDays: 25 },
+    },
     upcoming7d: { count: 0, amount: '0.00' },
     todaySales: { amount: '2204.19', count: 2, yesterdayAmount: '0.00' },
     cashInHand: { amount: '800.00' },
+    todayReceived: { count: 2, amount: '700.00' },
+    supplierBills: {
+      overdue: { count: 1, amount: '1000.00', oldestDays: 12 },
+      dueWeek: { count: 1, amount: '2150.00' },
+    },
     lowStock: { count: 3, outCount: 1 },
   },
   recentActivity: [
@@ -78,6 +87,7 @@ const DATA = (over: Partial<DashboardData> = {}): DashboardData => ({
       mobile: '+919812345678',
     },
   ],
+  topCreditors: [{ id: 's1', name: 'Gupta Wholesale', balance: '3150.00' }],
   lowStockItems: [
     {
       id: 'i1',
@@ -99,6 +109,11 @@ const OWNER: readonly PermissionCode[] = [
   'parties.party.read',
   'sales.invoice.read',
   'sales.invoice.write',
+  'payments.payment.read',
+  'payments.payment.write',
+  'purchases.bill.read',
+  'purchases.bill.write',
+  'expenses.expense.write',
   'inventory.stock.read',
   'ledger.entry.read',
   'ledger.reminder.write',
@@ -106,7 +121,16 @@ const OWNER: readonly PermissionCode[] = [
 
 const signIn = (
   permissions: readonly PermissionCode[],
-  modules: readonly ModuleCode[] = ['reports', 'sales', 'ledger', 'inventory', 'parties']
+  modules: readonly ModuleCode[] = [
+    'reports',
+    'sales',
+    'ledger',
+    'inventory',
+    'parties',
+    'payments',
+    'purchases',
+    'expenses',
+  ]
 ): void => {
   store.dispatch(
     sessionLoaded({
@@ -134,35 +158,141 @@ beforeEach(() => {
   resetDashboardSectionsForTests();
 });
 
-it('draws exactly the tiles the server sent, each opening its list', async () => {
+/**
+ * WP-06 — the owner's layout A (16 Oct 2026): "two books side by side". The
+ * header says whose Shop and which day; a Today row of net sales, money
+ * received and cash in hand; a Customers panel and a Suppliers panel, each
+ * leading with its own figure and opening the list that reproduces it; and
+ * Needs attention always on the page, not behind a Details toggle.
+ */
+it('says whose Shop and which day in the header, with New bill and the rest under More', async () => {
   service.getDashboard.mockResolvedValue(DATA());
   signIn(OWNER);
   renderWithProviders(<DashboardPageContent />);
-  expect(await screen.findAllByText('To collect')).not.toHaveLength(0);
-  // Approved design (12 Oct 2026): the four figures a merchant opens Home for
-  // are tiles from the start; the other four stay one line with Details (the
-  // owner's 6 Oct choice).
-  expect(screen.getByRole('button', { name: /To collect: ₹7,000\.00/ })).toBeInTheDocument();
-  const strip = screen.getByTestId('stat-summary');
-  expect(within(strip).getByText('To collect today')).toBeInTheDocument();
-  expect(within(strip).queryByText('To collect')).toBeNull();
-  await userEvent.click(screen.getByRole('button', { name: 'Details' }));
-  for (const label of [
-    'To pay',
-    'To collect today',
-    'Overdue',
-    "Today's sales",
-    'Cash in hand',
-    'Low stock',
-  ]) {
-    expect(screen.getAllByText(label).length).toBeGreaterThan(0);
-  }
-  expect(screen.getAllByText('₹7,000.00').length).toBeGreaterThan(0);
-  expect(screen.getByText(/₹900\.00 in 2 bills/)).toBeInTheDocument();
-  expect(screen.getByText('1 out of stock')).toBeInTheDocument();
-  await userEvent.click(screen.getByRole('button', { name: /To collect: ₹7,000\.00/ }));
-  // DEC-019 — the Shop's home opens the Shop's customers, not the Udhaar book.
-  expect(mockPush).toHaveBeenCalledWith('/customers?balance=owes_me');
+  const heading = await screen.findByRole('heading', { name: 'Kumar Stores' });
+  // "Shree Ganesh Kirana Stores" was cut to "Shree Ganesh Ki…" on a 360 px
+  // phone: the title is a business name now, and a name is not cut.
+  expect(heading).not.toHaveClass('truncate');
+  expect(screen.getByText(/^Shop · Today, 18\/09\/2026/)).toBeInTheDocument();
+  expect(screen.getByRole('link', { name: 'New bill' })).toHaveAttribute(
+    'href',
+    '/sales/invoices/new'
+  );
+  await userEvent.click(screen.getByRole('button', { name: 'More actions' }));
+  const sheet = screen.getByRole('dialog', { name: 'More actions' });
+  expect(within(sheet).getByRole('link', { name: 'Record payment' })).toHaveAttribute(
+    'href',
+    '/payments?add=1'
+  );
+  expect(within(sheet).getByRole('link', { name: 'Add expense' })).toHaveAttribute(
+    'href',
+    '/expenses?add=1'
+  );
+  expect(within(sheet).getByRole('link', { name: 'New purchase' })).toHaveAttribute(
+    'href',
+    '/purchases/bills/new'
+  );
+});
+
+it("shows today's net sales, money received and cash in hand, each opening its records", async () => {
+  service.getDashboard.mockResolvedValue(DATA());
+  signIn(OWNER);
+  renderWithProviders(<DashboardPageContent />);
+  const today = await screen.findByRole('region', { name: 'Today' });
+  expect(within(today).getByText('Net sales today')).toBeInTheDocument();
+  expect(within(today).getByText('Money received today')).toBeInTheDocument();
+  expect(within(today).getByText('2 receipts')).toBeInTheDocument();
+  await userEvent.click(within(today).getByRole('button', { name: /Money received today/ }));
+  expect(mockPush).toHaveBeenCalledWith('/payments?period=today&tab=in');
+});
+
+it('gives customers and suppliers a panel each, every figure opening its own list', async () => {
+  service.getDashboard.mockResolvedValue(DATA());
+  signIn(OWNER);
+  renderWithProviders(<DashboardPageContent />);
+  const customers = await screen.findByRole('region', { name: 'Customers' });
+  expect(within(customers).getByRole('link', { name: /To collect.*₹7,000\.00/ })).toHaveAttribute(
+    'href',
+    '/customers?balance=owes_me'
+  );
+  expect(
+    within(customers).getByRole('link', { name: /2 bills overdue · ₹900\.00/ })
+  ).toHaveAttribute('href', '/sales/invoices?tab=overdue');
+  expect(within(customers).getByText(/Oldest is 25 days late/)).toBeInTheDocument();
+  expect(within(customers).getByRole('link', { name: 'Ramesh' })).toBeInTheDocument();
+
+  const suppliers = screen.getByRole('region', { name: 'Suppliers' });
+  expect(within(suppliers).getByRole('link', { name: /To pay.*₹1,500\.00/ })).toHaveAttribute(
+    'href',
+    '/suppliers?balance=i_owe'
+  );
+  expect(
+    within(suppliers).getByRole('link', { name: /1 bill overdue · ₹1,000\.00/ })
+  ).toHaveAttribute('href', '/purchases/bills?tab=overdue');
+  expect(
+    within(suppliers).getByRole('link', { name: /1 bill due this week · ₹2,150\.00/ })
+  ).toHaveAttribute('href', '/purchases/bills?tab=unpaid');
+  expect(within(suppliers).getByRole('link', { name: 'Gupta Wholesale' })).toHaveAttribute(
+    'href',
+    '/parties/s1'
+  );
+  expect(within(suppliers).getByRole('link', { name: 'All suppliers' })).toHaveAttribute(
+    'href',
+    '/suppliers?balance=i_owe'
+  );
+});
+
+it('keeps Needs attention on the page, each row with its amount, age and next step', async () => {
+  service.getDashboard.mockResolvedValue(DATA());
+  signIn(OWNER);
+  renderWithProviders(<DashboardPageContent />);
+  const attention = await screen.findByRole('region', { name: 'Needs attention' });
+  expect(screen.queryByRole('button', { name: 'Details' })).not.toBeInTheDocument();
+  const rows = within(attention).getAllByRole('link');
+  expect(rows.map((row) => row.textContent)).toEqual([
+    expect.stringMatching(/Collect ₹900\.00 from 2 overdue bills.*Oldest is 25 days late/),
+    expect.stringMatching(/Pay ₹1,000\.00 on 1 overdue supplier bill.*Oldest is 12 days late/),
+    expect.stringMatching(/1 item out of stock.*Reorder/),
+    expect.stringMatching(/2 items running low.*Reorder/),
+  ]);
+  expect(rows[0]).toHaveAttribute('href', '/sales/invoices?tab=overdue');
+  expect(rows[2]).toHaveAttribute('href', '/stock/low');
+});
+
+it('says when nothing needs the merchant, rather than hiding the section', async () => {
+  const quiet = {
+    ...DATA().tiles,
+    overdue: { count: 0, amount: '0.00', invoices: { count: 0, amount: '0.00' } },
+    supplierBills: {
+      overdue: { count: 0, amount: '0.00' },
+      dueWeek: { count: 0, amount: '0.00' },
+    },
+    lowStock: { count: 0, outCount: 0 },
+  };
+  service.getDashboard.mockResolvedValue(DATA({ tiles: quiet, lowStockItems: [] }));
+  signIn(OWNER);
+  renderWithProviders(<DashboardPageContent />);
+  const attention = await screen.findByRole('region', { name: 'Needs attention' });
+  expect(within(attention).getByText('Nothing needs you right now.')).toBeInTheDocument();
+});
+
+it('names money held the other way round under its own tile (WP-06 DASH-02)', async () => {
+  // "To pay, to all your suppliers" used to be a customer's advance over an
+  // empty supplier list. The tiles are their lists' totals now, and an advance
+  // is said beside the tile it belongs to, never folded into the other one.
+  service.getDashboard.mockResolvedValue(
+    DATA({
+      tiles: {
+        ...DATA().tiles,
+        toCollect: { amount: '1800.00', advances: '700.00' },
+        toPay: { amount: '450.00', advances: '0.00' },
+      },
+    })
+  );
+  signIn(OWNER);
+  renderWithProviders(<DashboardPageContent />);
+  expect(await screen.findAllByText(/Customers paid ₹700\.00 ahead/)).not.toHaveLength(0);
+  expect(screen.queryByText(/paid suppliers/)).not.toBeInTheDocument();
 });
 
 it('leaves out a tile the reader may not see, rather than showing it as ₹0 (FR-6)', async () => {
@@ -242,6 +372,13 @@ it('links each recent event to its document, and each debtor to the khata', asyn
     '/parties/p1'
   );
   expect(within(debtors).getByText(/\+91 98••• ••678/)).toBeInTheDocument();
+  // WP-06 / DEC-019 — the panel's "All customers" opens the Shop's customers,
+  // the list whose figure this is the top of, not the Udhaar book's people.
+  const panel = screen.getByRole('region', { name: 'Customers' });
+  expect(within(panel).getByRole('link', { name: 'All customers' })).toHaveAttribute(
+    'href',
+    '/customers?balance=owes_me'
+  );
   expect(within(debtors).getByRole('button', { name: 'Remind Ramesh' })).toBeInTheDocument();
 });
 

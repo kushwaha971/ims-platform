@@ -48,18 +48,20 @@ def _tiles(tenant: Any) -> dict:
 
 
 def test_ac1_to_collect_and_to_pay(tenant: Any) -> None:
-    """AC-1 — Shop balances +5,000, +2,000, −1,500 → To collect ₹7,000, To pay ₹1,500.
-    A supplier who owes US counts in To collect (BR-1); an archived party never.
-    DEC-019 — the dashboard is the Shop's home: an Udhaar book balance (`balance`)
-    is another app's money and is in neither figure."""
+    """AC-1, as WP-06 DASH-02 restates it — each tile is its role's list: customers
+    who owe ₹5,000 → To collect ₹5,000. RPT-01 BR-1 had summed every party, so a
+    supplier owing US (B) was in To collect and a customer's advance (C) was "To
+    pay, to all your suppliers"; those figures opened lists that could not show
+    them. They travel as each tile's `advances` now. An archived party is in
+    neither; DEC-019 — an Udhaar book balance (`balance`) is another app's money."""
     b.party(tenant, "A", shop_balance=Decimal("5000"), balance=Decimal("900"))
     b.party(tenant, "B", shop_balance=Decimal("2000"), is_supplier=True, is_customer=False)
     b.party(tenant, "C", shop_balance=Decimal("-1500"))
     b.party(tenant, "Udhaar only", balance=Decimal("-4000"))
     b.party(tenant, "Gone", shop_balance=Decimal("0"), status="archived")
     tiles = _tiles(tenant)
-    assert tiles["to_collect"] == {"amount": "7000.00"}
-    assert tiles["to_pay"] == {"amount": "1500.00"}
+    assert tiles["to_collect"] == {"amount": "5000.00", "advances": "1500.00"}
+    assert tiles["to_pay"] == {"amount": "0.00", "advances": "2000.00"}
 
 
 def test_the_shop_home_carries_no_udhaar_promise_dates(tenant: Any) -> None:
@@ -269,6 +271,8 @@ def test_project_omits_what_a_reader_may_not_see(tenant: Any) -> None:
         "overdue",
         "today_sales",
         "cash_in_hand",
+        "today_received",
+        "supplier_bills",
         "low_stock",
     }
     assert full["tiles"]["overdue"]["invoices"] == {"count": 0, "amount": "0.00"}
@@ -342,3 +346,91 @@ def test_the_cashbook_the_day_book_and_the_tile_agree_on_the_drawer(tenant: Any)
     closing = str(book.closing["cash"].quantize(Decimal("0.01")))
     assert cashbook["range"]["closing"]["cash"] == closing == tile
     assert "payment" in cashbook["sources"]
+
+
+# ── WP-06 layout A: the Today row, and the Suppliers panel ──────────────────
+
+
+def test_money_received_today_is_the_shops_receipts_of_the_day(tenant: Any) -> None:
+    """WP-06 (owner's layout A, 16 Oct 2026) — the Today row's "Money received":
+    the Shop's receipts dated today. Sales is not cash (spec order 2), so a bill
+    issued today and not paid adds nothing; a void receipt, yesterday's, a
+    payment OUT and another app's receipt (`bucket`) add nothing either."""
+    from apps.common.constants import LedgerBucket
+
+    ramesh = b.party(tenant)
+    b.sale(tenant, TODAY, 900, party=ramesh)
+    b.payment(tenant, TODAY, {"cash": 500, "upi": 200}, party=ramesh)
+    b.payment(tenant, TODAY, {"cash": 50}, party=ramesh, status="void")
+    b.payment(tenant, TODAY - dt.timedelta(days=1), {"cash": 75}, party=ramesh)
+    b.payment(tenant, TODAY, {"cash": 30}, party=b.party(tenant, "Gupta"), direction="out")
+    lent = b.payment(tenant, TODAY, {"cash": 400}, party=ramesh)
+    lent.bucket = LedgerBucket.LOAN
+    lent.save(update_fields=["bucket"])
+    assert _tiles(tenant)["today_received"] == {"amount": "700.00", "count": 1}
+
+
+def test_the_suppliers_panel_is_who_you_owe_most_and_the_bills_falling_due(tenant: Any) -> None:
+    """WP-06 DASH-02 / spec order 3 — suppliers get a panel of their own: the five
+    you owe most (the top of `/suppliers?balance=i_owe`), and the purchase bills
+    that are overdue or fall due within seven days. Suppliers used to appear only
+    as the To pay figure, with nothing to say whom or when."""
+    gupta = b.party(tenant, "Gupta", shop_balance=Decimal("-3150"), is_supplier=True, is_customer=False)
+    agro = b.party(tenant, "Agro", shop_balance=Decimal("-450"), is_supplier=True, is_customer=False)
+    b.party(tenant, "Paid ahead", shop_balance=Decimal("300"), is_supplier=True, is_customer=False)
+    b.party(tenant, "Customer advance", shop_balance=Decimal("-700"))
+    late = b.purchase(tenant, TODAY - dt.timedelta(days=30), 1000, party=gupta, status="overdue")
+    late.due_on = TODAY - dt.timedelta(days=12)
+    late.save(update_fields=["due_on"])
+    soon = b.purchase(tenant, TODAY - dt.timedelta(days=10), 2150, party=gupta)
+    soon.due_on = TODAY + dt.timedelta(days=3)
+    soon.save(update_fields=["due_on"])
+    later = b.purchase(tenant, TODAY, 450, party=agro)
+    later.due_on = TODAY + dt.timedelta(days=20)
+    later.save(update_fields=["due_on"])
+    paid = b.purchase(tenant, TODAY - dt.timedelta(days=5), 99, party=agro, status="paid")
+    paid.due_on = TODAY + dt.timedelta(days=1)
+    paid.amount_due = Decimal("0")
+    paid.save(update_fields=["due_on", "amount_due"])
+
+    payload = _dashboard(tenant)
+    assert [(row["name"], row["balance"]) for row in payload["top_creditors"]] == [
+        ("Gupta", "3150.00"),
+        ("Agro", "450.00"),
+    ]
+    assert payload["tiles"]["supplier_bills"] == {
+        "overdue": {"count": 1, "amount": "1000.00", "oldest_days_late": 12},
+        "due_week": {"count": 1, "amount": "2150.00"},
+    }
+
+
+def test_overdue_bills_say_how_old_the_oldest_is(tenant: Any) -> None:
+    """WP-06 — Needs attention shows count, amount AND age (spec order 4); the
+    oldest overdue bill's days past its due date is that age."""
+    ramesh = b.party(tenant)
+    old = b.sale(tenant, TODAY - dt.timedelta(days=60), 1800, party=ramesh, status="overdue", due=1800)
+    old.due_on = TODAY - dt.timedelta(days=25)
+    old.save(update_fields=["due_on"])
+    new = b.sale(tenant, TODAY - dt.timedelta(days=9), 420, party=ramesh, status="overdue", due=220)
+    new.due_on = TODAY - dt.timedelta(days=2)
+    new.save(update_fields=["due_on"])
+    bills = _tiles(tenant)["overdue_invoices"]
+    assert bills == {"count": 2, "amount": "2020.00", "oldest_days_late": 25}
+
+
+def test_the_new_panels_follow_the_readers_permissions(tenant: Any) -> None:
+    """WP-06 — each new figure travels only with the permission that reads its
+    list: money received with payments, the supplier bills with purchase bills,
+    the creditors with parties. Omitted, not zeroed (§10)."""
+    b.party(tenant, "Gupta", shop_balance=Decimal("-300"), is_supplier=True, is_customer=False)
+    payload = _dashboard(tenant)
+    full = project(payload, granted=EVERYTHING, modules=ALL_MODULES)
+    assert {"today_received", "supplier_bills"} <= set(full["tiles"])
+    assert [row["name"] for row in full["top_creditors"]] == ["Gupta"]
+    bare = project(
+        payload,
+        granted=frozenset({"reports.basic.read", "sales.invoice.read"}),
+        modules=ALL_MODULES,
+    )
+    assert "today_received" not in bare["tiles"] and "supplier_bills" not in bare["tiles"]
+    assert bare["top_creditors"] == []

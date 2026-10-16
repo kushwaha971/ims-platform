@@ -4,6 +4,7 @@ import { toQueryString } from 'src/utils/queryString';
 
 import type {
   ActivityItem,
+  AgedCountAmount,
   CountAmount,
   DashboardData,
   DashboardSection,
@@ -18,15 +19,19 @@ interface CountAmountWire {
   readonly amount: string;
 }
 
+interface AgedWire extends CountAmountWire {
+  readonly oldest_days_late?: number;
+}
+
 interface DashboardWire {
   readonly data: {
     readonly as_of: string;
     readonly generated_at: string;
     readonly tiles: {
-      readonly to_collect?: { readonly amount: string };
-      readonly to_pay?: { readonly amount: string };
+      readonly to_collect?: { readonly amount: string; readonly advances?: string };
+      readonly to_pay?: { readonly amount: string; readonly advances?: string };
       readonly due_today?: CountAmountWire;
-      readonly overdue?: CountAmountWire & { readonly invoices?: CountAmountWire };
+      readonly overdue?: CountAmountWire & { readonly invoices?: AgedWire };
       readonly upcoming_7d?: CountAmountWire;
       readonly today_sales?: {
         readonly amount: string;
@@ -34,6 +39,8 @@ interface DashboardWire {
         readonly yesterday_amount: string;
       };
       readonly cash_in_hand?: { readonly amount: string };
+      readonly today_received?: CountAmountWire;
+      readonly supplier_bills?: { readonly overdue: AgedWire; readonly due_week: CountAmountWire };
       readonly low_stock?: { readonly count: number; readonly out_count: number };
     };
     readonly recent_activity: readonly {
@@ -57,6 +64,12 @@ interface DashboardWire {
       readonly collection_date: string | null;
       readonly mobile_masked: string | null;
       readonly mobile: string | null;
+    }[];
+    /** WP-06 — absent from a server older than layout A. */
+    readonly top_creditors?: readonly {
+      readonly id: string;
+      readonly name: string;
+      readonly balance: string;
     }[];
     readonly low_stock_items: readonly {
       readonly id: string;
@@ -89,17 +102,27 @@ const countAmount = (wire: CountAmountWire): CountAmount => ({
   amount: wire.amount,
 });
 
+const aged = (wire: AgedWire): AgedCountAmount => ({
+  ...countAmount(wire),
+  ...(wire.oldest_days_late === undefined ? {} : { oldestDays: wire.oldest_days_late }),
+});
+
+const dues = (wire: { readonly amount: string; readonly advances?: string }) => ({
+  amount: wire.amount,
+  ...(wire.advances ? { advances: wire.advances } : {}),
+});
+
 /** Every key copied only when present: an omitted tile stays omitted (FR-6). */
 const toTiles = (wire: DashboardWire['data']['tiles']): DashboardTiles => ({
-  ...(wire.to_collect ? { toCollect: { amount: wire.to_collect.amount } } : {}),
-  ...(wire.to_pay ? { toPay: { amount: wire.to_pay.amount } } : {}),
+  ...(wire.to_collect ? { toCollect: dues(wire.to_collect) } : {}),
+  ...(wire.to_pay ? { toPay: dues(wire.to_pay) } : {}),
   ...(wire.due_today ? { dueToday: countAmount(wire.due_today) } : {}),
   ...(wire.overdue
     ? {
         overdue: {
           count: wire.overdue.count,
           amount: wire.overdue.amount,
-          ...(wire.overdue.invoices ? { invoices: countAmount(wire.overdue.invoices) } : {}),
+          ...(wire.overdue.invoices ? { invoices: aged(wire.overdue.invoices) } : {}),
         },
       }
     : {}),
@@ -114,6 +137,15 @@ const toTiles = (wire: DashboardWire['data']['tiles']): DashboardTiles => ({
       }
     : {}),
   ...(wire.cash_in_hand ? { cashInHand: { amount: wire.cash_in_hand.amount } } : {}),
+  ...(wire.today_received ? { todayReceived: countAmount(wire.today_received) } : {}),
+  ...(wire.supplier_bills
+    ? {
+        supplierBills: {
+          overdue: aged(wire.supplier_bills.overdue),
+          dueWeek: countAmount(wire.supplier_bills.due_week),
+        },
+      }
+    : {}),
   ...(wire.low_stock
     ? { lowStock: { count: wire.low_stock.count, outCount: wire.low_stock.out_count } }
     : {}),
@@ -167,6 +199,11 @@ export const getDashboard = async (
       collectionDate: row.collection_date,
       mobileMasked: row.mobile_masked,
       mobile: row.mobile,
+    })),
+    topCreditors: (data.top_creditors ?? []).map((row) => ({
+      id: row.id,
+      name: row.name,
+      balance: row.balance,
     })),
     lowStockItems: data.low_stock_items.map((row) => ({
       id: row.id,
