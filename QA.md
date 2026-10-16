@@ -474,3 +474,15 @@ Read this file, `git status`, current diff, root/frontend AGENTS, and the releva
 - Review: new `e2e/counter-editor-review.mjs` opened drafts of 1, 10 and 50 lines in the sales invoice and purchase bill editors at 360, 390, 768, 1024, 1280, 1440, 1536 and 1920 px. The findings and three layout options are in `docs/shop-ims-readiness/12-counter-editor-design-review.md`. Laptops below 1536 px get a phone card about 290 px tall per line, so a 50-line bill is about 15,000 px; at 1536 px the same bill is 3,600 px. The owner was asked to choose a layout, and nothing about the layout is built yet.
 - Defect found by measuring: the purchase bill showed a weighed quantity as "6.000", and at 1536 px it did not fit its box (8 KGS lines cut out of 50). `formQty` now trims weighed quantities too. The `invoiceViewModel` case failed before. The re-run measures no cut text at any width.
 - Gates: Jest 4179 passed; `tsc` and ESLint clean; build passed; the bundle gate passed with no budget change.
+
+### 16 October 2026 — WP-03 D-04: UI composition inventoried; the reason rule has one owner (cloud session)
+
+- D-04 is inventoried as D-04a to D-04e in `10-reuse-inventory.md`:
+  - D-04a: five hand-made ⋯ menus, and an unused `UbActionSheet` whose close order is the one the khata menu found wrong;
+  - D-04b: the three-character reason rule;
+  - D-04c: eight void or cancel dialogs that take a reason;
+  - D-04d: hand-built bordered boxes;
+  - D-04e: docks, where there is no debt.
+- R-09 (D-04b): `utils/reason.ts` (import-free) and `useValidationSchemas().reasonText()` replace ten dialogs and eleven schemas that wrote out 3 and 160. A guard forbids the literals, and a contract test reads the server's `VOID_REASON_MIN`/`MAX`. Both failed before the change.
+- Gates: Jest 4182 passed; `tsc` and ESLint clean; build passed. Bundle: `/login/email` and `/reset-password` +0.1 KB each, because the validator hook ships there; the reason is noted in `bundle-budgets.json`.
+- Owner decision: the counter editor's layout for 1024–1535 px is option A, a table with the totals below. The build is next.
