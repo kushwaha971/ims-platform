@@ -183,10 +183,10 @@ the server-prepared reference.
    src/utils/zonedTime.ts for the shop's clock). Cash in hand sends `since`,
    the first day the Shop's cash moved (8b42662, `first_cash_day` in
    day_book.py, `cashTile` in dashboardDisplay.ts): the tile reads "since
-   <date>", and a negative drawer reads "More cash paid out". Next,
-   test-first: open orders in Needs attention (promise dates stay out of the
-   Shop home under DEC-019; a bill's due date is the Shop's promise); then
-   the owner's acceptance review of WP-06.
+   <date>", and a negative drawer reads "More cash paid out". Open orders,
+   challans and purchase orders are Needs attention rows (bbd36a7, `open_orders`;
+   the view passes the savepoint as `scope`, since selectors open no
+   transaction, rule D8). Next: the owner's acceptance review of WP-06.
 4. Still owed to WP-02, needing the owner or a device: a physical
    network-interruption check on a phone, and the owner's SH-011 release
    review in the tracker. Do not wait on these.
