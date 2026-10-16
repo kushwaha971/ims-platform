@@ -84,3 +84,35 @@ all documented sign-offs and both scorecards; passing many tests alone is not en
 ## Resume an interrupted package
 
 Append: “Resume from the latest verified QA.md checkpoint and acceptance tracker. Inspect the working tree, current diff and running services first. Preserve completed work and unresolved decisions; do not restart the programme or overwrite unrelated changes.”
+
+## Current handoff — 16 October 2026
+
+Resume **WP-02**, functionality/data reliability with regression testing. Continue
+autonomously through authorized work; a passing checkpoint is not a reason to stop.
+Do not move pricing/contact onboarding ahead of WP-07.
+
+Verified local changes for this handoff:
+- Owner resolved D-01: weighted-average supplier-return stock costing; original
+  bill price/tax still determines supplier credit. Documentation corrected;
+  180 purchases/inventory tests pass. No stock algorithm or history migration.
+- Shared draft URL preserves invoice/estimate/order/challan family on first save.
+- Autosave preserves newer edits made during a pending save and schedules the next
+  save even if its debounce expired. 159 sales tests, types and affected lint pass.
+
+**SH-011 remains open.** Next implement durable first-create identity and recovery
+across lost POST response, retry and reload. Include tenant/user/family scoping,
+concurrent manual/autosave requests, stale-version protection, and deleted-draft
+tombstones so retry cannot resurrect discarded work. A recovered create must not
+overwrite newer server edits or reapply stale wrapper metadata. Preserve posted
+documents and invoice snapshots. The existing 24-hour idempotency cache alone does
+not cover the seven-day local-draft recovery window.
+
+Inspect shared owners first: sales/hooks/useInvoiceEditor.ts, useDraftAutosave.ts,
+redux/salesThunk.ts, salesFlowThunk.ts, api/salesService.ts, estimateService.ts,
+src/utils/localDrafts.ts and backend/apps/sales/services/documents.py with its
+estimate/order/challan adapters. Keep one recovery protocol; no duplicated logic
+per screen. Keep newer edits dirty after saving an older snapshot.
+
+Use isolated fixtures. Preserve unrelated untracked files. Push this tested
+checkpoint to dev only when requested; distinguish push from verified deployment.
+Keep QA.md and the acceptance tracker truthful, with open work explicit.

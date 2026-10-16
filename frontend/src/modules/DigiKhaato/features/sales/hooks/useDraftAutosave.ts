@@ -74,6 +74,7 @@ export const useDraftAutosave = (
   const dirty = form.formState.isDirty;
   const [restore, setRestore] = useState<LocalDraft<InvoiceFormValues> | null>(null);
   const saving = useRef(false);
+  const [saveRevision, setSaveRevision] = useState(0);
   const checked = useRef<string | null>(null);
 
   // FR-3 / FR-4 — offer the device's newer copy once per editor.
@@ -108,14 +109,21 @@ export const useDraftAutosave = (
     const timer = window.setTimeout(() => {
       if (saving.current) return;
       saving.current = true;
+      const submitted = JSON.stringify(form.getValues());
       void save(true).then((result) => {
         saving.current = false;
-        // Keep the typed values; clear only the dirty flag so the next change re-arms.
-        if (result) form.reset(form.getValues(), { keepValues: true });
+        if (!result) return;
+        if (submitted === JSON.stringify(form.getValues())) {
+          // Only the submitted values are saved; newer typing must stay dirty.
+          form.reset(form.getValues(), { keepValues: true });
+        } else {
+          // Its debounce may have expired while the first request was running.
+          setSaveRevision((revision) => revision + 1);
+        }
       });
     }, SERVER_AUTOSAVE_MS);
     return () => window.clearTimeout(timer);
-  }, [values, dirty, blocked, save, form]);
+  }, [values, dirty, blocked, save, form, saveRevision]);
 
   const acceptRestore = useCallback(() => {
     if (restore) form.reset(restore.form, { keepDefaultValues: true });

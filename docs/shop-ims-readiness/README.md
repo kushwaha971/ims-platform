@@ -27,7 +27,7 @@ Shared message editing and code-reuse requirements extend to Shop, Library, Lend
 
 Source: [Shop audit](../review/06-shop-user-audit.md), [QA handoff](../../QA.md), and [existing decisions](../DECISIONS.md). Last recorded baseline: 1,542 Shop backend tests, 4,096 frontend tests, build/types/locale/contrast/bundle checks passed. This baseline precedes the future work here and is not evidence that these requirements are implemented.
 
-Known open work: mixed-cost return valuation SH-009; desktop billing density SH-010; draft recovery SH-011; mobile price visibility SH-012; supplier-return proof SH-013; terminology/paging SH-014. Local audit fixes require release verification; a journal entry saying “fixed locally” is not proof of deployment.
+SH-009 is resolved by the explicit owner choice on16 October2026: keep weighted-average stock costing and correct conflicting return documentation. Known open work: desktop billing density SH-010; draft recovery SH-011; mobile price visibility SH-012; supplier-return proof SH-013; terminology/paging SH-014. Local audit fixes require release verification; a journal entry saying “fixed locally” is not proof of deployment.
 
 ## Agent entry point
 

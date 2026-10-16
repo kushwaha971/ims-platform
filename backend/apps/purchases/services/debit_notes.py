@@ -15,7 +15,9 @@ shelf, and the note is issued in one transaction:
    bought at, not today's). A document discount in rupees is shared out by the
    returned part of the subtotal (FR-4); a percentage applies as it is.
 3. `restock` (FR-5, default on): every tracked goods line posts
-   `purchase_return_out` at the bill line's inbound cost. Off for a price
+   `purchase_return_out` at the current weighted-average stock cost (D-01,
+   owner decision 16 Oct 2026). The supplier credit still uses the original
+   bill price/tax above. Off for a price
    correction where nothing physically moved. The negative-stock policy applies
    (409 `insufficient_stock`, EC-3).
 4. One DEBIT `debit_note` line on the supplier's khata for the grand total — the
@@ -196,7 +198,6 @@ def _post_stock(ctx: Ctx, note: Any, picked: list[tuple[Any, Decimal]]) -> list[
             movement_date=note.document_date,
             source_type=MovementSource.PURCHASE_DOCUMENT,
             source_id=note.id,
-            unit_cost=line.inbound_unit_cost,
             index=index,
         )
         for index, (line, qty) in enumerate(picked)

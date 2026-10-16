@@ -1,6 +1,6 @@
 # YourKhata UI/UX feedback and resumable handoff
 
-Last updated: 15 October 2026 (Asia/Kolkata). Current task: full Shop/Retail audit. Earlier sections are chronological checkpoints; later verified milestones supersede earlier pending statuses.
+Last updated: 16 October 2026 (Asia/Kolkata). Current task: step-by-step Shop/IMS roadmap implementation. Earlier sections are chronological checkpoints; later verified milestones supersede earlier pending statuses.
 
 ## Owner feedback and order
 
@@ -277,3 +277,26 @@ Read this file, `git status`, current diff, root/frontend AGENTS, and the releva
 - Application/regression changes committed as519d272f. Readiness pack includes AGENT_START_PROMPT.md, using repository-relative paths and explicit business boundaries, universal editable messaging, reuse requirements, phased implementation and honest acceptance evidence. Root AGENTS.md remains an unrelated pre-existing untracked file; the portable prompt treats it as optional and includes the essential project workflow itself.
 - Prior verified results:1542 Shop backend /4096 frontend tests, production build/bundle/types/locales/contrast and affected-file lint; unresolved valuation and other gaps remain documented. Publication does not claim the future readiness programme or universal message migration is complete.
 - Push verification is recorded in the final handoff/Git remote. Railway deployment must be verified separately; the existing dev auto-deploy configuration may run on push.
+
+
+## Roadmap implementation started — 16 Oct 2026
+- Owner authorized proceeding step by step. Explicit D-01 choice: keep weighted-average stock costing and correct conflicting return docs; supplier credit remains based on the original bill. Corrected purchase-return service documentation and removed its misleading unused original-cost stock argument, retaining the shared costing engine. Added mixed-cost/depleted-stock/price-only/void/replay policy scenarios; full debit-note suite12 passed. Initial new-test failures were fixture date/type/property mistakes, corrected; no stock engine arithmetic was changed.
+- New owner request retained for WP-07: Purchase Cost, default Selling Price, editable Profit Margin with bidirectional calculations, authorized internal search display, invoice-specific overrides and strict customer-document privacy; also shared phone contact prefill for Customers/Suppliers/Udhaar. Owner clarified not to reprioritize it ahead of the roadmap. No pricing/contact implementation changes yet.
+- Next: WP-02 draft recovery. Source review also identified the shared sales editor always writes an invoice URL after first save, even for estimates/orders/challans; add fail-before route-family regression and fix through the existing shared hook. The attempted test-file/write command was not executed because approval review hit account usage limit; normal tool retry is required after reset.
+
+
+## First implementation checkpoint — 16 Oct 2026
+- D-01 resolved by explicit owner answer: preserve normative weighted-average stock costing. Supplier return credit remains original bill price/tax; observed₹610.26 stock out vs₹672 tax-inclusive supplier credit is intended under this approved rule. Corrected conflicting return docs/test descriptions and removed the ignored original-cost stock argument; engine arithmetic/history unchanged. Purchase/inventory regression180 passed; debit-note12 includes mixed-cost, depleted-shelf, price-only and void/independent replay cases.
+- Found/fixed a separate draft recovery bug: useEditorWindowEffects always wrote /sales/invoices/<id>/edit for newly saved estimates/orders/challans. Fail-before regression3 failed/1 passed; existing shared hook now receives the page's document-family base path. Sales frontend158 tests/16 suites passed; types and affected-file lint passed.
+- Real isolated browser saved a synthetic Estimate with customer label Draft recovery QA and one rice item(default450), then reloaded /sales/estimates/<id>/edit: correct Draft Estimate, name/item/rate and₹473 total retained. No issue/send/stock/ledger action. Screenshot chat outputs/shop-product-audit/estimate-reload-2026-10-16.png.
+- SH-011 uncertain first-create response/durable logical draft identity remains open; correcting route recovery does not claim it solved. Next WP-02 slice must cover lost-response/retry/remount/concurrent edits without duplicate drafts or lost changes.
+- Item pricing/margin and Customer/Supplier/Udhaar contact selection remain queued in WP-07 per owner correction; no pricing/contact code changes. No new push/deploy.
+
+- First checkpoint final gates: production build and bundle check passed with existing budgets unchanged; backend Black/isort passed. Local preview restored3114. Evidence is scoped to this checkpoint, not a complete WP-02 or9/10 release sign-off.
+
+### 16 October 2026 — WP-02 autosave concurrency checkpoint
+
+- Confirmed a slow-save race: edits made while an earlier autosave was pending were incorrectly marked clean when the earlier request completed. The regression failed before the fix (`dirty` was false).
+- The shared sales autosave hook now compares the submitted snapshot with the current form before clearing dirty state. Newer edits stay dirty and re-arm autosave even when their original debounce expired during the pending request. Applies to invoices, estimates, sales orders and delivery challans using this hook.
+- Validation: all 159 sales frontend tests across 17 suites pass; TypeScript check and affected-file ESLint pass. No customer-facing pricing, stock costing, or posted-document behavior changed. Logs: `/private/tmp/draft-race-before.log`, `/private/tmp/draft-race-after.log`, `/private/tmp/draft-race-types.log`.
+- This checkpoint does **not** close SH-011: durable first-create identity, lost POST response/reload deduplication, discard tombstones and multi-device conflict handling remain outstanding. No new push or deployment performed for this checkpoint.

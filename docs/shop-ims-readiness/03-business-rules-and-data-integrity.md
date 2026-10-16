@@ -38,7 +38,7 @@ STK-02: stock issue, receipt, return, adjustment and reversal reconcile quantity
 
 STK-03: apply the configured negative-stock policy consistently, including backdated availability and repeated item lines. Do not borrow stock from a later purchase when the policy forbids it.
 
-STK-04: resolve purchase-return costing before implementation. Audit example: 29 units at ₹300, receive 10 at ₹320, return 2 from that purchase. Documented original-cost removal is ₹640; observed average-cost removal was ₹610.26. The policy must specify stock left after mixed-cost sales, no stock left, negative remaining value, note voids and historical replay. No special-case arithmetic in a screen.
+STK-04: owner decision16 October2026 retains weighted-average stock costing; supplier credit uses original purchase bill price/tax. Audit example: 29 units at ₹300, receive 10 at ₹320, return 2 from that purchase. Older conflicting return notes implied ₹640 stock removal; the owner-approved weighted-average rule removes ₹610.26 while supplier credit remains ₹672 including GST. The normative costing engine remains the owner for mixed-cost/depleted stock, zero/negative stock policy, note voids and replay. The four new mixed/depleted/price-only/void scenarios pass alongside existing debit-note tests (12 total). Correct conflicting original-cost stock descriptions; no arithmetic or historical valuation migration is introduced.
 
 STK-05: actual posting and independent chronological replay produce the same current quantity/value. Rounding residuals and zero stock have deterministic handling. Migration must preserve immutable historic records and reconcile old caches before deployment.
 

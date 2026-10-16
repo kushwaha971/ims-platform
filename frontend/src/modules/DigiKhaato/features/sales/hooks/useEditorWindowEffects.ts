@@ -19,7 +19,9 @@ export const useEditorWindowEffects = ({
   dirty,
   onSave,
   onIssue,
+  basePath = ROUTES.SALES_INVOICES,
 }: {
+  readonly basePath?: string;
   readonly documentId: string | null;
   readonly savedId: string | null;
   readonly dirty: boolean;
@@ -28,9 +30,9 @@ export const useEditorWindowEffects = ({
 }): void => {
   useEffect(() => {
     if (!documentId && savedId && typeof window !== 'undefined') {
-      window.history.replaceState(null, '', `${ROUTES.SALES_INVOICES}/${savedId}/edit`);
+      window.history.replaceState(null, '', `${basePath}/${savedId}/edit`);
     }
-  }, [documentId, savedId]);
+  }, [documentId, savedId, basePath]);
 
   useEffect(() => {
     if (!dirty) return undefined;

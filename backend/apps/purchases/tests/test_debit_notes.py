@@ -1,7 +1,7 @@
 """Shop P0 — debit notes (PUR-07): goods back to the supplier, the bill and the khata both less.
 
 The defects these prevent: returning more than was bought, or the same goods twice;
-a return taxed at today's rate or costed at today's average; a note that moves the
+a return credit priced at today's rate instead of its bill's rate; a note that moves the
 khata but leaves the bill still asking for the full amount (or the reverse); a void
 that leaves the goods "gone" or the bill short; a bill voided out from under its
 note; and a payment arithmetic that forgets the note and lets the bill be overpaid.
@@ -238,3 +238,90 @@ def test_retry_of_a_return_replays_without_moving_stock_or_money_twice(
     )
     assert conflict.status_code == 409
     assert on_hand(rice) == 8
+
+
+@pytest.mark.parametrize("drain", [0, 37])
+@pytest.mark.parametrize("restock", [True, False])
+def test_mixed_cost_return_credits_bill_price_but_stock_uses_weighted_average(
+    owner: Any, shop: Any, make_supplier: Any, make_item: Any, drain: int, restock: bool
+) -> None:
+    """D-01 (owner, 16 Oct): supplier credit is bill-priced, stock out is average-cost.
+
+    Mixed stock and a depleted shelf must follow the same costing owner as
+    ordinary outbounds, and a return void must reconcile with immutable replay.
+    """
+    import datetime as dt
+
+    from apps.common.context import Ctx
+    from apps.common.money import q2
+    from apps.inventory.models import StockMovement
+    from apps.inventory.services.stock import MovementLine, post_movements, replay_with_value
+
+    supplier = make_supplier()
+    rice = make_item("Mixed rice", "300.00", "GST5", stock="29", stock_cost="300.00")
+    bill = recorded_bill(owner, party_id=str(supplier.id), lines=[line(rice, "10", "320.00")])
+    stock = ItemStock.objects.get(item=rice)
+    assert stock.on_hand == Decimal("39.000")
+    assert stock.stock_value == Decimal("11900.0000000")
+    assert stock.avg_cost == Decimal("305.1282")
+    if drain:
+        post_movements(
+            ctx=Ctx.system(shop),
+            lines=[
+                MovementLine(
+                    item=rice,
+                    qty=-Decimal(drain),
+                    movement_type="adjustment_out",
+                    movement_date=dt.date.fromisoformat(bill["document_date"]),
+                    source_type="manual",
+                    reason="count",
+                )
+            ],
+        )
+        stock.refresh_from_db()
+    before_qty, before_value = stock.on_hand, stock.stock_value
+    result = return_goods(
+        owner,
+        bill,
+        (1, "2"),
+        restock=restock,
+        reason="damaged_goods" if restock else "rate_correction",
+    )
+    assert result.status_code == 201, result.json()
+    note = result.json()["data"]
+    assert note["grand_total"] == "672.00"  # original bill: 2 × 320 + 5% GST
+    supplier.refresh_from_db()
+    assert supplier.shop_balance == Decimal("-2688.00")
+    stock.refresh_from_db()
+    moves = StockMovement.objects.filter(source_id=note["id"])
+    if restock:
+        movement = moves.get()
+        assert movement.unit_cost == Decimal("305.1282")
+        assert q2(movement.qty * movement.unit_cost) == Decimal("-610.26")
+        assert stock.on_hand == before_qty - 2
+        assert q2(stock.stock_value) == (Decimal("0.00") if drain else Decimal("11289.74"))
+    else:
+        assert not moves.exists()
+        assert (stock.on_hand, stock.stock_value) == (before_qty, before_value)
+
+    def assert_replay() -> None:
+        expected_qty, expected_avg, expected_value, _ = replay_with_value(
+            StockMovement.objects.filter(item=rice).order_by("sequence_no")
+        )
+        assert (stock.on_hand, stock.avg_cost, stock.stock_value) == (
+            expected_qty,
+            expected_avg,
+            expected_value,
+        )
+
+    assert_replay()
+    undone = owner.post(
+        note_url(note["id"], "void"), {"reason": "Return entered by mistake"}, format="json"
+    )
+    assert undone.status_code == 200, undone.json()
+    stock.refresh_from_db()
+    assert stock.on_hand == before_qty
+    assert q2(stock.stock_value) == q2(before_value)
+    supplier.refresh_from_db()
+    assert supplier.shop_balance == Decimal("-3360.00")
+    assert_replay()

@@ -161,6 +161,7 @@ export function InvoiceEditorPageContent({
 
   const saveNow = useCallback(() => void save(false), [save]);
   useEditorWindowEffects({
+    basePath: home,
     documentId,
     savedId: server.documentId,
     dirty: autosave.dirty,

@@ -49,7 +49,7 @@ Status values: Not started, In progress, Needs acceptance review, Pass, Fail, Bl
 | STK-01 | [business-rules-and-data-integrity](03-business-rules-and-data-integrity.md) | Domain/inventory | Needs acceptance review | — | — |
 | STK-02 | [business-rules-and-data-integrity](03-business-rules-and-data-integrity.md) | Domain/inventory | Needs acceptance review | — | — |
 | STK-03 | [business-rules-and-data-integrity](03-business-rules-and-data-integrity.md) | Domain/inventory | Needs acceptance review | — | — |
-| STK-04 | [business-rules-and-data-integrity](03-business-rules-and-data-integrity.md) | Domain/inventory | Needs acceptance review | — | — |
+| STK-04 | [business-rules-and-data-integrity](03-business-rules-and-data-integrity.md) | Domain/inventory | Needs acceptance review | Owner D-01 choice16 Oct2026; 180 purchase/inventory tests, including mixed/depleted/price-only/void/replay | Policy approved by owner16 Oct; broader release review pending |
 | STK-05 | [business-rules-and-data-integrity](03-business-rules-and-data-integrity.md) | Domain/inventory | Needs acceptance review | — | — |
 | ENG-01 | [engineering-and-code-reuse](04-engineering-and-code-reuse.md) | Engineering | Needs acceptance review | — | — |
 | ENG-02 | [engineering-and-code-reuse](04-engineering-and-code-reuse.md) | Engineering | Needs acceptance review | — | — |
@@ -85,7 +85,7 @@ Status values: Not started, In progress, Needs acceptance review, Pass, Fail, Bl
 | Supported business/capability scope | Not frozen; see D-02 |
 | Design/UX weighted score | Not evaluated; target at least9.0 |
 | Functionality/business weighted score | Not evaluated; target at least9.0 |
-| Lowest dimension / unresolved defects | Not evaluated; valuation decision D-01 open |
+| Lowest dimension / unresolved defects | Not evaluated; D-01 approved16 Oct; SH-011 durable draft recovery remains open |
 | Mobile/desktop/device evidence | Link evidence for declared matrix |
 | Message inventory completion | Not audited against MSG-01 universal target |
 | Duplication baseline / high-risk exceptions | Not measured; REUSE audit required |

@@ -12,7 +12,7 @@ Status: planned work; no target score has been achieved merely by creating these
 | WP-04 Universal editable communication | P1, product + frontend/backend | Complete outgoing-path inventory; shared composer/adapters; every applicable MSG requirement passes in all apps |
 | WP-05 Counter editor redesign | P1, design + frontend | Reviewed dense bill/purchase designs; width/keyboard/tax behavior; real 1/10/50-line speed/accuracy evidence |
 | WP-06 Shop dashboard | P1, design + reporting/backend | Defined KPI contracts, separate customer/supplier panels, attention priorities and matching drill-downs; all figures reconcile |
-| WP-07 Records and onboarding | P1, frontend + domain | Consistent drawers, role-specific copy, selected phone contacts, mobile selling price and safe archived/duplicate handling |
+| WP-07 Records and onboarding | P1, frontend + domain | Consistent drawers, role-specific copy, selected phone contacts for Customers/Suppliers/Udhaar, item purchase cost/default selling price/editable margin, mobile price visibility and safe archived/duplicate handling |
 | WP-08 Returns/documents | P1, document/backend/frontend | Complete credit/refund/return proof, supported print/share and conversion histories |
 | WP-09 Business capability validation | P1/P2, product + QA | Product business matrix classified; optional variants/units/batches/locations/etc scoped and capability-gated |
 | WP-10 Readiness evidence | P0 release gate, QA + design/domain reviewers | Device/network/security/performance tests, scorecards, staging smoke and explicit release/rollback decision |
@@ -33,7 +33,7 @@ WP-03 starts early and accompanies every package. Do not postpone duplication re
 
 | ID | Decision required | Decision owner / evidence |
 |---|---|---|
-| D-01 | Purchase-return valuation: original inbound cost vs average-cost/variance treatment; depleted/negative residual value; void/replay/migration | Product/domain owner; approve numeric scenarios before implementation |
+| D-01 | RESOLVED 16 Oct 2026: retain normative weighted-average stock costing; supplier credit retains original bill price/tax; correct conflicting documentation | Explicit owner response; mixed-cost, depleted, price-only and void/replay regression12/12 passed |
 | D-02 | Supported businesses and capability limits for the release; phased batch/expiry/variants/serial/unit/location support | Product owner with representative merchants; publish capability matrix |
 | D-03 | Explicit dual-role customer/supplier settlement/net-position behavior and dashboard cohort definitions | Product/domain owner; no silent change to existing balance rules |
 | D-04 | Personal user-owned Udhaar and login landing/migration | Separate ownership project; preserve current business entries and member privacy |
@@ -45,3 +45,15 @@ WP-03 starts early and accompanies every package. Do not postpone duplication re
 Each package supplies: requirement IDs, current/proposed behavior, design/data contract, source owner and reuse plan, intentional exceptions, API/migration impact, acceptance scenarios, screenshots, independent reconciliation where relevant, tests/gates, known limitations and release notes. Assign named people when work is scheduled; role names here do not imply a staffed team or date commitment.
 
 Update [QA.md](../../QA.md) with verified checkpoints and this pack with current acceptance status. Keep the historical audit intact. Ship no fictional figures, unverified competitor claims or claimed delivery status unsupported by evidence.
+
+
+## Additional owner requirements — 16 October 2026
+
+Owner explicitly requested keeping the roadmap order, without reprioritizing the new request. Add the following to WP-07 after the earlier packages:
+
+- Item pricing: existing purchase-cost reference and default selling price plus editable profit margin. Margin is `(net selling price − reference purchase cost) / net selling price × 100`, not markup. Cost/margin edits recalculate default selling price; manual selling-price edits recalculate margin. Define zero/undefined cases, precision, tax-inclusive normalization and validation before coding.
+- Preserve invoice snapshots and invoice-specific overrides/discounts. Master pricing changes never rewrite old invoices or stock movement costs. Internal purchase cost/margin remain permission-gated and excluded from customer invoices, print/PDF and share documents.
+- Show internal pricing in authorized item search/selection where useful, with default vs actual transaction pricing clearly distinguished. Reuse existing controls/calculation owners; do not add parallel pricing logic in each screen.
+- Reuse the existing selected-phone-contact prefill for Customer/Supplier/Udhaar onboarding and appropriate inline-add flows. Keep role/book/tenant context, explicit save and duplicate checks; preserve manual entry and unsupported/cancel behavior. Selecting a contact does not itself create a person or send a message.
+
+These are queued requirements, not implemented features. The next implementation work remains WP-02 recovery hardening.

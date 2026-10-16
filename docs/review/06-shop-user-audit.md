@@ -4,7 +4,7 @@
 
 ## Verdict
 
-The accounting capabilities are ahead of the counter experience. Compact customer, supplier, bill and payment lists are useful; desktop billing still spends too much space on one item. More seriously, book isolation and supplier-return retry protection had observable defects despite large passing suites. Those defects are fixed locally. Mixed-cost purchase-return valuation remains an unresolved inconsistency between documented behavior and the stock engine. This audit is not an unconditional production sign-off.
+The accounting capabilities are ahead of the counter experience. Compact customer, supplier, bill and payment lists are useful; desktop billing still spends too much space on one item. More seriously, book isolation and supplier-return retry protection had observable defects despite large passing suites. Those defects are fixed locally. The mixed-cost return documentation conflict was resolved by the owner on16 October2026: retain normative weighted-average stock costing and original-bill supplier credit. The new policy regression now passes. This audit is not an unconditional production sign-off.
 
 ## Boundaries the owner explicitly requires
 
@@ -35,11 +35,11 @@ The file is a chronological journal, not a current acceptance checklist. Earlier
 
 ## Open findings and blunt product feedback
 
-### High priority: SH-009 — mixed-cost purchase-return valuation is inconsistent
+### Resolved 16 October 2026: SH-009 — purchase-return costing documentation
 
 Observed sequence: 29 rice bags valued at ₹300, buy 10 at ₹320, return 2 from that purchase. Supplier credit is ₹672 including GST, quantity becomes 37, but the stock movement records unit cost ₹305.1282 and value −₹610.26. Purchase-return service documentation and product comparison document specify the bill's inbound cost, which would remove ₹640 before tax. Current stock value is ₹11,289.74 rather than ₹11,260 under that documented rule.
 
-The caller supplies the original inbound cost; the shared costing engine treats a negative movement as an ordinary average-cost outbound and ignores it. Replay also follows that convention. This needs an explicit, consistent valuation policy covering mixed costs, depleted stock, zero/negative remaining value, note voids and historical replay. No financial valuation rule was silently changed. Passing quantity/payment tests are insufficient evidence here.
+The original audit identified conflicting descriptions, not incorrect supplier credit or stock quantity. On16 October2026 the owner explicitly chose the existing normative weighted-average stock rule. Corrected the return documentation and removed the misleading unused original-cost argument; the common costing engine remains unchanged. Mixed-cost, depleted-stock, price-only and void/replay scenarios are now covered:12 debit-note tests and180 purchase/inventory regressions passed. No valuation migration or historical rewrite is required.
 
 ### High workflow priority: SH-010 — desktop billing is space-heavy
 
@@ -115,4 +115,4 @@ Keep compact phone record rows and desktop comparison tables for customers/suppl
 
 ## Remaining release evidence
 
-Physical Android/iPhone keyboards and contact picker, scanner/camera and thermal printer; real offline/reconnect and interrupted-request testing; large-business paging/performance; explicit mixed-cost purchase-return valuation decision and regression. No claim that every possible device or edge case has been covered.
+Physical Android/iPhone keyboards and contact picker, scanner/camera and thermal printer; real offline/reconnect and interrupted-request testing; large-business paging/performance; remaining draft recovery and the other open work packages. No claim that every possible device or edge case has been covered.
