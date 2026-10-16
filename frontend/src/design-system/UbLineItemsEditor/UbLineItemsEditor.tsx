@@ -1,6 +1,15 @@
 'use client';
 
-import { useCallback, useEffect, useId, useMemo, useRef, type ReactNode } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
 
 import { Plus, Trash2 } from 'lucide-react';
 import {
@@ -107,8 +116,60 @@ export interface UbLineItemsEditorProps<TForm extends FieldValues, TName extends
   readonly layout?: UbLineCellLayout;
   /** Wide forms keep labelled cards until their columns have room. */
   readonly tableFrom?: number;
+  /**
+   * `'fits'` — draw the table whenever the editor's OWN width holds every
+   * column's minimum track (`minimumTableWidth`), cards otherwise. The screen
+   * width says nothing about the space a form's lines get beside a sidebar or
+   * a totals panel. Until the editor has been measured (and in jsdom, which
+   * measures nothing) it falls back to `tableFrom`.
+   */
+  readonly tableWhen?: 'viewport' | 'fits';
   readonly className?: string;
 }
+
+const REM_PX = 16;
+/* Layout constants of the table below, in rem: the remove button's track, the
+   0.5rem gap after every column, and the row's 0.75rem padding each side. */
+const REMOVE_TRACK_REM = 2.5;
+const GAP_REM = 0.5;
+const ROW_PADDING_REM = 1.5;
+
+const trackMinimumPx = (track: string): number => {
+  const min =
+    /^\s*minmax\(\s*([\d.]+)(rem|px)?/.exec(track) ?? /^\s*([\d.]+)(rem|px)\s*$/.exec(track);
+  if (!min) return 0;
+  const value = Number(min[1]);
+  return min[2] === 'px' ? value : value * REM_PX;
+};
+
+/**
+ * WP-05 — the narrowest the table can be drawn without a column going below
+ * its minimum: the tracks' minimums, the remove button, the gaps and the row
+ * padding. Below it the table would scroll sideways or clip Qty and Total,
+ * which is what the spec forbids.
+ */
+export const minimumTableWidth = (tracks: readonly string[]): number =>
+  tracks.reduce((sum, track) => sum + trackMinimumPx(track), 0) +
+  (REMOVE_TRACK_REM + GAP_REM * tracks.length + ROW_PADDING_REM) * REM_PX;
+
+/** The editor's own width, or null before it is measured (and in jsdom). */
+const useOwnWidth = (ref: React.RefObject<HTMLElement | null>, active: boolean): number | null => {
+  const [width, setWidth] = useState<number | null>(null);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!active || !el) return undefined;
+    const read = () => {
+      const measured = el.getBoundingClientRect().width;
+      setWidth(measured > 0 ? measured : null);
+    };
+    read();
+    if (typeof ResizeObserver === 'undefined') return undefined;
+    const observer = new ResizeObserver(read);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [ref, active]);
+  return width;
+};
 
 const FOCUSABLE =
   'input:not([disabled]), button:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
@@ -140,11 +201,18 @@ export function UbLineItemsEditor<TForm extends FieldValues, TName extends Array
   footer,
   layout: forcedLayout,
   tableFrom = 768,
+  tableWhen = 'viewport',
   className,
 }: UbLineItemsEditorProps<TForm, TName>): React.JSX.Element {
-  const tableFits = useMediaQuery(`(min-width: ${tableFrom}px)`);
-  const layout: UbLineCellLayout = forcedLayout ?? (tableFits ? 'table' : 'card');
   const containerRef = useRef<HTMLDivElement>(null);
+  const screenFits = useMediaQuery(`(min-width: ${tableFrom}px)`);
+  const ownWidth = useOwnWidth(containerRef, tableWhen === 'fits' && !forcedLayout);
+  const minimum = useMemo(
+    () => minimumTableWidth(columns.map((column) => column.track ?? 'minmax(0,1fr)')),
+    [columns]
+  );
+  const tableFits = ownWidth === null ? screenFits : ownWidth >= minimum;
+  const layout: UbLineCellLayout = forcedLayout ?? (tableFits ? 'table' : 'card');
   const baseId = useId();
   const { fields, append, remove } = fieldArray;
   /* Where the caret goes once the lines the last action changed are in the

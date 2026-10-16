@@ -20,9 +20,9 @@ import {
   UbStack,
   UbText,
   UbTotalDock,
-  useIsMobileLayer,
 } from 'src/design-system';
 import { useAppDispatch } from 'src/hooks/useAppStore';
+import { useDocksEditorTotals } from 'src/hooks/useDocksEditorTotals';
 import { useTranslation } from 'src/hooks/useTranslation';
 import { showSnackbar } from 'src/redux/slice/snackbarSlice';
 import { ROUTES } from 'src/routes';
@@ -82,7 +82,7 @@ export function PurchaseBillEditorPageContent({
 
   const context = server.context;
   const hasLines = hasRecordableLines(values, preview);
-  const isMobileLayer = useIsMobileLayer();
+  const docksTotals = useDocksEditorTotals();
   const locked = server.recording || !!server.recorded;
   const claimable = regular && values.itcEligible && !order;
 
@@ -200,8 +200,8 @@ export function PurchaseBillEditorPageContent({
               onClick={() => void save(false)}
               busy={server.saveState === 'saving'}
               disabled={locked}
-              /* The phone docks Save and Record under the total (below). */
-              className="max-lg:hidden"
+              /* Below 1536 px Save and Record are docked under the total (below). */
+              className="max-2xl:hidden"
             >
               {t('purchases.editor.saveDraft')}
             </UbButton>
@@ -213,7 +213,7 @@ export function PurchaseBillEditorPageContent({
               busyLabel={t(order ? 'purchases.order.sending' : 'purchases.editor.recording')}
               disabled={!hasLines || locked}
               data-testid="purchase-record"
-              className="max-lg:hidden"
+              className="max-2xl:hidden"
             >
               {t(order ? 'purchases.order.send' : 'purchases.editor.record')}
             </UbButton>
@@ -221,8 +221,8 @@ export function PurchaseBillEditorPageContent({
         }
       />
       <UbForm form={form} onSubmit={() => void startRecord()}>
-        <UbGrid columns={{ base: 1, lg: 3 }} gap={4}>
-          <UbStack gap={4} className="lg:col-span-2">
+        <UbGrid columns={1} gap={4} className="2xl:grid-cols-3">
+          <UbStack gap={4} className="2xl:col-span-2">
             <UbPanel>
               <PurchaseBillHeaderSection
                 form={form}
@@ -255,8 +255,8 @@ export function PurchaseBillEditorPageContent({
       </UbForm>
 
       {/* docs/mobile-redesign (A14) — the total and the finishing actions,
-          docked on a phone (see UbTotalDock). */}
-      {isMobileLayer && (
+          docked below 1536 px (WP-05 layout A; see useDocksEditorTotals). */}
+      {docksTotals && (
         <UbTotalDock
           data-testid="purchase-dock"
           totalLabel={t('purchases.totals.grand')}

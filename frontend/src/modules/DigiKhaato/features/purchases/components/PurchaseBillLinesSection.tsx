@@ -305,6 +305,7 @@ export function PurchaseBillLinesSection({
   return (
     <UbLineItemsEditor<PurchaseBillFormValues, 'lines'>
       tableFrom={1536}
+      tableWhen="fits"
       control={control}
       name="lines"
       fieldArray={fieldArray}

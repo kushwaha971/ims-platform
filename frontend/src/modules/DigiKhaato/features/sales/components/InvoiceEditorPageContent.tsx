@@ -20,9 +20,9 @@ import {
   UbStack,
   UbStatusBanner,
   UbTotalDock,
-  useIsMobileLayer,
 } from 'src/design-system';
 import { useAppDispatch, useAppSelector } from 'src/hooks/useAppStore';
+import { useDocksEditorTotals } from 'src/hooks/useDocksEditorTotals';
 import { useTranslation } from 'src/hooks/useTranslation';
 import { selectLocale } from 'src/redux/slice/localeSlice';
 import { selectMayOverrideCreditLimit } from 'src/redux/slice/sessionSlice';
@@ -102,7 +102,7 @@ export function InvoiceEditorPageContent({
   const context = server.context;
   const taxFree = context ? context.gstType !== 'regular' : false;
   const walkIn = values.mode === 'walkIn';
-  const isMobileLayer = useIsMobileLayer();
+  const docksTotals = useDocksEditorTotals();
   const hasLines = preview.lines.length > 0 && values.lines.some((l) => l.itemId || l.description);
   const locked = server.issuing || !!server.issued;
   const creditBlocked = server.error?.code === 'credit_limit_exceeded';
@@ -269,8 +269,8 @@ export function InvoiceEditorPageContent({
               onClick={() => void save(false)}
               busy={server.saveState === 'saving'}
               disabled={locked}
-              /* The phone docks Save and Issue under the total (below). */
-              className="max-lg:hidden"
+              /* Below 1536 px Save and Issue are docked under the total (below). */
+              className="max-2xl:hidden"
             >
               {t('sales.editor.saveDraft')}
             </UbButton>
@@ -282,7 +282,7 @@ export function InvoiceEditorPageContent({
               busyLabel={issueBusyLabel}
               disabled={!hasLines || locked}
               data-testid="invoice-issue"
-              className="max-lg:hidden"
+              className="max-2xl:hidden"
             >
               {issueLabel}
             </UbButton>
@@ -294,8 +294,8 @@ export function InvoiceEditorPageContent({
         onSubmit={() => startIssue()}
         formErrors={refused ? [t('sales.validation.fixHighlighted')] : undefined}
       >
-        <UbGrid columns={{ base: 1, lg: 3 }} gap={4}>
-          <UbStack gap={4} className="lg:col-span-2">
+        <UbGrid columns={1} gap={4} className="2xl:grid-cols-3">
+          <UbStack gap={4} className="2xl:col-span-2">
             {stockShort.length > 0 && (
               <UbStatusBanner
                 tone="error"
@@ -364,10 +364,12 @@ export function InvoiceEditorPageContent({
         </UbGrid>
       </UbForm>
 
-      {/* docs/mobile-redesign (A14) — on a phone the total and the two ways to
-          finish are docked at the bottom, always in view while lines are
-          added; the header no longer carries them there. */}
-      {isMobileLayer && (
+      {/* docs/mobile-redesign (A14) — the total and the two ways to finish are
+          docked at the bottom, always in view while lines are added; the
+          header no longer carries them there. WP-05 layout A extends it from
+          phones to every width below 1536 px, where the totals panel moves
+          under the lines so they have room for a table. */}
+      {docksTotals && (
         <UbTotalDock
           data-testid="invoice-dock"
           totalLabel={t('sales.totals.grand')}

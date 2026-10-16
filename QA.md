@@ -486,3 +486,19 @@ Read this file, `git status`, current diff, root/frontend AGENTS, and the releva
 - R-09 (D-04b): `utils/reason.ts` (import-free) and `useValidationSchemas().reasonText()` replace ten dialogs and eleven schemas that wrote out 3 and 160. A guard forbids the literals, and a contract test reads the server's `VOID_REASON_MIN`/`MAX`. Both failed before the change.
 - Gates: Jest 4182 passed; `tsc` and ESLint clean; build passed. Bundle: `/login/email` and `/reset-password` +0.1 KB each, because the validator hook ships there; the reason is noted in `bundle-budgets.json`.
 - Owner decision: the counter editor's layout for 1024–1535 px is option A, a table with the totals below. The build is next.
+
+### 16 October 2026 — WP-05 layout A built: the counter editors draw a table on laptops (cloud session)
+
+- Owner's choice (decision card): option A. Below 1536 px the lines get the full width and the totals go under them. The grand total, Save and Issue/Record ride in a docked bar.
+- `UbLineItemsEditor` `tableWhen="fits"` chooses table or cards by its own measured width (`minimumTableWidth`), no longer by the screen.
+- Fail-before:
+  - the `UbLineItemsEditor` container-fit cases;
+  - `InvoiceEditor.test.tsx` "a 1280 laptop", which failed on the old page.
+- Live re-measure (`e2e/counter-editor-review.mjs`):
+  - a 10-line invoice at 1280 is 1,679 px (was 3,410 px), and a 50-line invoice is 4,119 px (was 14,963 px);
+  - the bill gets the table at 1280 and 1440, and keeps cards at 1024 and 768, where its columns do not fit;
+  - no overflow or cut text at any width;
+  - Alt+N and Alt+Backspace pass on every table width.
+- Regression: `sales-recovery-look` and `purchase-recovery-look` all passed.
+- Gates: Jest 4186 passed; `tsc` and ESLint clean; build passed. Bundle: the sales editor routes 152.1 -> 152.4 KB for the measurement code; the reason is noted in `bundle-budgets.json`. The breakpoint hook lives in `src/hooks`, because in the design-system motion module it cost the landing page 0.9 KB.
+- Still owed for WP-05: the compact supplier/context summary and timed 1/10/50-line entry evidence. Railway deployment and 9/10 readiness are NOT claimed.

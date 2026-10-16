@@ -1,6 +1,6 @@
 # WP-05 counter editor: design review
 
-Status: review for the owner, 16 October 2026. Nothing in this document is built yet. The spec (02, "Bill editor") asks for compact context, optional fields disclosed, a container-fit line grid, and totals that stay reachable, measured before any layout is chosen.
+Status: the owner chose option A on 16 October 2026, and it is built (see "Built" at the end). The spec (02, "Bill editor") asks for compact context, optional fields disclosed, a container-fit line grid, and totals that stay reachable, measured before any layout is chosen.
 
 Evidence: `e2e/counter-editor-review.mjs` on a live stack, with a synthetic shop and drafts of 1, 10 and 50 lines for both the sales invoice and the purchase bill, at eight widths. The numbers are in `/tmp/e2e-shots/counter-review/measurements.json` when it is re-run. The screenshots were taken from the same run.
 
@@ -59,3 +59,24 @@ Nothing overflowed the page at any width, and no page errors were recorded.
 ## Asked of the owner
 
 Which layout should the counter editor use from 1024 to 1535 px: A (recommended), B or C?
+
+## Built (16 October 2026)
+
+- `UbLineItemsEditor` takes `tableWhen="fits"`. It measures its own width and draws the table whenever `minimumTableWidth(tracks)` fits; until it has been measured, it falls back to `tableFrom`.
+- `useDocksEditorTotals` (`src/hooks`, query `max-width: 1535.98px`) is the one breakpoint both editors share.
+  - Below 1536 px the totals panel sits under the lines, right-aligned at a readable width (`EDITOR_TOTALS_PANEL_CLASS`).
+  - Save and Issue/Record ride in `UbTotalDock`, and the header keeps Delete.
+  - From 1536 px nothing changed.
+- Re-measured with `e2e/counter-editor-review.mjs`:
+
+| Width | Before | After |
+|---|---|---|
+| Invoice at 1280 | cards, 10 lines 3,410 px, 50 lines 14,963 px | table, 61 px a line, 10 lines 1,679 px, 50 lines 4,119 px |
+| Invoice at 1024 and 768 | cards | table |
+| Bill at 1280 and 1440 | cards | table |
+| Bill at 1024 and 768 | cards | still cards (796 px is under the bill's 824 px minimum, as the review expected) |
+
+- Every width: no overflow and no cut text. Alt+N and Alt+Backspace pass on the table at every width where it is drawn.
+- Not yet done:
+  - the compact context summary for the supplier block;
+  - timed 1/10/50-line entry evidence (keystrokes and time to Issue), which WP-05's exit criteria still ask for.

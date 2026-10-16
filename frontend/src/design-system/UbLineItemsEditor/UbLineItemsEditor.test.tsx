@@ -4,6 +4,7 @@ import { useFieldArray, useForm } from 'react-hook-form';
 
 import {
   UbLineItemsEditor,
+  minimumTableWidth,
   type UbLineCellLayout,
   type UbLineItemsColumn,
 } from './UbLineItemsEditor';
@@ -60,18 +61,27 @@ const COLUMNS: UbLineItemsColumn[] = [
   },
 ];
 
+/* Item 10rem, Qty 5rem: with the 2.5rem remove button, three 0.5rem gaps and
+   0.75rem of padding each side, the table needs 20.5rem — 328 px. */
+const SIZED_COLUMNS: UbLineItemsColumn[] = COLUMNS.map((column) => ({
+  ...column,
+  track: { name: 'minmax(10rem,2fr)', qty: 'minmax(5rem,1fr)', echo: 'minmax(0,1fr)' }[column.id],
+}));
+
 function Harness({
   initial,
   layout = 'table',
   onSubmit,
   maxLines,
   responsive = false,
+  fits = false,
 }: Readonly<{
   initial: Line[];
   layout?: UbLineCellLayout;
   onSubmit?: () => void;
   maxLines?: number;
   responsive?: boolean;
+  fits?: boolean;
 }>) {
   const { control } = useForm<FormShape>({ defaultValues: { lines: initial } });
   const fieldArray = useFieldArray({ control, name: 'lines', keyName: 'key' });
@@ -80,9 +90,10 @@ function Harness({
       control={control}
       name="lines"
       fieldArray={fieldArray}
-      columns={COLUMNS}
+      columns={fits ? SIZED_COLUMNS : COLUMNS}
+      tableWhen={fits ? 'fits' : undefined}
       newLine={() => ({ name: '', qty: '' })}
-      layout={responsive ? undefined : layout}
+      layout={responsive || fits ? undefined : layout}
       tableFrom={responsive ? 1536 : undefined}
       maxLines={maxLines}
       onSubmitShortcut={onSubmit}
@@ -260,5 +271,56 @@ describe('ARIA table ownership in the table layout', () => {
     const message = screen.getByText('No lines yet');
     expect(message.closest('[role="cell"]')).not.toBeNull();
     expect(message.closest('[role="row"]')?.parentElement).toBe(screen.getByRole('table'));
+  });
+});
+
+describe('the table when its columns fit (WP-05 layout A)', () => {
+  /* The table used to switch on the SCREEN width, so a 1440 laptop got a
+     290 px phone card per line while the lines' own column had room for the
+     table (docs/shop-ims-readiness/12-counter-editor-design-review.md). */
+  const withWidth = (width: number, run: () => void) => {
+    const spy = jest
+      .spyOn(HTMLElement.prototype, 'getBoundingClientRect')
+      .mockImplementation(function rect(this: HTMLElement) {
+        const w = this.dataset.testid === 'line-items-editor' ? width : 0;
+        return {
+          width: w,
+          height: 0,
+          top: 0,
+          left: 0,
+          right: w,
+          bottom: 0,
+          x: 0,
+          y: 0,
+          toJSON: () => ({}),
+        };
+      });
+    try {
+      run();
+    } finally {
+      spy.mockRestore();
+    }
+  };
+
+  it('adds up the minimum tracks, the remove button, the gaps and the padding', () => {
+    expect(minimumTableWidth(['minmax(10rem,2fr)', 'minmax(5rem,1fr)', 'minmax(0,1fr)'])).toBe(328);
+    expect(minimumTableWidth(['minmax(9rem,2.6fr)', '6rem', 'minmax(80px,1fr)'])).toBe(
+      (9 + 6 + 2.5 + 1.5 + 1.5) * 16 + 80
+    );
+  });
+
+  it('draws the table when the container holds every minimum column', () => {
+    withWidth(328, () => {
+      render(<Harness fits initial={[{ name: 'Rice', qty: '2' }]} />);
+      expect(screen.getByRole('table')).toBeInTheDocument();
+    });
+  });
+
+  it('draws cards when it does not, whatever the screen', () => {
+    withWidth(327, () => {
+      render(<Harness fits initial={[{ name: 'Rice', qty: '2' }]} />);
+      expect(screen.queryByRole('table')).toBeNull();
+      expect(screen.getByRole('region', { name: 'line 1' })).toBeInTheDocument();
+    });
   });
 });

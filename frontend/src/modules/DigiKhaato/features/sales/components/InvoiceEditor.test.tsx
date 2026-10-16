@@ -1,4 +1,4 @@
-import { act, screen, waitFor } from '@testing-library/react';
+import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { resetAllFeatureState } from 'src/redux/actions';
@@ -154,6 +154,33 @@ describe('the line table at a 1536 desktop (QA S-D5 / B17)', () => {
     expect(tracks.reduce((sum, track) => sum + rem(track), 0) + gaps + padding).toBeLessThanOrEqual(
       53.5
     );
+  });
+});
+
+describe('a 1280 laptop (WP-05 layout A)', () => {
+  it('docks the total and Issue under the lines, since the totals panel is no longer beside them', async () => {
+    // The review measured a 290 px phone card per line at 1280: the totals
+    // panel beside the lines left them 696 px. The owner chose to move the
+    // totals under the lines below 1536 px and keep Issue in a docked bar.
+    const width = 1280;
+    const original = window.matchMedia;
+    window.matchMedia = ((query: string) => {
+      const min = /min-width:\s*([\d.]+)/.exec(query)?.[1];
+      const max = /max-width:\s*([\d.]+)/.exec(query)?.[1];
+      return {
+        ...original(query),
+        matches: min ? width >= Number(min) : max ? width <= Number(max) : false,
+      };
+    }) as typeof window.matchMedia;
+    try {
+      signIn(['sales.invoice.read', 'sales.invoice.write']);
+      renderWithProviders(<InvoiceEditorPageContent documentId={null} />);
+      const dock = await screen.findByTestId('invoice-dock');
+      expect(within(dock).getByRole('button', { name: /Issue/ })).toBeInTheDocument();
+      expect(screen.getByTestId('invoice-issue')).toHaveClass('max-2xl:hidden');
+    } finally {
+      window.matchMedia = original;
+    }
   });
 });
 

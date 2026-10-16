@@ -112,6 +112,19 @@ for (const [name, width, height] of WIDTHS) {
       results.push({ kind, width: name, lines: count, ...m, errors: errors.splice(0) });
       console.log(`${kind.padEnd(7)} ${name.padEnd(13)} ${String(count).padStart(2)} lines  ${String(m.layout).padEnd(5)} editor ${m.editorWidth}px  line ${m.lineHeight}px  10th@${m.tenthLineTop ?? '-'}  total@${m.totalTop} ${m.totalOnScreen ? 'on screen' : 'below'}  page ${m.pageHeight}px  overflow ${m.overflow}  cut ${m.cut.length}`);
       if (count !== 50) await page.screenshot({ path: `${ROOT}/${kind}-${name}-${count}.png`, fullPage: count === 10 });
+      if (count === 1 && m.layout === 'table') {
+        // The keyboard contract on the table at this width: Alt+N adds a line, Alt+Backspace removes it.
+        const qty = page.getByLabel('Qty, line 1');
+        await qty.focus();
+        await page.keyboard.press('Alt+n');
+        await page.getByLabel('Qty, line 2').waitFor({ timeout: 5000 }).catch(() => undefined);
+        const added = (await page.getByLabel('Qty, line 2').count()) === 1;
+        await page.keyboard.press('Alt+Backspace');
+        await page.waitForTimeout(300);
+        const removed = (await page.getByLabel('Qty, line 2').count()) === 0;
+        console.log(`${added && removed ? 'PASS' : 'FAIL'}  ${kind} ${name}: Alt+N adds a line and Alt+Backspace removes it`);
+        results.push({ kind, width: name, keyboard: added && removed });
+      }
     }
   }
   await ctx.close();

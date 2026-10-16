@@ -15,6 +15,7 @@ import {
   UbText,
   UbTextArea,
 } from 'src/design-system';
+import { EDITOR_TOTALS_PANEL_CLASS } from 'src/hooks/useDocksEditorTotals';
 import { useTranslation } from 'src/hooks/useTranslation';
 import { ROUTES } from 'src/routes';
 import { formatInr } from 'src/utils/money';
@@ -59,7 +60,7 @@ export function PurchaseBillTotalsPanel({
   const cost = claimable ? '' : ` ${t('purchases.tax.costSuffix')}`;
 
   return (
-    <UbPanel as="aside" className="lg:sticky lg:top-4">
+    <UbPanel as="aside" className={EDITOR_TOTALS_PANEL_CLASS}>
       <UbStack gap={3} className="p-4" data-testid="purchase-totals">
         {row(t('purchases.totals.subtotal'), formatInr(preview.subtotal))}
         <UbChoiceChips<PurchaseDiscountType>

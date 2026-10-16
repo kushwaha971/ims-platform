@@ -15,6 +15,7 @@ import {
   UbSwitch,
   UbText,
 } from 'src/design-system';
+import { EDITOR_TOTALS_PANEL_CLASS } from 'src/hooks/useDocksEditorTotals';
 import { useTranslation } from 'src/hooks/useTranslation';
 import { formatInr } from 'src/utils/money';
 
@@ -71,7 +72,7 @@ export function InvoiceTotalsPanel({
   );
 
   return (
-    <UbPanel as="aside" className="lg:sticky lg:top-4">
+    <UbPanel as="aside" className={EDITOR_TOTALS_PANEL_CLASS}>
       <UbStack gap={3} className="p-4" data-testid="invoice-totals">
         {row(t('sales.totals.subtotal'), formatInr(preview.subtotal))}
         <UbChoiceChips<DiscountType>
