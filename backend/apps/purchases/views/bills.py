@@ -132,13 +132,12 @@ class PurchaseBillViewSet(
         if date_from and date_to and date_from > date_to:
             raise ValidationFailed({"date_to": ["End date is before the start date."]})
         filtered = self.filter_queryset(self.get_queryset())
-        counts = tab_counts(filtered)
-        queryset = apply_tab(filtered, tab)
+        today = tenant_today(self.get_tenant())
+        counts = tab_counts(filtered, today=today)
+        queryset = apply_tab(filtered, tab, today=today)
         totals = list_totals(queryset)
         page = self.paginate_queryset(queryset)
-        data = BillListSerializer(
-            page, many=True, context={"today": tenant_today(self.get_tenant())}
-        ).data
+        data = BillListSerializer(page, many=True, context={"today": today}).data
         meta = {
             **self.paginator.get_meta(),
             # Approved designs (12 Oct 2026): does this kind exist at all, whatever

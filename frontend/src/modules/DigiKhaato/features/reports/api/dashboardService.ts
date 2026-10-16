@@ -21,6 +21,7 @@ interface CountAmountWire {
 
 interface AgedWire extends CountAmountWire {
   readonly oldest_days_late?: number;
+  readonly oldest_bill_date?: string;
 }
 
 interface DashboardWire {
@@ -105,6 +106,7 @@ const countAmount = (wire: CountAmountWire): CountAmount => ({
 const aged = (wire: AgedWire): AgedCountAmount => ({
   ...countAmount(wire),
   ...(wire.oldest_days_late === undefined ? {} : { oldestDays: wire.oldest_days_late }),
+  ...(wire.oldest_bill_date ? { firstBillDate: wire.oldest_bill_date } : {}),
 });
 
 const dues = (wire: { readonly amount: string; readonly advances?: string }) => ({

@@ -2,7 +2,7 @@ import type { TranslateFn } from 'src/hooks/useTranslation';
 import { ROUTES } from 'src/routes';
 import { formatInr, isNegativeAmount, toDecimal, type MoneyString } from 'src/utils/money';
 
-import type { ActivityItem, DashboardTiles } from '../types/reports.types';
+import type { ActivityItem, AgedCountAmount, DashboardTiles } from '../types/reports.types';
 
 /**
  * RPT-01 — pure helpers for the dashboard screen: the short-form rupee, the
@@ -88,6 +88,18 @@ export const tileHref = (key: TileKey, _tiles: DashboardTiles): string => TILE_H
  * other way round in that list, or null when there is none: "Customers paid
  * ₹700.00 ahead". A zero advance is not news and is not drawn.
  */
+/**
+ * WP-06 Finding 2 — an overdue figure's link. The bill lists default to this
+ * financial year, and an overdue bill from last year is exactly the one that
+ * must not drop out of the list the figure opens, so the link carries the range
+ * from the oldest overdue bill's date to today. Without that date (an older
+ * server, or nothing overdue) it is the tab alone.
+ */
+export const overdueHref = (list: string, bills: AgedCountAmount, today: string): string =>
+  bills.firstBillDate
+    ? `${list}?tab=overdue&from=${bills.firstBillDate}&to=${today}`
+    : `${list}?tab=overdue`;
+
 export const advancesLine = (
   key: 'toCollect' | 'toPay',
   tiles: DashboardTiles,

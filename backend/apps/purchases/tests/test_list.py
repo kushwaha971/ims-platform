@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import datetime as dt
 from typing import Any
 
 import pytest
@@ -51,6 +52,12 @@ def test_tabs_map_to_statuses_and_counts_ignore_the_tab(owner: Any, book: dict) 
     """T-PUR-03-1 / AC-1 — Unpaid is recorded + partially paid + overdue; every tab's count is
     computed over the filters WITHOUT the tab, so the chips agree whichever one is pressed."""
     PurchaseDocument.objects.filter(pk=book["three"]["id"]).update(status="overdue")
+    # The fixture's September bills fall due on their supplier's terms, which the
+    # calendar has passed; Overdue is decided on the day (WP-06), so they are
+    # given a due date ahead to stay merely unpaid.
+    PurchaseDocument.objects.filter(pk__in=[book["one"]["id"], book["two"]["id"]]).update(
+        due_on=dt.date(2099, 1, 1)
+    )
     unpaid = get(owner, tab="unpaid")
     assert {row["id"] for row in unpaid["data"]} == {
         book["one"]["id"],
@@ -119,3 +126,25 @@ def test_another_tenant_sees_none_of_it(book: dict, other_tenant: Any, api_as: A
     assert client.get(reverse(BILLS)).json()["data"] == []
     detail = reverse("v1:purchase-bill-detail", args=[book["one"]["id"]])
     assert client.get(detail).status_code == 404
+
+
+def test_the_overdue_tab_counts_a_bill_past_due_before_the_nightly_job(
+    owner: Any, shop: Any, book: dict
+) -> None:
+    """WP-06 Finding 2 — the dashboard's "overdue" figure opens this tab, so the
+    two must decide overdue the same way, on the day: a stored `overdue`, or an
+    open bill whose due date has passed. The tab used to read the stored status
+    alone, which the nightly job sets at 00:15, so a bill that fell due
+    yesterday was missing from the list the dashboard sent the merchant to."""
+    from apps.common.dates import tenant_today
+
+    yesterday = tenant_today(shop) - dt.timedelta(days=1)
+    tomorrow = yesterday + dt.timedelta(days=2)
+    PurchaseDocument.objects.filter(pk=book["one"]["id"]).update(due_on=yesterday)
+    PurchaseDocument.objects.filter(pk__in=[book["two"]["id"], book["three"]["id"]]).update(
+        due_on=tomorrow
+    )
+    overdue = get(owner, tab="overdue")
+    assert [row["id"] for row in overdue["data"]] == [book["one"]["id"]]
+    assert overdue["meta"]["counts"]["overdue"] == 1
+    assert overdue["meta"]["totals"]["amount_due"] == "105.00"

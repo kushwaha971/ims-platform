@@ -53,7 +53,7 @@ const DATA = (over: Partial<DashboardData> = {}): DashboardData => ({
     overdue: {
       count: 0,
       amount: '900.00',
-      invoices: { count: 2, amount: '900.00', oldestDays: 25 },
+      invoices: { count: 2, amount: '900.00', oldestDays: 25, firstBillDate: '2025-12-02' },
     },
     upcoming7d: { count: 0, amount: '0.00' },
     todaySales: { amount: '2204.19', count: 2, yesterdayAmount: '0.00' },
@@ -215,9 +215,12 @@ it('gives customers and suppliers a panel each, every figure opening its own lis
     'href',
     '/customers?balance=owes_me'
   );
+  // The bill list defaults to this financial year; an overdue bill from last
+  // year must not drop out of the list the figure opens, so the link carries
+  // the range from the oldest overdue bill's date to today.
   expect(
     within(customers).getByRole('link', { name: /2 bills overdue · ₹900\.00/ })
-  ).toHaveAttribute('href', '/sales/invoices?tab=overdue');
+  ).toHaveAttribute('href', '/sales/invoices?tab=overdue&from=2025-12-02&to=2026-09-18');
   expect(within(customers).getByText(/Oldest is 25 days late/)).toBeInTheDocument();
   expect(within(customers).getByRole('link', { name: 'Ramesh' })).toBeInTheDocument();
 
@@ -255,7 +258,10 @@ it('keeps Needs attention on the page, each row with its amount, age and next st
     expect.stringMatching(/1 item out of stock.*Reorder/),
     expect.stringMatching(/2 items running low.*Reorder/),
   ]);
-  expect(rows[0]).toHaveAttribute('href', '/sales/invoices?tab=overdue');
+  expect(rows[0]).toHaveAttribute(
+    'href',
+    '/sales/invoices?tab=overdue&from=2025-12-02&to=2026-09-18'
+  );
   expect(rows[2]).toHaveAttribute('href', '/stock/low');
 });
 

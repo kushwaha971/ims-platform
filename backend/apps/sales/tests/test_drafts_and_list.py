@@ -234,3 +234,30 @@ def test_concurrent_allocation_has_no_gaps_and_no_duplicates(shop: Any) -> None:
         thread.join()
     assert not errors
     assert sorted(numbers) == [f"INV/26-27/{n:04d}" for n in range(1, 11)]
+
+
+def test_the_overdue_tab_counts_a_bill_past_due_before_the_nightly_job(
+    owner: Any, shop: Any, make_item: Any, make_party: Any
+) -> None:
+    """WP-06 Finding 2 — the dashboard's Overdue opens this tab, so both decide
+    overdue on the day: a stored `overdue`, or an open bill whose due date has
+    passed. The tab read the stored status alone, which the nightly job sets at
+    00:15, so a bill that fell due yesterday was missing until the next morning
+    (no `refresh_overdue()` runs here, which is the point)."""
+    from apps.common.dates import tenant_today
+
+    today = tenant_today(shop)
+    item = make_item(price="100.00", tax_code="GST0", stock="50")
+    ramesh = make_party(name="Ramesh Traders", mobile="+919876543210")
+    late = _issued(
+        owner,
+        item,
+        ramesh,
+        document_date=(today - dt.timedelta(days=10)).isoformat(),
+        due_on=(today - dt.timedelta(days=1)).isoformat(),
+    )
+    _issued(owner, item, ramesh, document_date=today.isoformat(), due_on=today.isoformat())
+    overdue = owner.get(reverse(INVOICES), {"tab": "overdue"}).json()
+    assert [row["id"] for row in overdue["data"]] == [late["id"]]
+    assert overdue["meta"]["tabs"]["overdue"] == 1
+    assert overdue["meta"]["totals"]["amount_due"] == "100.00"

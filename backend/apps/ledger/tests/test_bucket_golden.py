@@ -48,7 +48,8 @@ CAPTURED_ON = dt.date(2026, 9, 30)
 #: empty-book flag of 12 Oct 2026 on `/ledger/aging` and `/ledger/summary`'s `meta`) and
 #: `shop_balance` (DEC-019, the party detail's Shop figure, sent while the Shop is on), and
 #: WP-06's layout A on the dashboard (16 Oct 2026): `advances` beside To collect / To pay,
-#: `today_received`, `supplier_bills`, `top_creditors` and an overdue line's `oldest_days_late`.
+#: `today_received`, `supplier_bills`, `top_creditors`, and an overdue line's
+#: `oldest_days_late` and `oldest_bill_date`.
 ADDED_SINCE_CAPTURE: frozenset[str] = frozenset(
     {
         "bucket",
@@ -60,6 +61,7 @@ ADDED_SINCE_CAPTURE: frozenset[str] = frozenset(
         "supplier_bills",
         "top_creditors",
         "oldest_days_late",
+        "oldest_bill_date",
     }
 )
 

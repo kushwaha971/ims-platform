@@ -75,7 +75,11 @@ def test_the_shop_home_carries_no_udhaar_promise_dates(tenant: Any) -> None:
     assert full["overdue"] == {
         "count": 0,
         "amount": "600.00",
-        "invoices": {"count": 1, "amount": "600.00"},
+        "invoices": {
+            "count": 1,
+            "amount": "600.00",
+            "oldest_bill_date": (TODAY - dt.timedelta(days=40)).isoformat(),
+        },
     }
 
 
@@ -113,7 +117,11 @@ def test_overdue_bills_are_the_secondary_line(tenant: Any) -> None:
     b.sale(tenant, TODAY - dt.timedelta(days=40), 1000, party=ramesh, status="overdue", due=600)
     b.sale(tenant, TODAY - dt.timedelta(days=50), 700, party=ramesh, status="overdue")
     b.sale(tenant, TODAY - dt.timedelta(days=50), 400, party=ramesh, status="void")
-    assert _tiles(tenant)["overdue_invoices"] == {"count": 2, "amount": "1300.00"}
+    assert _tiles(tenant)["overdue_invoices"] == {
+        "count": 2,
+        "amount": "1300.00",
+        "oldest_bill_date": (TODAY - dt.timedelta(days=50)).isoformat(),
+    }
 
 
 def test_ac4_low_stock_counts_out_of_stock_separately(tenant: Any) -> None:
@@ -375,8 +383,12 @@ def test_the_suppliers_panel_is_who_you_owe_most_and_the_bills_falling_due(tenan
     you owe most (the top of `/suppliers?balance=i_owe`), and the purchase bills
     that are overdue or fall due within seven days. Suppliers used to appear only
     as the To pay figure, with nothing to say whom or when."""
-    gupta = b.party(tenant, "Gupta", shop_balance=Decimal("-3150"), is_supplier=True, is_customer=False)
-    agro = b.party(tenant, "Agro", shop_balance=Decimal("-450"), is_supplier=True, is_customer=False)
+    gupta = b.party(
+        tenant, "Gupta", shop_balance=Decimal("-3150"), is_supplier=True, is_customer=False
+    )
+    agro = b.party(
+        tenant, "Agro", shop_balance=Decimal("-450"), is_supplier=True, is_customer=False
+    )
     b.party(tenant, "Paid ahead", shop_balance=Decimal("300"), is_supplier=True, is_customer=False)
     b.party(tenant, "Customer advance", shop_balance=Decimal("-700"))
     late = b.purchase(tenant, TODAY - dt.timedelta(days=30), 1000, party=gupta, status="overdue")
@@ -399,7 +411,12 @@ def test_the_suppliers_panel_is_who_you_owe_most_and_the_bills_falling_due(tenan
         ("Agro", "450.00"),
     ]
     assert payload["tiles"]["supplier_bills"] == {
-        "overdue": {"count": 1, "amount": "1000.00", "oldest_days_late": 12},
+        "overdue": {
+            "count": 1,
+            "amount": "1000.00",
+            "oldest_days_late": 12,
+            "oldest_bill_date": (TODAY - dt.timedelta(days=30)).isoformat(),
+        },
         "due_week": {"count": 1, "amount": "2150.00"},
     }
 
@@ -408,14 +425,22 @@ def test_overdue_bills_say_how_old_the_oldest_is(tenant: Any) -> None:
     """WP-06 — Needs attention shows count, amount AND age (spec order 4); the
     oldest overdue bill's days past its due date is that age."""
     ramesh = b.party(tenant)
-    old = b.sale(tenant, TODAY - dt.timedelta(days=60), 1800, party=ramesh, status="overdue", due=1800)
+    old = b.sale(
+        tenant, TODAY - dt.timedelta(days=60), 1800, party=ramesh, status="overdue", due=1800
+    )
     old.due_on = TODAY - dt.timedelta(days=25)
     old.save(update_fields=["due_on"])
     new = b.sale(tenant, TODAY - dt.timedelta(days=9), 420, party=ramesh, status="overdue", due=220)
     new.due_on = TODAY - dt.timedelta(days=2)
     new.save(update_fields=["due_on"])
     bills = _tiles(tenant)["overdue_invoices"]
-    assert bills == {"count": 2, "amount": "2020.00", "oldest_days_late": 25}
+    assert bills == {
+        "count": 2,
+        "amount": "2020.00",
+        "oldest_days_late": 25,
+        # The list opens from the earliest of their bill dates, not this year's.
+        "oldest_bill_date": (TODAY - dt.timedelta(days=60)).isoformat(),
+    }
 
 
 def test_the_new_panels_follow_the_readers_permissions(tenant: Any) -> None:
@@ -434,3 +459,36 @@ def test_the_new_panels_follow_the_readers_permissions(tenant: Any) -> None:
     )
     assert "today_received" not in bare["tiles"] and "supplier_bills" not in bare["tiles"]
     assert bare["top_creditors"] == []
+
+
+def test_a_bill_past_its_due_date_is_overdue_today_not_after_tonights_job(tenant: Any) -> None:
+    """WP-06 Finding 2 — Overdue read the stored status, which the nightly job
+    sets at 00:15. A bill entered today with a due date already past, or one that
+    fell due yesterday before the job ran, was missing from the figure until the
+    next morning. Overdue is decided when it is read: a stored `overdue`, or an
+    open bill whose due date is before today."""
+    ramesh = b.party(tenant)
+    gupta = b.party(tenant, "Gupta", is_supplier=True, is_customer=False)
+    unmarked = b.sale(tenant, TODAY - dt.timedelta(days=30), 900, party=ramesh, due=400)
+    unmarked.due_on = TODAY - dt.timedelta(days=5)
+    unmarked.save(update_fields=["due_on"])
+    due_today = b.sale(tenant, TODAY, 300, party=ramesh, due=300)
+    due_today.due_on = TODAY
+    due_today.save(update_fields=["due_on"])
+    bought = b.purchase(tenant, TODAY - dt.timedelta(days=20), 650, party=gupta)
+    bought.due_on = TODAY - dt.timedelta(days=1)
+    bought.save(update_fields=["due_on"])
+
+    tiles = _tiles(tenant)
+    assert tiles["overdue_invoices"] == {
+        "count": 1,
+        "amount": "400.00",
+        "oldest_days_late": 5,
+        "oldest_bill_date": (TODAY - dt.timedelta(days=30)).isoformat(),
+    }
+    assert tiles["supplier_bills"]["overdue"] == {
+        "count": 1,
+        "amount": "650.00",
+        "oldest_days_late": 1,
+        "oldest_bill_date": (TODAY - dt.timedelta(days=20)).isoformat(),
+    }

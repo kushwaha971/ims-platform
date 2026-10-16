@@ -41,7 +41,7 @@ const units = await must('GET', '/units', null, T);
 const nos = units.find((u) => u.code === 'NOS') ?? units[0];
 const item = (name, price, stock, reorder) => must('POST', '/items', {
   name, item_type: 'goods', unit_id: nos.id, selling_price: price, purchase_price: '300.00', tax_code: 'GST5', hsn_sac: '1006',
-  reorder_point: reorder, opening_stock: { qty: stock, unit_cost: '300.00', as_of: iso(60) },
+  reorder_point: reorder, opening_stock: { qty: stock, unit_cost: '300.00', as_of: iso(220) },
 }, T);
 const rice = await item('Basmati Rice 5kg', '450.00', '60', '5');
 const dal = await item('Toor Dal 1kg', '140.00', '12', '10');
@@ -59,6 +59,9 @@ const invoice = async (party, lines, date, due) => {
 };
 await invoice(ramesh, [{ item_id: rice.id, qty: '4', unit_price: '450.00' }], iso(40), iso(25));
 await invoice(suresh, [{ item_id: dal.id, qty: '3', unit_price: '140.00' }], iso(9));
+// Last financial year's bill, still unpaid: the bill list defaults to THIS
+// year, and the overdue figure's link must still open a list that holds it.
+await invoice(meena, [{ item_id: dal.id, qty: '1', unit_price: '140.00' }], iso(200), iso(185));
 const today1 = await invoice(meena, [{ item_id: rice.id, qty: '2', unit_price: '450.00' }], iso(0));
 await invoice(ramesh, [{ item_id: dal.id, qty: '2', unit_price: '140.00' }, { item_id: sugar.id, qty: '2', unit_price: '48.00' }], iso(0));
 await api('POST', '/payments', { direction: 'in', document_id: today1.id, payment_date: iso(0), mode_breakup: [{ mode: 'cash', amount: '500.00' }] }, T);
@@ -122,9 +125,31 @@ for (const [size, viewport] of WIDTHS) {
     report[size].dues = { toCollect: dash.to_collect, customers: owe.receivable, toPay: dash.to_pay, suppliers: due.payable };
     console.log(`${size}: To collect ${dash.to_collect.amount} vs customers ${owe.receivable}; To pay ${dash.to_pay.amount} vs suppliers ${due.payable}; advances ${dash.to_collect.advances} / ${dash.to_pay.advances}`);
     console.log(`   texts: ${JSON.stringify(await page.locator('text=/paid .* ahead/').allInnerTexts())}`);
+    // Overdue is decided on the day, and its link opens a list holding every one.
+    for (const [region, rx, path, tile] of [
+      ['Customers', /bills? overdue/, '/sales/invoices', dash.overdue?.invoices],
+      ['Suppliers', /bills? overdue/, '/purchases/bills', dash.supplier_bills?.overdue],
+    ]) {
+      const link = page.getByRole('region', { name: region }).getByRole('link', { name: rx });
+      const href = (await link.count()) ? await link.first().getAttribute('href') : null;
+      const qs = new URLSearchParams((href ?? '').split('?')[1] ?? '');
+      const wire = new URLSearchParams({ tab: 'overdue' });
+      if (qs.get('from')) { wire.set('date_from', qs.get('from')); wire.set('date_to', qs.get('to')); }
+      const listed = (await api('GET', `${path}?${wire}`, null, T)).body.meta.totals;
+      console.log(`   ${region} overdue ${tile?.count} · ${tile?.amount} vs list ${listed.count} · ${listed.amount_due} (${href})`);
+    }
     for (const name of ['Today', 'Customers', 'Suppliers', 'Needs attention']) {
       console.log(`   region "${name}": ${await page.getByRole('region', { name }).count()}`);
     }
+  }
+  if (size === '360' || size === '1280') {
+    // The overdue line opens the bill list over the range that holds every one.
+    await page.getByRole('region', { name: 'Customers' }).getByRole('link', { name: /bills? overdue/ }).first().click();
+    await page.waitForURL(/\/sales\/invoices/, { timeout: 20000 });
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(800);
+    await page.screenshot({ path: `${ROOT}/${size}-overdue-list.png` });
+    await page.goto(`${FE}/dashboard`, { waitUntil: 'networkidle' });
   }
   if (size === '360') {
     // More → Record payment must open the payment form, not just the list.

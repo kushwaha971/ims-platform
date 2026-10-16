@@ -21,7 +21,7 @@ import type { TranslateFn } from 'src/hooks/useTranslation';
 import { partyPath, ROUTES } from 'src/routes';
 import { formatInr } from 'src/utils/money';
 
-import { advancesLine, shortInr, tileHref, tileTone } from '../view-model/dashboardDisplay';
+import { advancesLine, overdueHref, shortInr, tileHref, tileTone } from '../view-model/dashboardDisplay';
 
 import { TopDebtorsList } from './DashboardLists';
 
@@ -36,8 +36,6 @@ import type { AgedCountAmount, DashboardData, TopCreditor } from '../types/repor
  * money held the other way round named under each.
  */
 
-const OVERDUE_SALES = `${ROUTES.SALES_INVOICES}?tab=overdue`;
-const OVERDUE_PURCHASES = `${ROUTES.PURCHASE_BILLS}?tab=overdue`;
 const UNPAID_PURCHASES = `${ROUTES.PURCHASE_BILLS}?tab=unpaid`;
 const RECEIVED_TODAY = `${ROUTES.PAYMENTS}?period=today&tab=in`;
 
@@ -194,7 +192,7 @@ export function CustomersPanel({
       </UbStack>
       {overdue && overdue.count > 0 && (
         <BillsLine
-          href={OVERDUE_SALES}
+          href={overdueHref(ROUTES.SALES_INVOICES, overdue, data.asOf)}
           text={t('reports.dashboard.customers.overdue', {
             count: overdue.count,
             amount: formatInr(overdue.amount),
@@ -277,7 +275,7 @@ export function SuppliersPanel({
         <UbStack gap={0}>
           {bills.overdue.count > 0 && (
             <BillsLine
-              href={OVERDUE_PURCHASES}
+              href={overdueHref(ROUTES.PURCHASE_BILLS, bills.overdue, data.asOf)}
               text={t('reports.dashboard.suppliers.overdue', {
                 count: bills.overdue.count,
                 amount: formatInr(bills.overdue.amount),
@@ -325,7 +323,7 @@ export function NeedsAttention({
       }),
       caption: oldestLine(overdue, t),
       icon: <AlarmClock />,
-      href: OVERDUE_SALES,
+      href: overdueHref(ROUTES.SALES_INVOICES, overdue, data.asOf),
       tone: 'danger',
     });
   const payable = tiles.supplierBills?.overdue;
@@ -338,7 +336,7 @@ export function NeedsAttention({
       }),
       caption: oldestLine(payable, t),
       icon: <Truck />,
-      href: OVERDUE_PURCHASES,
+      href: overdueHref(ROUTES.PURCHASE_BILLS, payable, data.asOf),
       tone: 'warning',
     });
   const stock = tiles.lowStock;

@@ -2,13 +2,20 @@
 
 from __future__ import annotations
 
+import datetime as dt
 from typing import Any
 
 from django.db.models import Count, Q, QuerySet, Sum, Value
 from django.db.models.functions import Coalesce
 
 from apps.common.money import ZERO
-from apps.purchases.constants import BILL_KINDS, NOT_PAYABLE_STATUSES, TAB_STATUSES
+from apps.common.overdue import status_tab_q
+from apps.purchases.constants import (
+    BILL_KINDS,
+    NOT_PAYABLE_STATUSES,
+    OPEN_STATUSES,
+    TAB_STATUSES,
+)
 from apps.purchases.models import PurchaseDocument
 
 #: PUR-03 §10 — the ordering whitelist; anything else is 400.
@@ -34,18 +41,30 @@ def detail_queryset(*, tenant: Any, kinds: tuple[str, ...] = BILL_KINDS) -> Quer
     )
 
 
-def apply_tab(queryset: QuerySet, tab: str, tabs: dict | None = None) -> QuerySet:
+def apply_tab(
+    queryset: QuerySet, tab: str, tabs: dict | None = None, *, today: dt.date | None = None
+) -> QuerySet:
+    """`today` decides Overdue on the day (WP-06); only the bills list passes it."""
     tabs = tabs or TAB_STATUSES
-    return queryset.filter(status__in=tabs.get(tab, tabs["all"]))
+    return queryset.filter(_tab_q(tabs.get(tab, tabs["all"]), tabs, today))
 
 
-def tab_counts(queryset: QuerySet, tabs: dict | None = None) -> dict[str, int]:
+def tab_counts(
+    queryset: QuerySet, tabs: dict | None = None, *, today: dt.date | None = None
+) -> dict[str, int]:
     """FR-3 `meta.counts` — one grouped query over the filtered set WITHOUT the tab."""
+    tabs = tabs or TAB_STATUSES
     aggregates = {
-        tab: Count("id", filter=Q(status__in=statuses))
-        for tab, statuses in (tabs or TAB_STATUSES).items()
+        tab: Count("id", filter=_tab_q(statuses, tabs, today)) for tab, statuses in tabs.items()
     }
     return queryset.order_by().aggregate(**aggregates)
+
+
+def _tab_q(statuses: tuple[str, ...], tabs: dict, today: dt.date | None) -> Q:
+    # Only bills fall due; orders' and debit notes' tabs are their statuses.
+    if tabs is not TAB_STATUSES:
+        return Q(status__in=statuses)
+    return status_tab_q(statuses, today=today, open_statuses=OPEN_STATUSES)
 
 
 def list_totals(queryset: QuerySet) -> dict:

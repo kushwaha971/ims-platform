@@ -57,8 +57,9 @@ def tabbed_list(view: Any, request: Any, tabs: dict[str, tuple[str, ...]]) -> An
     if ordering and ordering.lstrip("-") not in ORDERING_FIELDS:
         raise ValidationFailed({"ordering": [f"Sort by one of {', '.join(ORDERING_FIELDS)}."]})
     filtered = view.filter_queryset(view.get_queryset())
-    counts = tab_counts(filtered, tabs)
-    queryset = apply_tab(filtered, tab, tabs)
+    today = tenant_today(view.get_tenant())
+    counts = tab_counts(filtered, tabs, today=today)
+    queryset = apply_tab(filtered, tab, tabs, today=today)
     totals = list_totals(queryset)
     page = view.paginate_queryset(queryset)
     from apps.sales.services.origins import page_labels
@@ -68,7 +69,7 @@ def tabbed_list(view: Any, request: Any, tabs: dict[str, tuple[str, ...]]) -> An
         rows,
         many=True,
         context={
-            "today": tenant_today(view.get_tenant()),
+            "today": today,
             # ── A5 ── one label call per origin type for the page, never one per row.
             "origin_labels": page_labels(view.get_tenant(), rows),
         },

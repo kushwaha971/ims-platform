@@ -50,6 +50,8 @@ export interface DashboardTiles {
 /** A count and amount with the oldest one's days past due, when any has a due date. */
 export interface AgedCountAmount extends CountAmount {
   readonly oldestDays?: number;
+  /** The earliest bill date among them (ISO), so their list opens over a range holding all. */
+  readonly firstBillDate?: string;
 }
 
 /** WP-06 — a supplier the Shop owes, for the Suppliers panel. */

@@ -38,6 +38,7 @@ from django.db.models.functions import Coalesce
 
 from apps.common.constants import LedgerBucket
 from apps.common.money import ZERO
+from apps.common.overdue import overdue_q
 from apps.reports.constants import (
     CREDIT_NOTE_KIND,
     CREDIT_NOTE_LIVE_STATUSES,
@@ -114,7 +115,10 @@ def document_tiles(*, tenant: Any, today: dt.date) -> dict[str, Any]:
     yesterday = today - dt.timedelta(days=1)
     sale = Q(kind__in=SALE_KINDS) & ~Q(status__in=(DRAFT, VOID))
     credit = Q(kind=CREDIT_NOTE_KIND, status__in=CREDIT_NOTE_LIVE_STATUSES)
-    overdue = Q(kind__in=SALE_KINDS, status="overdue")
+    from apps.sales.constants import OPEN_STATUSES as SALE_OPEN
+
+    # WP-06 Finding 2 — decided on the day, as the list it opens decides it.
+    overdue = Q(kind__in=SALE_KINDS) & overdue_q(today=today, open_statuses=SALE_OPEN)
     row = SalesDocument.objects.filter(tenant=tenant).aggregate(
         sales_today=_sum("grand_total", sale & Q(document_date=today)),
         bills_today=Count("id", filter=sale & Q(document_date=today)),
@@ -124,6 +128,7 @@ def document_tiles(*, tenant: Any, today: dt.date) -> dict[str, Any]:
         overdue_count=Count("id", filter=overdue),
         overdue_due=_sum("amount_due", overdue),
         overdue_since=Min("due_on", filter=overdue),
+        overdue_first=Min("document_date", filter=overdue),
     )
     return {
         "today_sales": {
@@ -135,14 +140,20 @@ def document_tiles(*, tenant: Any, today: dt.date) -> dict[str, Any]:
             "count": row["overdue_count"],
             "amount": _money(row["overdue_due"]),
             # WP-06 — Needs attention says how old: the oldest bill's days past due.
-            **_age(row["overdue_since"], today),
+            **_age(row["overdue_since"], today, row["overdue_first"]),
         },
     }
 
 
-def _age(since: dt.date | None, today: dt.date) -> dict[str, int]:
-    """`{"oldest_days_late": n}` for the oldest due date, or nothing when none is set."""
-    return {"oldest_days_late": (today - since).days} if since else {}
+def _age(since: dt.date | None, today: dt.date, first: dt.date | None = None) -> dict[str, Any]:
+    """`oldest_days_late` for the oldest due date, and `oldest_bill_date`, the
+    earliest bill date among them, so the link can open the list over a range
+    that holds every one: the list defaults to this financial year, and an
+    overdue bill from last year is exactly the one that must not drop out."""
+    return {
+        **({"oldest_days_late": (today - since).days} if since else {}),
+        **({"oldest_bill_date": first.isoformat()} if first else {}),
+    }
 
 
 def money_received_today(*, tenant: Any, today: dt.date) -> dict[str, Any]:
@@ -151,12 +162,16 @@ def money_received_today(*, tenant: Any, today: dt.date) -> dict[str, Any]:
     and not another app's money (`bucket`, DEC-019)."""
     from apps.payments.models import Payment
 
-    row = Payment.objects.filter(
-        tenant=tenant,
-        bucket=LedgerBucket.SHOP,
-        direction="in",
-        payment_date=today,
-    ).exclude(status=VOID).aggregate(amount=_sum("amount", Q()), count=Count("id"))
+    row = (
+        Payment.objects.filter(
+            tenant=tenant,
+            bucket=LedgerBucket.SHOP,
+            direction="in",
+            payment_date=today,
+        )
+        .exclude(status=VOID)
+        .aggregate(amount=_sum("amount", Q()), count=Count("id"))
+    )
     return {"amount": _money(row["amount"]), "count": row["count"]}
 
 
@@ -167,12 +182,13 @@ def supplier_bills(*, tenant: Any, today: dt.date) -> dict[str, Any]:
     from apps.purchases.constants import OPEN_STATUSES
     from apps.purchases.models import PurchaseDocument
 
-    overdue = Q(status="overdue")
+    overdue = overdue_q(today=today, open_statuses=OPEN_STATUSES)
     week = Q(status__in=OPEN_STATUSES, due_on__gte=today, due_on__lte=today + dt.timedelta(days=7))
     row = PurchaseDocument.objects.filter(tenant=tenant, kind="purchase_bill").aggregate(
         overdue_count=Count("id", filter=overdue),
         overdue_due=_sum("amount_due", overdue),
         overdue_since=Min("due_on", filter=overdue),
+        overdue_first=Min("document_date", filter=overdue),
         week_count=Count("id", filter=week),
         week_due=_sum("amount_due", week),
     )
@@ -180,7 +196,7 @@ def supplier_bills(*, tenant: Any, today: dt.date) -> dict[str, Any]:
         "overdue": {
             "count": row["overdue_count"],
             "amount": _money(row["overdue_due"]),
-            **_age(row["overdue_since"], today),
+            **_age(row["overdue_since"], today, row["overdue_first"]),
         },
         "due_week": {"count": row["week_count"], "amount": _money(row["week_due"])},
     }
@@ -598,7 +614,9 @@ def project(
     if "payments.payment.read" in granted and "today_received" in source:
         tiles["today_received"] = dict(source["today_received"])
     if "purchases.bill.read" in granted and "supplier_bills" in source:
-        tiles["supplier_bills"] = {key: dict(value) for key, value in source["supplier_bills"].items()}
+        tiles["supplier_bills"] = {
+            key: dict(value) for key, value in source["supplier_bills"].items()
+        }
     if "reports.financial.read" in granted and {"payments", "expenses"} <= modules:
         tiles["cash_in_hand"] = dict(source["cash_in_hand"])
     stock = "inventory.stock.read" in granted
