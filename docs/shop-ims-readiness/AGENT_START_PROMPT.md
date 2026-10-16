@@ -191,7 +191,7 @@ the server-prepared reference.
    are in 72ceb6c, `period_figures` in dashboard.py. Next: the owner's
    acceptance review of WP-06; nothing on the review's list is open.
    WP-07 began with item pricing: the review, the contract and what was
-   built are 14-item-pricing-design-review.md. It is built on the recommended
+   built are 14-item-pricing-design-review.md. It is built (e637f67) on the recommended
    answers (margin on the last purchase price; staff keep seeing bill costs);
    the owner's two cards are still open, and the other options are small,
    isolated changes. `priceAfterEdit` (inventory/view-model/itemPricing.ts)

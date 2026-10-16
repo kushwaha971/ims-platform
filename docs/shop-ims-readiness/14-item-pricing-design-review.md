@@ -110,7 +110,7 @@ Evidence: the code was read, and every claim below has a file reference.
 - Low stock calls the same field "last purchase cost" while the form calls it "purchase price"; the words should be one.
 - The stock report's "potential sale value" multiplies an inclusive selling price as though it were net (`apps/reports/views/stock.py:86-89`).
 
-## Built — 17 October 2026
+## Built — 17 October 2026 (e637f67)
 
 Built test-first on the recommended answers while the owner's two cards stay open: the margin is based on the last purchase price, and staff keep seeing costs on the bills they enter. If the owner picks the other option on either card, the change is small and isolated (`priceAfterEdit`'s cost input; the purchase bill permissions).
 

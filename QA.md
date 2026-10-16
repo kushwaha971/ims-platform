@@ -614,7 +614,7 @@ Read this file, `git status`, current diff, root/frontend AGENTS, and the releva
 
 ### 17 October 2026 — WP-07: item cost, selling price and margin (cloud session)
 
-- Built test-first on the recommended answers (margin on the last purchase price; staff keep seeing bill costs). The owner's two cards are still open. Details: docs/shop-ims-readiness/14-item-pricing-design-review.md, "Built".
+- Built test-first (e637f67) on the recommended answers (margin on the last purchase price; staff keep seeing bill costs). The owner's two cards are still open. Details: docs/shop-ims-readiness/14-item-pricing-design-review.md, "Built".
 - Server: a member who cannot see costs can no longer set an item's purchase price (400); list and lookup rows carry `gst_percent` for those who see costs. Fail-before: two API tests. Customer bills are checked for any cost figure or cost/margin/profit key.
 - Item form: Purchase price and Margin % beside Selling price for members who see costs. Typing a margin sets the price, typing the price rereads the margin, and a new cost keeps a margin already held. "Selling below cost" is shown at a loss and 100% or more is refused. Create no longer sends a cost for members who cannot see costs. The item page shows the margin. The picker shows "Usual price · Cost · margin".
 - Found by testing the form: typing a cost "45" passed through "4", whose margin took hold and priced the item at ₹562.50. The cost box now uses the margin as it was when the merchant entered it.
