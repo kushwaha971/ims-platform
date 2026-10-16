@@ -59,9 +59,7 @@ export const useDepositSchemas = (): DepositSchemas => {
           .default(''),
         reference: v.boundedText(64),
         reason:
-          kind === 'refund'
-            ? v.requiredBoundedText(160, 3, 'payments.deposit.reason.required')
-            : v.boundedText(160),
+          kind === 'refund' ? v.reasonText('payments.deposit.reason.required') : v.boundedText(160),
       }) as unknown as Yup.ObjectSchema<DepositMoneyFormValues>;
 
     const applySchemaFor = (held: string): Yup.ObjectSchema<ApplyDepositFormValues> =>
@@ -77,7 +75,7 @@ export const useDepositSchemas = (): DepositSchemas => {
         )
           .defined()
           .default([]),
-        reason: v.requiredBoundedText(160, 3, 'payments.deposit.reason.required'),
+        reason: v.reasonText('payments.deposit.reason.required'),
       }).test('within-the-deposit', '', function check(values) {
         const rows = values.rows as ApplyDepositFormValues['rows'];
         const over = rows.findIndex(overDue);

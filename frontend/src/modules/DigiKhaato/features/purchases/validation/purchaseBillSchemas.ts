@@ -44,7 +44,7 @@ export const usePurchaseBillSchemas = (): PurchaseBillSchemas => {
     }) as Yup.ObjectSchema<PurchaseBillHeader>;
 
     const voidReasonSchema = Yup.object({
-      reason: v.requiredBoundedText(160, 3, 'purchases.void.reasonRequired'),
+      reason: v.reasonText('purchases.void.reasonRequired'),
     }) as Yup.ObjectSchema<{ reason: string }>;
 
     return { purchaseBillSchema, voidReasonSchema };

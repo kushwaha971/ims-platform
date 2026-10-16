@@ -38,8 +38,7 @@ import type { ChargeOutcome } from '../hooks/useMemberCharges';
 // Loaded with dynamic(), so its words come with its own chunk.
 import 'src/i18n/catalogues/library';
 import 'src/i18n/catalogues/validation';
-
-const REASON_MAX = 160;
+import { REASON_MAX_CHARS, hasReason } from 'src/utils/reason';
 
 /** What the member will owe after a change, never negative — said before Save (Part 17.0.3). */
 const after = (dues: string, change: string, direction: 'add' | 'take'): string => {
@@ -81,7 +80,7 @@ export function WaiveChargeDialog({
             t('library.charge.waive.overDue', { amount: formatInr(charge.amountDue) }),
             (value) => Number(value) <= Number(charge.amountDue)
           ),
-        reason: v.requiredBoundedText(REASON_MAX, 3, 'library.member.reason.required'),
+        reason: v.reasonText('library.member.reason.required'),
       }) as Yup.ObjectSchema<WaiveFormValues>,
     [v, t, charge.amountDue]
   );
@@ -151,7 +150,9 @@ export function WaiveChargeDialog({
           )}
         </UbField>
         <UbField name="reason" label={t('library.member.reason')} required>
-          {(field) => <UbTextArea {...field} rows={2} maxLength={REASON_MAX} disabled={busy} />}
+          {(field) => (
+            <UbTextArea {...field} rows={2} maxLength={REASON_MAX_CHARS} disabled={busy} />
+          )}
         </UbField>
         <UbText variant="body-sm" tone="secondary" data-testid="charge-waive-after">
           {t('library.charge.duesAfter', {
@@ -183,7 +184,7 @@ export function ReverseChargeDialog({
   const [failure, setFailure] = useState<string | null>(null);
 
   const send = async () => {
-    if (reason.trim().length < 3) {
+    if (!hasReason(reason)) {
       setFailure(t('library.member.reason.required'));
       return;
     }
@@ -231,7 +232,7 @@ export function ReverseChargeDialog({
           placeholder={t('library.charge.reverse.placeholder')}
           value={reason}
           onChange={setReason}
-          maxLength={REASON_MAX}
+          maxLength={REASON_MAX_CHARS}
           invalid={!!failure}
         />
         {failure && (
@@ -269,7 +270,7 @@ export function ManualChargeDialog({
       Yup.object({
         kind: v.enumValidation(MANUAL_CHARGE_KINDS, 'library.settings.choose'),
         amount: v.amountValidation(),
-        description: v.requiredBoundedText(REASON_MAX, 3, 'library.charge.description.required'),
+        description: v.reasonText('library.charge.description.required'),
       }) as Yup.ObjectSchema<ManualChargeFormValues>,
     [v]
   );
@@ -349,7 +350,7 @@ export function ManualChargeDialog({
           placeholder={t('library.charge.description.placeholder')}
           required
         >
-          {(field) => <UbTextInput {...field} maxLength={REASON_MAX} disabled={busy} />}
+          {(field) => <UbTextInput {...field} maxLength={REASON_MAX_CHARS} disabled={busy} />}
         </UbField>
         <UbText variant="body-sm" tone="secondary">
           {t('library.charge.duesAfter', {
@@ -428,7 +429,7 @@ export function MarkLostDialog({
           placeholder={t('library.charge.lost.placeholder')}
           value={reason}
           onChange={setReason}
-          maxLength={REASON_MAX}
+          maxLength={REASON_MAX_CHARS}
         />
         {failure && (
           <UbText variant="body-sm" tone="formError">

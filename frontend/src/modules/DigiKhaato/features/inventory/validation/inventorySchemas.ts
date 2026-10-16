@@ -6,6 +6,7 @@ import * as Yup from 'yup';
 
 import { useTranslation } from 'src/hooks/useTranslation';
 import { useValidationSchemas } from 'src/hooks/useValidationSchemas';
+import { hasReason } from 'src/utils/reason';
 
 import type { AdjustmentFormValues, ItemFormValues, Unit } from '../types/item.types';
 
@@ -144,7 +145,7 @@ export const useInventorySchemas = (units: readonly Unit[]): InventorySchemas =>
         .defined()
         .max(255, t('validation.maxChars', { value: 255 }))
         .test('note-other', t('stock.adjust.note.required'), function check(value) {
-          return this.parent.reason !== 'other' || (value ?? '').trim().length >= 3;
+          return this.parent.reason !== 'other' || hasReason(value);
         }),
       lines: Yup.array()
         .of(

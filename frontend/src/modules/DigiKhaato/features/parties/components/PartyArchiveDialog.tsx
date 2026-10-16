@@ -29,6 +29,7 @@ import type { PartyOpenRecords } from '../types/party.types';
 // with the screen that opens it (src/i18n/catalogueRegistry.ts).
 import 'src/i18n/catalogues/ledger';
 import 'src/i18n/catalogues/parties';
+import { hasReason } from 'src/utils/reason';
 
 /**
  * PTY-04's confirmation, and the state the server puts it in when the party
@@ -80,8 +81,6 @@ export interface PartyArchiveDialogProps {
   readonly returnFocusRef?: RefObject<HTMLElement | null>;
 }
 
-const WRITE_OFF_REASON_MIN = 3;
-
 function PartyArchiveDialogBase({
   t,
   name,
@@ -119,7 +118,7 @@ function PartyArchiveDialogBase({
   const [writeOffDate, setWriteOffDate] = useState('');
   const saving = stage === 'saving';
   const shown: ArchiveStage = saving ? savingFrom : stage;
-  const canSubmitWriteOff = writeOffReason.trim().length >= WRITE_OFF_REASON_MIN && acknowledged;
+  const canSubmitWriteOff = hasReason(writeOffReason) && acknowledged;
 
   const handleConfirmWriteOff = useCallback(
     () => onConfirmWriteOff?.({ reason: writeOffReason.trim(), entryDate: writeOffDate || today }),

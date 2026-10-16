@@ -105,10 +105,7 @@ export const useLedgerSchemas = (): LedgerSchemas => {
      stop. What it stops is somebody clicking through the dialog with an empty
      box, which would leave the surviving row saying what changed and nothing
      saying why. */
-  const reasonField = useMemo(
-    () => v.requiredBoundedText(160, 3, 'ledger.correction.reason.required'),
-    [v]
-  );
+  const reasonField = useMemo(() => v.reasonText('ledger.correction.reason.required'), [v]);
 
   /** The cross-field rule both forms carry, defined once for the same reason. */
   const creditNeedsAMode = useMemo(

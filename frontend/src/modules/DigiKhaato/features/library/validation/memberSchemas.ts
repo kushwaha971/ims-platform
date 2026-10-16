@@ -4,6 +4,7 @@ import * as Yup from 'yup';
 
 import { useTranslation } from 'src/hooks/useTranslation';
 import { useValidationSchemas } from 'src/hooks/useValidationSchemas';
+import { REASON_MAX_CHARS } from 'src/utils/reason';
 
 import { buildPaymentLineSchema } from 'modules/DigiKhaato/features/payments/validation/paymentLineSchema';
 
@@ -19,7 +20,6 @@ import type {
  * F04 (LIB-04 §9) — the members' forms, composed from the central validators.
  * The server re-checks each rule; these exist so the librarian hears first.
  */
-const REASON_MAX = 160;
 const GROUP_MAX = 40;
 const NUMBER_MAX = 24;
 /** `library_membership.notes`, as `members.patch` bounds it. */
@@ -90,13 +90,13 @@ export const useMemberSchemas = (): MemberSchemas => {
     const reasonSchema = (required: boolean): Yup.ObjectSchema<ReasonFormValues> =>
       Yup.object({
         reason: required
-          ? v.requiredBoundedText(REASON_MAX, 3, 'library.member.reason.required')
-          : v.boundedText(REASON_MAX),
+          ? v.reasonText('library.member.reason.required')
+          : v.boundedText(REASON_MAX_CHARS),
         until: Yup.string().defined(),
       }) as Yup.ObjectSchema<ReasonFormValues>;
 
     const closeSchema = Yup.object({
-      reason: v.requiredBoundedText(REASON_MAX, 3, 'library.member.reason.required'),
+      reason: v.reasonText('library.member.reason.required'),
       applyToDues: Yup.boolean().defined(),
     }) as Yup.ObjectSchema<CloseFormValues>;
 

@@ -14,9 +14,7 @@ import type { BorrowerRow } from '../types/lending.types';
 
 // Loaded with dynamic(), so its own words come with its own chunk.
 import 'src/i18n/catalogues/lending';
-
-/** The server's column (`REASON_MAX`). */
-const REASON_MAX = 160;
+import { REASON_MAX_CHARS } from 'src/utils/reason';
 
 /**
  * Block or unblock a borrower (owner, 12 Oct 2026; owner or admin only).
@@ -136,7 +134,7 @@ export function BorrowerBlockDialog({
             placeholder={t('lending.end.reasonPlaceholder')}
             value={reason}
             onChange={setReason}
-            maxLength={REASON_MAX}
+            maxLength={REASON_MAX_CHARS}
             disabled={busy}
           />
         </UbStack>

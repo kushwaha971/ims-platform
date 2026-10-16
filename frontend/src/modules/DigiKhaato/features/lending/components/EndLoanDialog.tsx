@@ -24,6 +24,7 @@ import type { LoanDetail } from '../types/lending.types';
 
 // Loaded with dynamic(), so its own words come with its own chunk.
 import 'src/i18n/catalogues/lending';
+import { hasReason } from 'src/utils/reason';
 
 const REASONS = ['cannot_trace', 'death', 'bad_debt', 'other'] as const;
 
@@ -58,7 +59,7 @@ export function EndLoanDialog({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<ApiErrorShape | null>(null);
   const writeOff = mode === 'write_off';
-  const valid = reason.trim().length >= 3 && (!writeOff || (!!reasonCode && understood));
+  const valid = hasReason(reason) && (!writeOff || (!!reasonCode && understood));
 
   const submit = async () => {
     setBusy(true);

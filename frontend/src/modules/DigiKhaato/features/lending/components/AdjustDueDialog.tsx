@@ -25,6 +25,7 @@ import type { LoanDue, LoanDueFigures } from '../types/lending.types';
 
 // Loaded with dynamic(), so its own words come with its own chunk.
 import 'src/i18n/catalogues/lending';
+import { hasReason } from 'src/utils/reason';
 
 type Part = 'interest' | 'fee' | 'principal';
 const PARTS: readonly Part[] = ['fee', 'interest', 'principal'];
@@ -98,7 +99,7 @@ export function AdjustDueDialog({
     !!amount &&
     compareMoney(amount, '0.00') > 0 &&
     compareMoney(amount, ceiling) <= 0 &&
-    reason.trim().length >= 3;
+    hasReason(reason);
   const nothing = !!figures && compareMoney(ceiling, '0.00') <= 0;
 
   const submit = async () => {

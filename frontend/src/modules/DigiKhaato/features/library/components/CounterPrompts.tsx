@@ -23,8 +23,7 @@ import type { CounterMember, CounterPrompt } from '../types/counter.types';
 
 // Loaded with dynamic(), so its words come with its own chunk.
 import 'src/i18n/catalogues/library';
-
-const REASON_MIN = 3;
+import { hasReason } from 'src/utils/reason';
 
 /**
  * F05 (LIB-06 FR-4) — an overridable refusal: the blocks in words, a one-line
@@ -52,7 +51,7 @@ export function OverridePrompt({
   }, []);
 
   const send = () => {
-    if (reason.trim().length < REASON_MIN) {
+    if (!hasReason(reason)) {
       setError(t('library.counter.override.reasonRequired'));
       return;
     }

@@ -9,8 +9,7 @@ import { useTranslation } from 'src/hooks/useTranslation';
 import { LibraryDialog } from './LibraryOverlays';
 
 import 'src/i18n/catalogues/library';
-
-const REASON_MIN = 3;
+import { hasReason } from 'src/utils/reason';
 
 /**
  * W05 — a student who left or is on hold is refused at the desk. The dialog
@@ -45,7 +44,7 @@ export function AttendanceOverrideDialog({
   }, [canOverride]);
 
   const send = () => {
-    if (why.trim().length < REASON_MIN) {
+    if (!hasReason(why)) {
       setError(t('library.member.reason.required'));
       return;
     }

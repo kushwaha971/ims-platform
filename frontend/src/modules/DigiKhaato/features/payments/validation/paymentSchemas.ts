@@ -88,7 +88,7 @@ export const usePaymentSchemas = (): PaymentSchemas => {
     }) as unknown as Yup.ObjectSchema<PaymentFormValues>;
 
     const voidReasonSchema = Yup.object({
-      reason: v.requiredBoundedText(160, 3, 'payments.void.reason.required'),
+      reason: v.reasonText('payments.void.reason.required'),
     }) as Yup.ObjectSchema<{ reason: string }>;
 
     const applySchemaFor = (unallocated: string): Yup.ObjectSchema<ApplyFormValues> =>

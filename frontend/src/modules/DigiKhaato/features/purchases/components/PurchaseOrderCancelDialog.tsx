@@ -23,6 +23,7 @@ import { usePurchaseBillSchemas } from '../validation/purchaseBillSchemas';
 
 import type { PurchaseBill } from '../types/purchase.types';
 import 'src/i18n/catalogues/validation';
+import { hasReason } from 'src/utils/reason';
 
 /**
  * Shop item 3 — "Cancel order PO/26-27/0004?" with the reason (three characters at
@@ -93,7 +94,7 @@ export function PurchaseOrderCancelDialog({
             variant="destructive"
             busy={busy}
             busyLabel={t(`${ns}.working`)}
-            disabled={reason.trim().length < 3}
+            disabled={!hasReason(reason)}
             data-testid={
               mode === 'voidNote' ? 'debit-note-void-confirm' : 'purchase-order-cancel-confirm'
             }

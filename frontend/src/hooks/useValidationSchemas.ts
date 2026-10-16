@@ -18,6 +18,7 @@ import { selectTenantTimezone } from 'src/redux/slice/sessionSlice';
 import { todayInTenantTz } from 'src/utils/dates';
 import { isValidMobile, readsAsIndian } from 'src/utils/phone';
 import { REGEX } from 'src/utils/regexConstants';
+import { REASON_MAX_CHARS, REASON_MIN_CHARS } from 'src/utils/reason';
 
 /**
  * Part 19 §19.5.2 (ADR-003) — the single source of truth for field-level
@@ -124,6 +125,10 @@ export interface ValidationSchemas {
     min?: number,
     requiredMessageId?: string
   ) => Yup.StringSchema<string, Yup.AnyObject, string, 'd'>;
+  /** WP-03 D-04b — a required reason, three to 160 characters (`utils/text`). */
+  readonly reasonText: (
+    requiredMessageId: string
+  ) => Yup.StringSchema<string, Yup.AnyObject, string, 'd'>;
   readonly uuidValidation: (required?: boolean) => Yup.StringSchema<string | null | undefined>;
   /**
    * CR-2026-09-19-A — email is the MVP identity. Trims, lower-cases and checks
@@ -212,6 +217,9 @@ export const buildValidationSchemas = (
       .trim()
       .min(min, t(requiredMessageId))
       .required(t(requiredMessageId));
+
+  const reasonText = (requiredMessageId: string) =>
+    requiredBoundedText(REASON_MAX_CHARS, REASON_MIN_CHARS, requiredMessageId);
 
   /** Money: a decimal STRING with ≤ 2 dp, > 0 unless allowZero (R-TS-7). */
   /**
@@ -522,6 +530,7 @@ export const buildValidationSchemas = (
     requiredText,
     boundedText,
     requiredBoundedText,
+    reasonText,
     amountValidation,
     optionalAmountValidation,
     quantityValidation,

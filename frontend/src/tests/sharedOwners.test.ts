@@ -20,6 +20,7 @@ import { join, relative, sep } from 'node:path';
 
 import { CREDIT_OVERRIDE_ROLES, selectMayOverrideCreditLimit } from 'src/redux/slice/sessionSlice';
 import type { RootState } from 'src/redux/store';
+import { REASON_MAX_CHARS, REASON_MIN_CHARS } from 'src/utils/reason';
 
 const SRC = join(process.cwd(), 'src');
 
@@ -112,6 +113,23 @@ describe('quantities are worked out in utils/quantity.ts, not in floats (WP-03 D
   });
 });
 
+describe('a reason is three to 160 characters, decided in utils/reason.ts (WP-03 D-04b)', () => {
+  it('is never typed out as a literal or a local constant', () => {
+    // Ten dialogs and eleven schemas each wrote "at least 3, at most 160"
+    // themselves; one changing its minimum would disagree with the server.
+    const typedOut = [
+      /trim\(\)\.length\s*(<|>=)\s*3\b/,
+      /\b[A-Z_]*REASON_MIN\s*=\s*3\b/,
+      /\bREASON_MAX\s*=\s*160\b/,
+      /requiredBoundedText\(\s*(160|REASON_MAX)\s*,\s*3\b/,
+    ];
+    const found = FILES.filter(
+      (file) => file.path !== 'utils/reason.ts' && typedOut.some((pattern) => pattern.test(file.text))
+    ).map((file) => file.path);
+    expect(found).toEqual([]);
+  });
+});
+
 describe('client previews of server rules match the server', () => {
   it('names the same override roles as apps/parties/services/credit.py', () => {
     const python = readFileSync(
@@ -122,6 +140,19 @@ describe('client previews of server rules match the server', () => {
     const roles = [...declared.matchAll(/"([a-z_]+)"/g)].map((match) => match[1]);
     expect(roles.length).toBeGreaterThan(0);
     expect([...CREDIT_OVERRIDE_ROLES]).toEqual(roles);
+  });
+
+  it('asks for a reason of the length apps/sales/constants.py accepts', () => {
+    const python = readFileSync(
+      join(process.cwd(), '..', 'backend', 'apps', 'sales', 'constants.py'),
+      'utf8'
+    );
+    const read = (name: string) =>
+      Number(new RegExp(`^${name}\\s*=\\s*(\\d+)`, 'm').exec(python)?.[1]);
+    expect([REASON_MIN_CHARS, REASON_MAX_CHARS]).toEqual([
+      read('VOID_REASON_MIN'),
+      read('VOID_REASON_MAX'),
+    ]);
   });
 });
 

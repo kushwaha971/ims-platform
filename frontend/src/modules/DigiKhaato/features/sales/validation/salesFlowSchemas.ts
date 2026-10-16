@@ -58,7 +58,7 @@ export const useSalesFlowSchemas = (): SalesFlowSchemas => {
 
   return useMemo(() => {
     const voidReasonSchema = Yup.object({
-      reason: v.requiredBoundedText(160, 3, 'sales.void.reasonRequired'),
+      reason: v.reasonText('sales.void.reasonRequired'),
     }) as Yup.ObjectSchema<{ reason: string }>;
 
     const applySchemaFor = (max: string) =>

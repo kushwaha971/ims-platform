@@ -32,6 +32,7 @@ import type { SalesDocument } from '../types/sales.types';
 import type { UnallocatedPayment } from '../types/salesFlows.types';
 import 'src/i18n/catalogues/sales';
 import 'src/i18n/catalogues/validation';
+import { hasReason } from 'src/utils/reason';
 
 const ICONS = { stock: Package, ledger: BookOpen, payment: Wallet } as const;
 
@@ -212,7 +213,7 @@ export function VoidDocumentDialog({
             variant="destructive"
             busy={busy}
             busyLabel={t('sales.void.working')}
-            disabled={!!blocking || !!originLock || reason.trim().length < 3}
+            disabled={!!blocking || !!originLock || !hasReason(reason)}
             data-testid="void-confirm"
           >
             {originQuestion

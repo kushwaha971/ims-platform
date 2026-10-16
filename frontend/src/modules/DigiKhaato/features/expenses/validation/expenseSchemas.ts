@@ -69,7 +69,7 @@ export const useExpenseSchemas = (): ExpenseSchemas => {
     }) as Yup.ObjectSchema<ExpenseFormValues>;
 
     const voidReasonSchema = Yup.object({
-      reason: v.requiredBoundedText(160, 3, 'expenses.void.reason.required'),
+      reason: v.reasonText('expenses.void.reason.required'),
     }) as Yup.ObjectSchema<{ reason: string }>;
 
     return { expenseSchema, voidReasonSchema };

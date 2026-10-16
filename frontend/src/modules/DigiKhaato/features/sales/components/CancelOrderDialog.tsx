@@ -24,6 +24,7 @@ import { useSalesFlowSchemas } from '../validation/salesFlowSchemas';
 import type { SalesDocument } from '../types/sales.types';
 import 'src/i18n/catalogues/sales';
 import 'src/i18n/catalogues/validation';
+import { hasReason } from 'src/utils/reason';
 
 /**
  * Shop item 3 — "Cancel order SO/26-27/0004?" with the customer's reason (three
@@ -91,7 +92,7 @@ export function CancelOrderDialog({
             variant="destructive"
             busy={busy}
             busyLabel={t(`${ns}.working`)}
-            disabled={reason.trim().length < 3}
+            disabled={!hasReason(reason)}
             data-testid="order-cancel-confirm"
           >
             {t(`${ns}.action`)}
