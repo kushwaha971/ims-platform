@@ -178,10 +178,12 @@ the server-prepared reference.
    `shop_cash_in_hand` and keeps `cash_in_hand` every-book for the golden
    file, which must not be regenerated. Each dashboard part fails alone (85a4e3a):
    the server names it in `unavailable` and the panel built from it (see
-   `PARTS` in DashboardPanels.tsx) shows a line and Try again. Next,
-   test-first, the rest of the list at the end of that review: activity by
-   record date; opening cash so the till is never negative; promises due and
-   open orders in Needs attention.
+   `PARTS` in DashboardPanels.tsx) shows a line and Try again. Activity rows
+   carry their own date (6315539; `formatTimestampInTz` in
+   src/utils/zonedTime.ts for the shop's clock). Next, test-first, the rest of
+   the list at the end of that review: opening cash so the till is never
+   negative; open orders in Needs attention; then the owner's acceptance
+   review of WP-06.
 4. Still owed to WP-02, needing the owner or a device: a physical
    network-interruption check on a phone, and the owner's SH-011 release
    review in the tracker. Do not wait on these.

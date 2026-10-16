@@ -579,3 +579,9 @@ Read this file, `git status`, current diff, root/frontend AGENTS, and the releva
 - Fixed (85a4e3a): one failing figure was a 500 and a blank home screen. Each part is computed alone; a failed one is named in `unavailable`, every other figure still arrives, and the payload is not cached. Fail-before: selector, API and page tests.
 - Looked: `e2e/dashboard-review.mjs` stages a failed supplier-bills and activity part by rewriting the response. At 360 and 1280, three panels say "This section could not load." with Try again, "Nothing needs you" is not shown, and every other panel is intact (`360-part-failed.png`, `1280-part-failed.png`). Playwright's route needed `serviceWorkers: 'block'`: the app's service worker made the request invisible to it.
 - Gates: backend reports and golden tests pass; Jest reports 144/144; `tsc` clean; ESLint clean; build and bundle gate passed. Railway deployment and 9/10 readiness are NOT claimed.
+
+### 17 October 2026 — WP-06: activity rows carry their own date (cloud session)
+
+- Fixed (6315539): a bill dated 40 days ago read only "16/10/2026, 16:13" in Recent activity. Rows dated another day now read "Dated 31/03/2026 · entered 17/10/2026, 00:20". Fail-before: selector and view-model tests.
+- Found by looking at the first build: the entered time used the device clock, so on a UTC device every record entered after midnight IST looked backdated. It now uses the shop's clock (`formatTimestampInTz`, its own module so three unrelated routes stay in budget).
+- Gates: backend reports and golden tests pass; Jest dates and reports pass; `tsc` clean; ESLint clean; i18n in step; build and bundle gate passed. Railway deployment and 9/10 readiness are NOT claimed.

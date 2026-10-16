@@ -113,6 +113,6 @@ The owner chose **A, two books side by side**. Built and checked on the live sta
 1. ~~Overdue is still the nightly status (Finding 2)~~ Done in bb6dd2a: Overdue is decided when read (`apps/common/overdue.py`) by the dashboard and both bill lists' Overdue tab, and the link opens the list from the oldest overdue bill's date, so last year's bill stays in. Live: 3 bills · ₹2,160 on the figure and the list.
 2. ~~Cash in hand still mixes books (Finding 4)~~ Done in 09e66a3: Cash in hand, the day book and the cashbook read only the Shop's money (an Udhaar "You got ₹300, cash" moved the live drawer from ₹250 to ₹550 before). `cash_in_hand` keeps its every-book value for the golden file; the Shop reads `shop_cash_in_hand`. Still open: with no opening cash a new Shop can show a negative drawer.
 3. ~~One failure still blanks the page (Finding 7)~~ Done in 85a4e3a: each part is computed alone and a failed one is named in `unavailable`; the panel that owns it says "This section could not load." with its own Try again, and the payload is not cached.
-4. Recent activity shows when a record was typed, not its date (Finding 5).
+4. ~~Recent activity shows when a record was typed, not its date (Finding 5)~~ Done in 6315539: a row dated another day reads "Dated 31/03/2026 · entered 17/10/2026, 00:20", with the entered time on the shop's clock.
 5. Promises due and open orders are not yet rows in Needs attention; there is no range control beyond Today.
 6. At 360 px one long customer name in the top five is cut with an ellipsis, as before.
