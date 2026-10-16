@@ -1,3 +1,5 @@
+import { daysBetweenIso } from 'src/utils/calendarDays';
+
 import { DEFAULT_PRESET, FY_START_MONTH, STATEMENT_PRESETS } from '../constants/statementPeriod';
 
 import { balanceDirection, unsigned, type BalanceDirection } from './balanceSide';
@@ -172,7 +174,6 @@ export const rangeProblem = (filters: StatementFilters): 'inverted' | 'tooLong' 
   const { dateFrom, dateTo } = filters;
   if (!dateFrom || !dateTo) return null;
   if (dateFrom > dateTo) return 'inverted';
-  const days =
-    (Date.parse(`${dateTo}T00:00:00Z`) - Date.parse(`${dateFrom}T00:00:00Z`)) / 86_400_000;
+  const days = daysBetweenIso(dateFrom, dateTo);
   return days > MAX_RANGE_DAYS ? 'tooLong' : null;
 };

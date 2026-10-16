@@ -20,7 +20,7 @@ import { useAppSelector } from 'src/hooks/useAppStore';
 import { useTranslation } from 'src/hooks/useTranslation';
 import { selectTenantTimezone } from 'src/redux/slice/sessionSlice';
 import { PAYMENT_MODES, UPI_APPS } from 'src/types/domain.types';
-import { todayInTenantTz } from 'src/utils/dates';
+import { addDaysIso, todayInTenantTz } from 'src/utils/dates';
 
 import { PaymentMethodField } from '../../ledger/components/PaymentMethodField';
 import { useExpenseSchemas } from '../validation/expenseSchemas';
@@ -57,8 +57,6 @@ import 'src/i18n/catalogues/validation';
  * this branch; a photo tile that cannot store a photo teaches the merchant the
  * product is broken. The GST section (FR-5) is not in this wave either.
  */
-const DAY_MS = 86_400_000;
-
 export function ExpenseFormDrawer({
   form: expenseForm,
 }: Readonly<{ form: UseExpenseFormResult }>): React.JSX.Element {
@@ -80,10 +78,7 @@ export function ExpenseFormDrawer({
   } = expenseForm;
 
   const today = useMemo(() => todayInTenantTz(timezone ?? undefined), [timezone]);
-  const yesterday = useMemo(
-    () => new Date(Date.parse(`${today}T00:00:00Z`) - DAY_MS).toISOString().slice(0, 10),
-    [today]
-  );
+  const yesterday = useMemo(() => addDaysIso(today, -1), [today]);
 
   /* A failed save's draft wins over the defaults (FR-13): reopening brings
      back what was typed rather than an empty form. */

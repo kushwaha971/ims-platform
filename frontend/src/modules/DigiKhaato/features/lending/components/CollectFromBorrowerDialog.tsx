@@ -27,7 +27,7 @@ import { useTranslation } from 'src/hooks/useTranslation';
 import { selectTenantTimezone } from 'src/redux/slice/sessionSlice';
 import { showSnackbar } from 'src/redux/slice/snackbarSlice';
 import { todayInTenantTz } from 'src/utils/dates';
-import { formatInr } from 'src/utils/money';
+import { compareMoney, formatInr, subtractMoney } from 'src/utils/money';
 
 import { selectLendingForm } from '../redux/lendingFormSlice';
 import { collectFromBorrower, previewBorrowerCollection } from '../redux/lendingThunk';
@@ -61,14 +61,13 @@ function shareCaption(
   row: BorrowerSplitLoan,
   t: (id: string, params?: Record<string, string | number>) => string
 ): string {
-  const share = Number(row.amount);
-  const due = Number(row.dueNow);
-  if (due <= 0) return t('lending.collectFrom.ahead');
-  if (share === due) return t('lending.collectFrom.clearsDueNow');
-  if (share < due) return t('lending.collectFrom.ofDueNow', { due: formatInr(row.dueNow) });
+  if (compareMoney(row.dueNow, '0.00') <= 0) return t('lending.collectFrom.ahead');
+  const against = compareMoney(row.amount, row.dueNow);
+  if (against === 0) return t('lending.collectFrom.clearsDueNow');
+  if (against < 0) return t('lending.collectFrom.ofDueNow', { due: formatInr(row.dueNow) });
   return t('lending.collectFrom.dueNowAndAhead', {
     due: formatInr(row.dueNow),
-    ahead: formatInr((share - due).toFixed(2)),
+    ahead: formatInr(subtractMoney(row.amount, row.dueNow)),
   });
 }
 

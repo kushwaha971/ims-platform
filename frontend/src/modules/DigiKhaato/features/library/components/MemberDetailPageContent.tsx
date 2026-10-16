@@ -40,7 +40,7 @@ import { useTranslation } from 'src/hooks/useTranslation';
 import { selectTenantTimezone } from 'src/redux/slice/sessionSlice';
 import { ROUTES } from 'src/routes';
 import { formatBusinessDate, todayInTenantTz } from 'src/utils/dates';
-import { formatInr } from 'src/utils/money';
+import { addMoney, formatInr } from 'src/utils/money';
 import { formatPhoneForDisplay } from 'src/utils/share';
 
 import { useMemberDetail } from '../hooks/useMemberDetail';
@@ -191,7 +191,7 @@ export function MemberDetailPageContent({
   // QA B4 — a deposit not taken at admission is owed beside the fees; it is
   // counted here and named, never folded into the fee dues the server keeps.
   const depositDue = member.deposit && isNonZero(member.deposit.due) ? member.deposit.due : null;
-  const owedInAll = (Number(member.duesAmount) + Number(depositDue ?? 0)).toFixed(2);
+  const owedInAll = addMoney(member.duesAmount, depositDue ?? '0.00');
   const validity = validityLine(member, today);
   const validityText = t(
     validity.id,

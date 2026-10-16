@@ -25,7 +25,7 @@ import { useTranslation } from 'src/hooks/useTranslation';
 import { selectTenantTimezone } from 'src/redux/slice/sessionSlice';
 import { ROUTES } from 'src/routes';
 import { PAYMENT_MODES, type PaymentMode } from 'src/types/domain.types';
-import { todayInTenantTz } from 'src/utils/dates';
+import { addDaysIso, todayInTenantTz } from 'src/utils/dates';
 import { compareMoney, formatAmount } from 'src/utils/money';
 
 import { ExpensePartyField } from '../../expenses/components/ExpensePartyField';
@@ -60,8 +60,6 @@ import 'src/i18n/catalogues/validation';
 
 // Loaded with dynamic(), so its own words come with its own chunk rather than
 // with the screen that opens it (src/i18n/catalogueRegistry.ts).
-
-const DAY_MS = 86_400_000;
 
 /**
  * PAY-01 FR-2 — "Record payment · Ramesh Traders": who, when, how (PAY-02's
@@ -101,10 +99,7 @@ export function PaymentFormDrawer({
   const [earlyPayment, setEarlyPayment] = useState<PaymentFormValues | null>(null);
 
   const today = useMemo(() => todayInTenantTz(timezone ?? undefined), [timezone]);
-  const yesterday = useMemo(
-    () => new Date(Date.parse(`${today}T00:00:00Z`) - DAY_MS).toISOString().slice(0, 10),
-    [today]
-  );
+  const yesterday = useMemo(() => addDaysIso(today, -1), [today]);
 
   const defaults = useMemo<PaymentFormValues>(() => {
     const amount = context.presetAmount ?? defaultAmount(context.documentDue, context.receivable);

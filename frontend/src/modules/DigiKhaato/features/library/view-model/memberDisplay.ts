@@ -1,7 +1,7 @@
 import type { UbStatusBadgeTone } from 'src/design-system';
 import type { TranslateFn } from 'src/hooks/useTranslation';
-import { formatBusinessDate } from 'src/utils/dates';
-import { formatInr } from 'src/utils/money';
+import { daysBetweenIso, formatBusinessDate } from 'src/utils/dates';
+import { addMoney, formatInr, moneyOrZero } from 'src/utils/money';
 
 import { toModeBreakup } from 'modules/DigiKhaato/features/payments/view-model/modeBreakup';
 
@@ -56,11 +56,8 @@ export const placeLine = (member: Pick<MemberSummary, 'seat' | 'shift'>): string
 export const shiftHours = (shift: { readonly startsAt: string; readonly endsAt: string }): string =>
   `${shift.startsAt}–${shift.endsAt}`;
 
-const DAY_MS = 86_400_000;
-
 /** Whole days from `today` to `date` (both `YYYY-MM-DD`); negative in the past. */
-export const daysBetween = (today: string, date: string): number =>
-  Math.round((Date.parse(`${date}T00:00:00Z`) - Date.parse(`${today}T00:00:00Z`)) / DAY_MS);
+export const daysBetween = (today: string, date: string): number => daysBetweenIso(today, date);
 
 /**
  * The validity line: "Valid until 31/03/2027", "Expires in 3 days",
@@ -97,8 +94,10 @@ export const enrolCost = (
   type: MembershipType | undefined
 ): { readonly fees: string; readonly deposit: string } => {
   if (!type) return { fees: '0.00', deposit: '0.00' };
-  const fees = Number(type.feeAmount) + Number(type.admissionFee);
-  return { fees: fees.toFixed(2), deposit: Number(type.depositAmount).toFixed(2) };
+  return {
+    fees: addMoney(moneyOrZero(type.feeAmount), moneyOrZero(type.admissionFee)),
+    deposit: moneyOrZero(type.depositAmount),
+  };
 };
 
 /**

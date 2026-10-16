@@ -1,5 +1,6 @@
 import type { UbAmountSign, UbAmountTone } from 'src/design-system';
 import type { TranslateFn } from 'src/hooks/useTranslation';
+import { daysBetweenIso } from 'src/utils/calendarDays';
 import { formatInr, isZeroAmount } from 'src/utils/money';
 
 import { balanceDirection, unsigned } from './balanceSide';
@@ -344,8 +345,7 @@ export const entryReason = (entry: LedgerEntry): string => {
 export const isBackdated = (entry: LedgerEntry): boolean => {
   const written = entry.createdAt.slice(0, 10);
   if (!written || !entry.entryDate) return false;
-  const gapDays =
-    (Date.parse(`${written}T00:00:00Z`) - Date.parse(`${entry.entryDate}T00:00:00Z`)) / 86_400_000;
+  const gapDays = daysBetweenIso(entry.entryDate, written);
   return gapDays > 1;
 };
 

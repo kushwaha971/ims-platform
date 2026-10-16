@@ -117,7 +117,10 @@ Shared owners (reuse these, do not copy them):
   `CREDIT_OVERRIDE_ROLES` in `sessionSlice`. This is a role, not a codename,
   and a contract test keeps it equal to the server's `OVERRIDE_ROLES`.
 - client, WhatsApp/SMS links and phone display: `src/utils/share.ts`.
-- client, money: `src/utils/money.ts` (Decimal).
+- client, money: `src/utils/money.ts` (Decimal; `moneyOrZero` for a figure
+  shown while an amount is half-typed).
+- client, calendar days: `src/utils/calendarDays.ts` (`daysBetweenIso`,
+  `addDaysIso`). It imports nothing; `utils/dates.ts` brings dayjs.
 - client, lending asked-today: `lendingDisplay.askedToday`.
 - Guards: `frontend/src/tests/sharedOwners.test.ts`,
   `backend/tests/architecture/test_shared_owners.py` and
@@ -127,16 +130,14 @@ Shared owners (reuse these, do not copy them):
   `node e2e/sales-recovery-look.mjs`, on a live stack.
 
 **Next, in order:**
-1. WP-03 debt D-01: replace float money arithmetic in the Library and Lending
-   screens, the ledger slice and the import review (listed in 10) with
-   `utils/money.ts`.
-2. WP-03 debt D-02: one day-difference helper in `utils/dates.ts`. Keep each
-   in a small, separate commit and add a guard pattern for each.
-3. WP-04 (editable messages) per 07-delivery-roadmap.md and 05: start with the
+1. D-01 (float money) and D-02 (day maths) are done (R-06, R-07). D-05
+   (quantities via `utils/quantity.ts`) is small and optional. Do it only if it
+   stays mechanical.
+2. WP-04 (editable messages) per 07-delivery-roadmap.md and 05: start with the
    outgoing-text inventory, and reuse `utils/share.ts` and the shared owners
    above.
-4. The UI-composition audit (D-04) goes alongside WP-05.
-5. Still owed to WP-02, needing the owner or a device: a physical
+3. The UI-composition audit (D-04) goes alongside WP-05.
+4. Still owed to WP-02, needing the owner or a device: a physical
    network-interruption check on a phone, and the owner's SH-011 release review
    in the tracker. Do not wait on these.
 

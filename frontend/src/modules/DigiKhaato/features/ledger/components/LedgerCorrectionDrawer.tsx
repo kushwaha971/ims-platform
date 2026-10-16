@@ -19,7 +19,7 @@ import {
 import { useAppSelector } from 'src/hooks/useAppStore';
 import { useTranslation } from 'src/hooks/useTranslation';
 import { selectTenantTimezone } from 'src/redux/slice/sessionSlice';
-import { todayInTenantTz } from 'src/utils/dates';
+import { addDaysIso, todayInTenantTz } from 'src/utils/dates';
 
 import { useLedgerSchemas } from '../validation/ledgerSchemas';
 
@@ -60,8 +60,6 @@ import 'src/i18n/catalogues/validation';
  * the server will ignore, which is worse than not offering it: a merchant who
  * types a note and sees it vanish has learned the app loses their work.
  */
-const DAY_MS = 86_400_000;
-
 export function LedgerCorrectionDrawer({
   correction,
 }: Readonly<{ correction: UseEntryCorrectionResult }>): React.JSX.Element | null {
@@ -72,10 +70,7 @@ export function LedgerCorrectionDrawer({
   const { correcting, isSaving, canCorrect, formErrors, close, submitCorrect } = correction;
 
   const today = useMemo(() => todayInTenantTz(timezone ?? undefined), [timezone]);
-  const yesterday = useMemo(
-    () => new Date(Date.parse(`${today}T00:00:00Z`) - DAY_MS).toISOString().slice(0, 10),
-    [today]
-  );
+  const yesterday = useMemo(() => addDaysIso(today, -1), [today]);
 
   const defaults = useMemo<LedgerCorrectionFormValues>(
     () => ({

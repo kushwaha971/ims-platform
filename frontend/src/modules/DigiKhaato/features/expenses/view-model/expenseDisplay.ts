@@ -1,5 +1,5 @@
 import { PAYMENT_MODES, type PaymentMode, type UpiApp } from 'src/types/domain.types';
-import { isValidWireDate } from 'src/utils/dates';
+import { addDaysIso, isValidWireDate } from 'src/utils/dates';
 import {
   absMoney,
   compareMoney,
@@ -31,10 +31,7 @@ import type {
  * every rule here is a unit test away from being checked.
  */
 
-const DAY_MS = 86_400_000;
-
-const shiftDays = (iso: string, days: number): string =>
-  new Date(Date.parse(`${iso}T00:00:00Z`) + days * DAY_MS).toISOString().slice(0, 10);
+const shiftDays = addDaysIso;
 
 /** Monday of the week containing `today` (Indian shops count the week from Monday). */
 const weekStart = (today: string): string => {

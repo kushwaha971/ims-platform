@@ -1,4 +1,5 @@
 import { partyStatementPath } from 'src/routes';
+import { addDaysIso } from 'src/utils/calendarDays';
 
 import { AGING_BUCKETS } from '../types/aging.types';
 
@@ -91,8 +92,7 @@ export const BUCKET_EDGES: Readonly<Record<AgingBucket, readonly [number, number
   '90_plus': [91, null],
 };
 
-const shift = (asOf: string, days: number): string =>
-  new Date(Date.parse(`${asOf}T00:00:00Z`) - days * 86_400_000).toISOString().slice(0, 10);
+const shift = (asOf: string, days: number): string => addDaysIso(asOf, -days);
 
 export const bucketStatementHref = (
   partyId: string,

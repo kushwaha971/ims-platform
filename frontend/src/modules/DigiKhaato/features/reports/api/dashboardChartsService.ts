@@ -1,5 +1,6 @@
 import { API_PATHS } from 'src/api/APIPaths';
 import { api, ubConfig } from 'src/api/AxiosInstances';
+import { daysBetweenIso } from 'src/utils/calendarDays';
 import { toQueryString } from 'src/utils/queryString';
 
 /**
@@ -119,7 +120,7 @@ export const getDashboardCharts = async (
 export const barsFor = (from: string, to: string, group: ChartGroup): number => {
   const start = new Date(`${from}T00:00:00Z`);
   const end = new Date(`${to}T00:00:00Z`);
-  const days = Math.round((end.getTime() - start.getTime()) / 86_400_000) + 1;
+  const days = daysBetweenIso(from, to) + 1;
   if (group === 'day') return days;
   if (group === 'week') return Math.ceil((days + 6) / 7);
   const months =

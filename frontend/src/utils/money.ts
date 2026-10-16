@@ -75,5 +75,16 @@ export const formatAmount = (value: MoneyString | null | undefined): string => {
   return PLAIN_FORMAT.format(toDecimal(value).toNumber());
 };
 
+/**
+ * A typed (or server) amount as a money string, or `"0.00"` while it is not a
+ * number yet — `""`, `"."`, `"-"`. For figures shown beside a field as the
+ * merchant types ("Dues after this: …"); never for a value that is SAVED, which
+ * the form's own validation refuses instead.
+ */
+export const moneyOrZero = (value: MoneyString | number | null | undefined): MoneyString => {
+  const text = value === null || value === undefined ? '' : String(value).trim();
+  return /^-?(\d+\.?\d*|\.\d+)$/.test(text) ? toMoneyString(text) : '0.00';
+};
+
 /** Strips grouping and symbols from user input back to a wire-shaped string. */
 export const parseAmountInput = (input: string): MoneyString => input.replace(/[^\d.-]/g, '');

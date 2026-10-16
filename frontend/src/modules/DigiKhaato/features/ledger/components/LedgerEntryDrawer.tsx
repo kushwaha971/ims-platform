@@ -20,7 +20,7 @@ import { useAppSelector } from 'src/hooks/useAppStore';
 import { useTranslation } from 'src/hooks/useTranslation';
 import { selectTenantTimezone } from 'src/redux/slice/sessionSlice';
 import { PAYMENT_MODES, UPI_APPS } from 'src/types/domain.types';
-import { todayInTenantTz } from 'src/utils/dates';
+import { addDaysIso, todayInTenantTz } from 'src/utils/dates';
 import { formatAmount } from 'src/utils/money';
 
 import { useLedgerSchemas } from '../validation/ledgerSchemas';
@@ -52,8 +52,6 @@ import 'src/i18n/catalogues/validation';
  * every typed value, which is also why `reference` survives a switch to `debit`
  * even though it is not sent (EC-9).
  */
-const DAY_MS = 86_400_000;
-
 export function LedgerEntryDrawer({
   form: entryForm,
   partyName,
@@ -83,10 +81,7 @@ export function LedgerEntryDrawer({
      default to yesterday's date and land in yesterday's day group — and the
      merchant would have no reason to look for it there. */
   const today = useMemo(() => todayInTenantTz(timezone ?? undefined), [timezone]);
-  const yesterday = useMemo(
-    () => new Date(Date.parse(`${today}T00:00:00Z`) - DAY_MS).toISOString().slice(0, 10),
-    [today]
-  );
+  const yesterday = useMemo(() => addDaysIso(today, -1), [today]);
 
   /* The draft wins over the defaults, and that is FR-12's whole behaviour: a
      save that failed on a bad connection left what the merchant typed in the

@@ -57,6 +57,37 @@ describe('one owner per shared rule', () => {
   });
 });
 
+describe('money is added in utils/money.ts, not in floats (WP-03 D-01)', () => {
+  // `ledgerEntrySlice` is the recorded exception (X-06): it lives on the app
+  // shell, where decimal.js would cost every route, and it re-rounds at once.
+  const EXCEPTIONS = new Set(['modules/DigiKhaato/features/ledger/redux/ledgerEntrySlice.ts']);
+  // Money fields by name: quantities, counts and sort keys are a different
+  // concern (`utils/quantity.ts`) and are recorded separately (D-05).
+  const MONEY =
+    '(?:amount|dues|due|total|fee|interest|deduction|deposit|owed|arrears|balance|paid)';
+  const floatMoney = [
+    new RegExp(`Number\\([^()]*${MONEY}[^()]*\\)\\s*[+-]\\s*Number\\(`, 'i'),
+    new RegExp(
+      `\\.reduce\\(\\(\\w+,\\s*\\w+\\)\\s*=>\\s*\\w+\\s*\\+\\s*Number\\(\\w+\\.${MONEY}`,
+      'i'
+    ),
+    new RegExp(`Math\\.max\\(Number\\([^()]*${MONEY}`, 'i'),
+  ];
+
+  it('sums money with addMoney / sumMoney / subtractMoney', () => {
+    const found = FILES.filter(
+      (file) => !EXCEPTIONS.has(file.path) && floatMoney.some((pattern) => pattern.test(file.text))
+    ).map((file) => file.path);
+    expect(found).toEqual([]);
+  });
+});
+
+describe('calendar days are counted in utils/calendarDays.ts (WP-03 D-02)', () => {
+  it('keeps the one-day constant there', () => {
+    expect(offenders(/86_?400_?000/, 'utils/calendarDays.ts')).toEqual([]);
+  });
+});
+
 describe('client previews of server rules match the server', () => {
   it('names the same override roles as apps/parties/services/credit.py', () => {
     const python = readFileSync(

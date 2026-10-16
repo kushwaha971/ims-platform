@@ -1,4 +1,4 @@
-import { isValidWireDate } from 'src/utils/dates';
+import { daysBetweenIso, isValidWireDate } from 'src/utils/dates';
 
 import { resolveExpensePreset } from '../../expenses/view-model/expenseDisplay';
 import { resolvePreset } from '../../ledger/view-model/statementDisplay';
@@ -83,6 +83,4 @@ export const periodToQuery = (
 
 /** Days in a closed range — the day book shows a Date column past one day. */
 export const spansDays = (dateFrom: string, dateTo: string): number =>
-  Math.round(
-    (Date.parse(`${dateTo}T00:00:00Z`) - Date.parse(`${dateFrom}T00:00:00Z`)) / 86_400_000
-  ) + 1;
+  daysBetweenIso(dateFrom, dateTo) + 1;

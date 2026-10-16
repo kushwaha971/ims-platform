@@ -18,7 +18,7 @@ import {
   UbText,
 } from 'src/design-system';
 import { useTranslation } from 'src/hooks/useTranslation';
-import { formatInr } from 'src/utils/money';
+import { formatInr, isZeroAmount, isNegativeAmount, moneyOrZero, sumMoney } from 'src/utils/money';
 
 import { importErrorsUrl } from '../api/importService';
 import { IMPORT_KINDS, isImportKind } from '../constants/importKinds';
@@ -62,16 +62,14 @@ export function ImportReviewStep({
   const skipErrors = job.errorRows > 0 && job.validRows > 0;
 
   const problemsLine = (() => {
-    const owed = Number(job.totalsProblems.opening_receivable ?? 0);
-    const owing = Number(job.totalsProblems.opening_payable ?? 0);
-    const stock = Number(job.totalsProblems.stock_value ?? 0);
     // QA F10 — a refused loan's money is not "lent" in the totals either.
-    const lent = Number(job.totalsProblems.lent ?? 0);
-    const held =
-      Number(job.totalsProblems.deposits ?? 0) + Number(job.totalsProblems.old_dues ?? 0);
-    const amount = owed + owing + stock + lent + held;
-    return amount > 0
-      ? t('imports.review.problemMoney', { amount: formatInr(amount.toFixed(2)) })
+    const amount = sumMoney(
+      ['opening_receivable', 'opening_payable', 'stock_value', 'lent', 'deposits', 'old_dues'].map(
+        (key) => moneyOrZero(job.totalsProblems[key])
+      )
+    );
+    return !isZeroAmount(amount) && !isNegativeAmount(amount)
+      ? t('imports.review.problemMoney', { amount: formatInr(amount) })
       : null;
   })();
 

@@ -80,12 +80,7 @@ export const fyLabelFor = (value: string): string => {
   return `${startYear}-${String((startYear + 1) % 100).padStart(2, '0')}`;
 };
 
-/** `"2026-10-12"` + 7 → `"2026-10-19"`, on the calendar (UTC arithmetic, no time zone). */
-export const addDaysIso = (iso: string, days: number): string => {
-  const d = new Date(`${iso}T00:00:00Z`);
-  d.setUTCDate(d.getUTCDate() + days);
-  return d.toISOString().slice(0, 10);
-};
+export { DAY_MS, addDaysIso, daysBetweenIso } from './calendarDays';
 
 /**
  * `"2026-01-31"` + 1 month → `"2026-02-28"`: the same day next month, or that month's last

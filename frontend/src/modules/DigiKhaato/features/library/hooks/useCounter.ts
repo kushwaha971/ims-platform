@@ -7,7 +7,7 @@ import { usePermissions } from 'src/hooks/usePermissions';
 import { selectActiveTenant, selectTenantTimezone } from 'src/redux/slice/sessionSlice';
 import type { ApiErrorShape } from 'src/types/api.types';
 import { todayInTenantTz } from 'src/utils/dates';
-import { formatInr } from 'src/utils/money';
+import { formatInr, sumMoney } from 'src/utils/money';
 import { newRequestId } from 'src/utils/requestId';
 
 import { markLibraryLoanLost } from '../redux/libraryChargeThunk';
@@ -181,7 +181,7 @@ export const useCounter = (): Counter => {
       if (!markLibraryLoanLost.fulfilled.match(result)) {
         return { ok: false, error: result.payload ?? null };
       }
-      const total = result.payload.reduce((sum, charge) => sum + Number(charge.amount), 0);
+      const total = sumMoney(result.payload.map((charge) => charge.amount));
       dispatch(
         counterNoted({
           id: `lost-${loanId}`,
@@ -190,7 +190,7 @@ export const useCounter = (): Counter => {
           at: new Date().toISOString(),
           title,
           messageId: 'library.counter.markedLost',
-          messageParams: { amount: formatInr(total.toFixed(2)) },
+          messageParams: { amount: formatInr(total) },
         })
       );
       if (state.member) void dispatch(loadCounterMember(state.member.membershipId));

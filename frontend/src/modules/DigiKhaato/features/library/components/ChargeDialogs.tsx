@@ -21,7 +21,7 @@ import { useIdempotencyKey } from 'src/hooks/useIdempotencyKey';
 import { useTranslation } from 'src/hooks/useTranslation';
 import { useValidationSchemas } from 'src/hooks/useValidationSchemas';
 import { readDetailString } from 'src/utils/errorDetails';
-import { formatInr } from 'src/utils/money';
+import { addMoney, formatInr, isNegativeAmount, moneyOrZero, subtractMoney } from 'src/utils/money';
 
 import {
   MANUAL_CHARGE_KINDS,
@@ -42,7 +42,11 @@ import 'src/i18n/catalogues/validation';
 const REASON_MAX = 160;
 
 /** What the member will owe after a change, never negative — said before Save (Part 17.0.3). */
-const after = (dues: string, delta: number): string => Math.max(Number(dues) + delta, 0).toFixed(2);
+const after = (dues: string, change: string, direction: 'add' | 'take'): string => {
+  const typed = moneyOrZero(change);
+  const next = direction === 'add' ? addMoney(dues, typed) : subtractMoney(dues, typed);
+  return isNegativeAmount(next) ? '0.00' : next;
+};
 
 /**
  * F06 (LIB-07 FR-3, §8) — waive some or all of what is owed on one charge. The
@@ -151,7 +155,7 @@ export function WaiveChargeDialog({
         </UbField>
         <UbText variant="body-sm" tone="secondary" data-testid="charge-waive-after">
           {t('library.charge.duesAfter', {
-            amount: formatInr(after(dues, -Number(amount || 0))),
+            amount: formatInr(after(dues, amount, 'take')),
           })}
         </UbText>
       </UbForm>
@@ -349,7 +353,7 @@ export function ManualChargeDialog({
         </UbField>
         <UbText variant="body-sm" tone="secondary">
           {t('library.charge.duesAfter', {
-            amount: formatInr(after(dues, Number(amount || 0))),
+            amount: formatInr(after(dues, amount, 'add')),
           })}
         </UbText>
       </UbForm>

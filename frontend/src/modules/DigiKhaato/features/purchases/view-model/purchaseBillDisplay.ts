@@ -1,5 +1,5 @@
 import type { UbStatusBadgeTone } from 'src/design-system/UbStatusBadge/UbStatusBadge';
-import { isValidWireDate } from 'src/utils/dates';
+import { daysBetweenIso, isValidWireDate } from 'src/utils/dates';
 
 import { resolveExpensePreset } from '../../expenses/view-model/expenseDisplay';
 import {
@@ -104,8 +104,7 @@ export const isPurchaseListNarrowed = (filters: PurchaseBillListFilters): boolea
 /** FR-5 — "3 days late", computed on the row (BR-2: same-day accuracy). */
 export const daysLate = (dueOn: string | null, today: string): number => {
   if (!dueOn || dueOn >= today) return 0;
-  const ms = new Date(`${today}T00:00:00Z`).getTime() - new Date(`${dueOn}T00:00:00Z`).getTime();
-  return Math.round(ms / 86_400_000);
+  return daysBetweenIso(dueOn, today);
 };
 
 /**

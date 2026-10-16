@@ -351,3 +351,20 @@ Read this file, `git status`, current diff, root/frontend AGENTS, and the releva
   - Black, isort and flake8 are clean on the changed files. Two isort/black findings were already on `dev`: `payment_seam.py` import order and `test_purchase_orders.py`. They are untouched.
   - A full backend run is recorded in the next line once it finishes.
 - Limits: no browser pass was run, because there is no UI change; the screens draw the same figures and buttons. Railway deployment, device evidence and 9/10 readiness are NOT claimed.
+- Full backend run for that commit (all changes): 4546 passed, 16 skipped, 2 failed. Both failures were timing limits: `dues` 5,000 schedules (known, it also fails on unchanged `dev` here) and `library` close-over-20,000-copies (passes alone).
+
+### 16 October 2026 — WP-03 debt: money and calendar days through one owner each (cloud session)
+
+- Float money (D-01 → R-06): ten money sums in Library, Lending and the import review now use `utils/money.ts`. New `moneyOrZero` reads an unfinished amount as nothing.
+  - Real defect found and fixed. In a library charge's Waive dialog, typing "." first made "Dues after" `NaN`, and `formatInr` threw inside render, so the dialog vanished.
+  - New `ChargeDialogs.test.tsx` failed before the change with `[DecimalError] Invalid argument: NaN` and passes after.
+  - `ledgerEntrySlice` is kept as exception X-06, because it lives on the app shell.
+- Calendar days (D-02 → R-07): fifteen hand-written `/ 86_400_000` sites now use `utils/calendarDays.ts` (`daysBetweenIso`, `addDaysIso`).
+  - That module imports nothing. Putting the helpers in `utils/dates.ts` first cost about 2 KB on 20 routes (dayjs), which the bundle gate caught, so they live separately and `dates.ts` re-exports them.
+- `sharedOwners.test.ts` gained money-field and day-constant guards; each failed on the old code.
+- Gates:
+  - Frontend Jest: 4137 passed across 370 suites.
+  - `tsc` clean. ESLint and Prettier clean on the changed files.
+  - Locales in step.
+  - Production build passed. The bundle gate passed with no budget change.
+- No backend change in this step. No browser pass was run: the screens draw the same figures, except the waiver dialog, which no longer crashes. Railway deployment, device evidence and 9/10 readiness are NOT claimed.

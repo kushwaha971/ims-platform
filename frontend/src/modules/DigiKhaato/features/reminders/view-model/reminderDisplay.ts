@@ -1,4 +1,5 @@
 import type { UbStatusBadgeTone } from 'src/design-system';
+import { daysBetweenIso } from 'src/utils/calendarDays';
 
 import type {
   BulkReminderSkip,
@@ -82,7 +83,7 @@ export const collectionCaption = (
 ): { readonly id: string; readonly values: Readonly<Record<string, string | number>> } | null => {
   if (!collectionDate) return null;
   if (collectionDate === today) return { id: 'reminders.due.today', values: {} };
-  const days = Math.round((Date.parse(today) - Date.parse(collectionDate)) / 86_400_000);
+  const days = daysBetweenIso(collectionDate, today);
   if (days > 0) return { id: 'reminders.due.overdue', values: { count: days } };
   return { id: 'reminders.due.inDays', values: { count: -days } };
 };

@@ -24,7 +24,7 @@ import { useTranslation } from 'src/hooks/useTranslation';
 import { selectTenantTimezone } from 'src/redux/slice/sessionSlice';
 import { showSnackbar } from 'src/redux/slice/snackbarSlice';
 import { formatBusinessDate, todayInTenantTz } from 'src/utils/dates';
-import { formatInr } from 'src/utils/money';
+import { formatInr, sumMoney } from 'src/utils/money';
 
 import { selectLendingForm } from '../redux/lendingFormSlice';
 import { collectLendingLoan, previewLendingCollection } from '../redux/lendingThunk';
@@ -198,7 +198,7 @@ export function CollectDialog({
                 <UbText key={g.when} variant="body-sm" tone="secondary">
                   {t(`lending.collect.when.${g.when}`, {
                     count: g.rows.length,
-                    amount: formatInr(g.rows.reduce((s, r) => s + Number(r.amount), 0).toFixed(2)),
+                    amount: formatInr(sumMoney(g.rows.map((r) => r.amount))),
                     date: formatBusinessDate(g.rows[0]?.dueOn ?? ''),
                   })}
                 </UbText>

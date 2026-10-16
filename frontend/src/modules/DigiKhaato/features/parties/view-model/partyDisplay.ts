@@ -1,4 +1,5 @@
 import type { UbAmountTone } from 'src/design-system';
+import { DAY_MS } from 'src/utils/calendarDays';
 import { absMoney, compareMoney, isZeroAmount, sumMoney } from 'src/utils/money';
 import { formatPhoneForDisplay } from 'src/utils/share';
 
@@ -64,8 +65,6 @@ export interface PartyActivityView {
   readonly labelId: string;
   readonly values?: Readonly<Record<string, number>>;
 }
-
-const DAY_MS = 86_400_000;
 
 /** Whole calendar days between two instants, floored to the day boundary. */
 const daysBetween = (fromIso: string, nowMs: number): number => {

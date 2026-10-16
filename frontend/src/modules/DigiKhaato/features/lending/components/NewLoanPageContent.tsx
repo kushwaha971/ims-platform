@@ -36,7 +36,7 @@ import { showSnackbar } from 'src/redux/slice/snackbarSlice';
 import { ROUTES } from 'src/routes';
 import { applyServerErrors } from 'src/utils/applyServerErrors';
 import { formatBusinessDate, todayInTenantTz } from 'src/utils/dates';
-import { formatInr } from 'src/utils/money';
+import { addMoney, formatInr } from 'src/utils/money';
 
 import { toTermsBody } from '../api/lendingService';
 import { selectLendingForm } from '../redux/lendingFormSlice';
@@ -748,7 +748,7 @@ export function NewLoanPageContent(): React.JSX.Element {
                     ['lending.preview.total', preview.totalPayable],
                     [
                       'lending.preview.cost',
-                      (Number(preview.totalInterest) + Number(preview.deductionsTotal)).toFixed(2),
+                      addMoney(preview.totalInterest, preview.deductionsTotal),
                     ],
                   ].map(([id, amount]) => (
                     <UbStack key={id} direction="row" justify="between" gap={2}>
