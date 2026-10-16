@@ -530,3 +530,10 @@ Read this file, `git status`, current diff, root/frontend AGENTS, and the releva
 - Browser (`e2e/action-sheet-look.mjs`, 360 and 1280): 14/14. The sheet sits inside the screen; after Edit or Correct exactly one overlay is open; after Escape none is. `e2e/ledger.mjs` 54/54. The library ⋯ → Edit path was seen in `date-picker-look`.
 - Found on the way: `date-picker-look` and `student-dates-look` had been failing since 15 Oct, because the charge rows' ⋯ has the same test id as the header's. They now take the header's.
 - Gates: Jest 4198 passed; `tsc` clean; ESLint clean on the changed files; build passed. The bundle gate passed after a measured raise noted in `bundle-budgets.json`: seven routes that draw a ⋯ grew 0.1–0.2 KB for `UbMenuList` rows. Railway deployment and 9/10 readiness are NOT claimed.
+
+### 16 October 2026 — WP-03 D-04c: one "say why" dialog for every void, cancel and reverse (cloud session)
+
+- Consolidated (R-12): the seven dialogs that void, cancel or reverse with a written reason, and the library charge reversal, are `ReasonConfirmDialog`. It owns the reason rule, the caret in the reason, a confirm button that is never greyed for a missing reason, and staying open while the request runs. Each feature keeps its consequences.
+- Fail-before: `ReasonConfirmDialog.test.tsx`. Three of the old dialogs greyed the button silently, and all of them closed on Escape or ✕ mid-request, so the snackbar or the refusal arrived with the dialog gone.
+- Browser (`e2e/reason-dialog-look.mjs`, 360 and 1280): 12/12. Reversing a khata entry: caret in the reason, nothing red on opening, an empty reason says why and sends nothing, a written one reverses and the server's balance is zero. Screenshots looked at.
+- Gates: Jest 4202 passed; `tsc` clean; ESLint clean on the changed files; build passed. The bundle gate passed after `/lending/loans/new` 135.3 -> 135.8 (measured a few bytes over), noted in `bundle-budgets.json`. Railway deployment and 9/10 readiness are NOT claimed.
