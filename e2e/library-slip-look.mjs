@@ -7,6 +7,9 @@
  *   * typed Hindi + emoji reach the link unchanged, to the member's number;
  *   * a blank slip removes the link and says why;
  *   * "Use the original message" brings the slip back;
+ *   * the member's "Send fee reminder" (WP-04 M-08) opens the prepared words in
+ *     the same box, an edit reaches the link, and the tap sends the edited
+ *     words as `final_text` so the log keeps what went;
  *   * no page overflow, no page errors.
  * Nothing is sent: the link is read, never followed. Screenshots go to
  * /tmp/e2e-shots/library-slip.
@@ -93,6 +96,35 @@ for (const [size, viewport] of [['phone', { width: 360, height: 780 }], ['deskto
 
   await dialog.getByRole('button', { name: 'Use the original message' }).click();
   check(`${size}: the slip comes back`, (await box.inputValue()) === slip && (await linked()) === slip);
+  await page.keyboard.press('Escape');
+
+  // M-08 — the member's fee message, edited before WhatsApp opens.
+  const posted = [];
+  page.on('request', (r) => {
+    if (r.method() === 'POST' && /\/library\/members\/[^/]+\/messages?\//.test(new URL(r.url()).pathname)) posted.push(r.postData() ?? '');
+  });
+  await page.goto(`${FE}/library/members/${membershipId}`, { waitUntil: 'networkidle' });
+  await page.getByRole('button', { name: 'More actions' }).filter({ visible: true }).first().click();
+  await page.getByRole('button', { name: 'Send fee reminder' }).or(page.getByRole('menuitem', { name: 'Send fee reminder' })).filter({ visible: true }).first().click();
+  const fee = page.getByRole('dialog', { name: /Fee reminder for Asha/ });
+  const feeBox = fee.getByRole('textbox', { name: 'Message' });
+  await feeBox.waitFor({ timeout: 20000 });
+  const feeText = await feeBox.inputValue();
+  check(`${size}: the fee message names the amount`, /900/.test(feeText), JSON.stringify(feeText.slice(0, 70)));
+  await look('fee-default');
+  await feeBox.fill(EDITED);
+  const feeLink = fee.getByTestId('library-message-send');
+  const feeHref = (await feeLink.getAttribute('href')) ?? '';
+  check(`${size}: the fee link carries the edit`, new URL(feeHref).searchParams.get('text') === EDITED);
+  check(`${size}: to the member`, feeHref.startsWith(`https://wa.me/91${mobile.replace(/\D/g, '').slice(-10)}`), feeHref.slice(0, 30));
+  await look('fee-edited');
+  await page.evaluate(() => document.addEventListener('click', (e) => {
+    if (e.target instanceof Element && e.target.closest('a[href^="https://wa.me"]')) e.preventDefault();
+  }));
+  await feeLink.click();
+  await page.waitForTimeout(1500);
+  const sentBody = posted.length ? JSON.parse(posted[posted.length - 1] || '{}') : {};
+  check(`${size}: the tap records the edited words`, sentBody.final_text === EDITED, JSON.stringify(sentBody).slice(0, 90));
   check(`${size}: no page errors`, errors.length === 0, errors.join(' | '));
   await ctx.close();
 }

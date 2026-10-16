@@ -175,3 +175,37 @@ def test_with_a_upi_id_the_fee_reminder_carries_the_pay_page_for_the_fee(room: d
         "—"
     )
     assert resolve_pay_link(text.split("/pay/", 1)[1].split()[0])["amount"] == "900.00"
+
+
+def test_the_log_keeps_the_words_the_desk_edited_and_sent(room: dict) -> None:
+    """WP-04 MSG-10 — the desk may change a prepared fee message before WhatsApp
+    opens. `final_text` is those words: the link carries them and the message
+    log keeps them, while the reminder keeps its fee meaning (kind, amount)."""
+    from apps.platform_app.models import AuditLog
+
+    asha = room["admit"]("Asha Kulkarni", "a", "9876543210", collect=False)
+    url = reverse("v1:library-member-message", args=[asha["membership_id"], "fee"])
+    words = "Asha, fee Rs 900 Saturday tak de dena. 🙏"
+
+    sent = room["client"].post(url, {"final_text": f" {words} "}, format="json")
+
+    assert sent.status_code == 200, sent.content
+    assert unquote(sent.json()["data"]["wa_url"]).endswith(words)
+    row = Reminder.objects.get()
+    assert (row.kind, row.snapshot_balance) == ("due", D("900.00"))
+    audit = AuditLog.objects.get(entity_type="ledger_reminder", entity_id=row.id)
+    assert audit.metadata["text"] == words
+
+
+@pytest.mark.parametrize("final_text", ["", "  ", 7, "x" * 901])
+def test_unusable_edited_words_are_refused_and_nothing_is_recorded(
+    room: dict, final_text: Any
+) -> None:
+    asha = room["admit"]("Asha Kulkarni", "a", "9876543210", collect=False)
+    url = reverse("v1:library-member-message", args=[asha["membership_id"], "fee"])
+
+    response = room["client"].post(url, {"final_text": final_text}, format="json")
+
+    assert response.status_code == 400
+    assert "text" in response.json()["error"]["details"]
+    assert Reminder.objects.count() == 0

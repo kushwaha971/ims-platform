@@ -40,9 +40,11 @@ export const useSeatSchemas = (): SeatSchemas => {
       // QA B7 — each says what to enter, never the generic fallback.
       name: v.requiredText(SHIFT_NAME_MAX, 'library.seats.shift.name.required'),
       startsAt: v.requiredText(5, 'library.seats.shift.startsAt.required'),
-      endsAt: v.requiredText(5, 'library.seats.shift.endsAt.required').test('same', t('library.seats.shift.same'), function check(value) {
-        return value !== (this.parent as ShiftFormValues).startsAt;
-      }),
+      endsAt: v
+        .requiredText(5, 'library.seats.shift.endsAt.required')
+        .test('same', t('library.seats.shift.same'), function check(value) {
+          return value !== (this.parent as ShiftFormValues).startsAt;
+        }),
     }) as Yup.ObjectSchema<ShiftFormValues>;
     const seatRowSchema = Yup.object({
       prefix: v.boundedText(SEAT_PREFIX_MAX),

@@ -132,6 +132,16 @@ export const buildWhatsAppUrl = (text: string, phone?: string | null): string =>
 };
 
 /**
+ * A server-built `wa.me` link with the merchant's edited words in place of its
+ * own, to the same number (WP-04). The server knows the recipient and the
+ * client may not, so the number is kept from the link rather than looked up.
+ */
+export const withWhatsAppText = (waUrl: string, text: string): string => {
+  const digits = /^https:\/\/wa\.me\/(\d*)/.exec(waUrl)?.[1] ?? '';
+  return `https://wa.me/${digits}?text=${encodeShareText(text)}`;
+};
+
+/**
  * `sms:<+E.164>?&body=<encoded>` — the one spelling both platforms read.
  *
  * iOS historically parsed `sms:<n>&body=` and Android `sms:<n>?body=`; the

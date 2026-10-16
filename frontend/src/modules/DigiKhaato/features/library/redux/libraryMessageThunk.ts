@@ -44,16 +44,19 @@ export const prepareLibraryMessage = createAsyncThunk<
 
 export const recordLibraryMessage = createAsyncThunk<
   boolean,
-  { membershipId: string; kind: MessageKind; text?: string },
+  { membershipId: string; kind: MessageKind; text?: string; finalText?: string },
   Reject
->('libraryMessages/record', async ({ membershipId, kind, text }, { rejectWithValue }) => {
-  try {
-    await (await service()).recordMessage(membershipId, kind, text);
-    return true;
-  } catch (error) {
-    return rejectWithValue(toApiError(error, 'library.messages.error.record'));
+>(
+  'libraryMessages/record',
+  async ({ membershipId, kind, text, finalText }, { rejectWithValue }) => {
+    try {
+      await (await service()).recordMessage(membershipId, kind, text, finalText);
+      return true;
+    } catch (error) {
+      return rejectWithValue(toApiError(error, 'library.messages.error.record'));
+    }
   }
-});
+);
 
 /** QA F4 / B51 — a group's messages, prepared for the desk to open one by one. */
 export const prepareBulkMessages = createAsyncThunk<BulkMessageRow[], BulkMessageRequest, Reject>(

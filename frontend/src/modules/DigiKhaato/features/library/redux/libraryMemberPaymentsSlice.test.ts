@@ -5,7 +5,6 @@ import type { PaymentPage } from 'modules/DigiKhaato/features/payments/types/pay
 import { libraryMemberPaymentsSlice } from './libraryMemberPaymentsSlice';
 import { fetchMemberPayments } from './libraryPaymentThunk';
 
-
 const page = (partyId: string, amount: string): PaymentPage => ({
   rows: [
     {

@@ -51,11 +51,17 @@ export const prepareMessage = async (
 export const recordMessage = async (
   membershipId: string,
   kind: MessageKind,
-  text?: string
+  text?: string,
+  finalText?: string
 ): Promise<void> => {
   await api.post(
     LIBRARY_PATHS.MEMBER_MESSAGE(membershipId, kind),
-    { channel: 'whatsapp_manual', ...(text ? { text } : {}) },
+    {
+      channel: 'whatsapp_manual',
+      ...(text ? { text } : {}),
+      // WP-04 MSG-10 — the words that left, after any edit, are what is logged.
+      ...(finalText ? { final_text: finalText } : {}),
+    },
     ubConfig({ suppressErrorSnackbar: true })
   );
 };

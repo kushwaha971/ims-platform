@@ -34,7 +34,8 @@ const member = {
 beforeEach(() => {
   service.issueSlip.mockResolvedValue({
     text: SLIP,
-    waUrl: 'https://wa.me/919812345678?text=fixed',
+    // As the server builds it: the slip's own words, to the member.
+    waUrl: `https://wa.me/919812345678?text=${encodeURIComponent(SLIP)}`,
     hasMobile: true,
   });
 });

@@ -3,8 +3,6 @@
 import { useEffect, useRef, useState } from 'react';
 
 import {
-  finalMessage,
-  isBlankMessage,
   UbActionLink,
   UbButton,
   UbMessageBox,
@@ -12,9 +10,9 @@ import {
   UbText,
   UbTextInput,
 } from 'src/design-system';
+import { useEditableMessage } from 'src/hooks/useEditableMessage';
 import { useShareSheetLabels } from 'src/hooks/useShareSheetLabels';
 import { useTranslation } from 'src/hooks/useTranslation';
-import { buildWhatsAppUrl } from 'src/utils/share';
 
 import { issueSlip } from '../api/libraryCirculationService';
 import { blockParams } from '../view-model/memberDisplay';
@@ -140,11 +138,7 @@ export function FinishDialog({
   const [slip, setSlip] = useState<{ text: string; waUrl: string; hasMobile: boolean } | null>(
     null
   );
-  const [draft, setDraft] = useState<string | null>(null);
-  const words = slip ? finalMessage(slip.text, draft) : '';
-  // The member's number; the server's own link names it too, for a summary without one.
-  const phone =
-    member.mobile ?? (slip?.waUrl ? new URL(slip.waUrl).pathname.slice(1) || null : null);
+  const editable = useEditableMessage(slip?.text ?? '', slip?.waUrl);
 
   useEffect(() => {
     if (member.loans.length === 0) return;
@@ -177,14 +171,14 @@ export function FinishDialog({
           <UbStack gap={2}>
             <UbMessageBox
               message={slip.text}
-              draft={draft}
-              onDraftChange={setDraft}
+              draft={editable.draft}
+              onDraftChange={editable.setDraft}
               labels={labels}
               rows={4}
             />
-            {!isBlankMessage(words) && (
+            {editable.href && (
               <UbActionLink
-                href={buildWhatsAppUrl(words, phone)}
+                href={editable.href}
                 variant="secondary"
                 target="_blank"
                 rel="noopener noreferrer"

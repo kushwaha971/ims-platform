@@ -496,8 +496,13 @@ def preview(*, ctx: Any, membership_id: Any, kind: str, text: str = "") -> dict:
 
 @transaction.atomic
 def send(*, ctx: Any, membership_id: Any, kind: str, data: Any) -> dict:
-    """The tap that opens WhatsApp: records the message like a reminder."""
+    """The tap that opens WhatsApp: records the message like a reminder.
+
+    `final_text` is the message as the desk sent it after any edit (WP-04);
+    without it the prepared words are recorded, as before.
+    """
     from apps.ledger.services.reminder_seam import record_source_reminders
+    from apps.notifications.services.whatsapp_text import with_final_text
 
     data = data or {}
     channel = _channel(data.get("channel", "whatsapp_manual"))
@@ -513,6 +518,10 @@ def send(*, ctx: Any, membership_id: Any, kind: str, data: Any) -> dict:
     if not recipient.mobile:
         raise ValidationFailed({"recipient": [f"No mobile for {recipient.name}."]})
     composed = _compose(ctx.tenant, template, _addressed(m, params, recipient), recipient)
+    if channel != "call":
+        # WP-04 MSG-10 — the desk's edited words, when it changed them: the
+        # link carries them and the log keeps them; the kind keeps its meaning.
+        composed = with_final_text(composed, data.get("final_text"))
     sent = _sent(channel, composed)
     rows = record_source_reminders(
         ctx=ctx,

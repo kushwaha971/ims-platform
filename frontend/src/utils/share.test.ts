@@ -7,6 +7,7 @@ import {
   toDialableNumber,
   isShareAbort,
   toWhatsAppDigits,
+  withWhatsAppText,
 } from './share';
 
 /**
@@ -207,5 +208,17 @@ describe('toDialableNumber — what a tel: link dials and Copy copies (QA O6 fol
 
   it('is empty for nothing', () => {
     expect(toDialableNumber(null)).toBe('');
+  });
+});
+
+describe('withWhatsAppText', () => {
+  it('keeps the server link’s number and carries the edited words exactly', () => {
+    const url = withWhatsAppText('https://wa.me/919812345678?text=old', 'नमस्ते & 🙏\nRs 500');
+    expect(url.startsWith('https://wa.me/919812345678?text=')).toBe(true);
+    expect(new URL(url).searchParams.get('text')).toBe('नमस्ते & 🙏\nRs 500');
+  });
+
+  it('leaves the chat to be chosen when the link names nobody', () => {
+    expect(withWhatsAppText('https://wa.me/?text=old', 'hi')).toBe('https://wa.me/?text=hi');
   });
 });

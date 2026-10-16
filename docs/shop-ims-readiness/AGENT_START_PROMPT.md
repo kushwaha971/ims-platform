@@ -144,10 +144,11 @@ built from text; the source-scan guard fails on it. Lending/Library dialogs are
 the server-prepared reference.
 
 **Next, in order:**
-1. WP-04 is down to decisions and one gap (see 11-message-inventory.md): M-09
-   Library bulk per-member override (MSG-07), and M-12 supplier messages, which
-   start on the composer when WP-08 builds them. Done: M-06 Remind all, MSG-10
-   final text, M-10 counter slip, M-11 pay-link text (16 Oct).
+1. WP-04's buildable paths are done (see 11-message-inventory.md): every
+   in-scope merchant message except M-12 is editable, and reminder and
+   Library logs keep the final words. M-12 supplier messages start on the
+   composer when WP-08 builds them. Use `useEditableMessage` +
+   `UbMessageBox` for a server-prepared message outside a sheet.
 2. WP-04 M-03/M-04: decide (with WP-08) whether receipt/invoice share text is
    recorded; today only the share link is.
 3. The UI-composition audit (WP-03 D-04) goes alongside WP-05. D-05

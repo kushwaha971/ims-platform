@@ -441,3 +441,21 @@ Read this file, `git status`, current diff, root/frontend AGENTS, and the releva
 - Harness: `paylink.mjs` hard-coded `backend/.venv/bin/python`; it now takes `E2E_PYTHON`.
 - Not done: no physical-device share-sheet handoff. Railway deployment and 9/10 readiness are NOT claimed.
 
+### 16 October 2026 — WP-04: every Library message is editable, and the log keeps what went (cloud session)
+
+- Inventory correction: M-08 had been recorded as editable, but only a custom message's words could be written. The fee, receipt, welcome and plan-end texts were shown read-only. They now sit in the shared message box.
+- M-09 (MSG-07): in the group message, each member's prepared text is editable on its own row. The row's link carries that row's words, and an edit never touches another row.
+- Server (MSG-10): `POST /library/members/{id}/message/{kind}` takes `final_text`, the words that left. The link and the message log carry them, while the reminder keeps its kind and amount. Blank, over-long or non-text words are refused by the shared `final_text` rule before anything is recorded.
+- Reuse:
+  - `useEditableMessage` (draft, final words, link) is the one owner for a server-prepared message outside a sheet. The library dialog, the group rows and the counter slip use it.
+  - `withWhatsAppText` rebuilds a server link with new words to the same number, replacing a hand-written URL parse in the slip.
+- Fail-before:
+  - `test_fee_messages.py`: the 5 new cases failed before.
+  - The new `MessageDialog.test.tsx` and `BulkMessageDrawer.test.tsx` cases failed before. Existing record assertions now include the final words.
+- Gates:
+  - Backend: library, lending, ledger and notifications suites pass.
+  - Frontend Jest: 4157 passed across 371 suites. `tsc` and ESLint `--max-warnings=0` are clean on the changed code.
+  - Build passed, the bundle gate passed with no budget change, and locales are in step.
+- Browser (live stack, synthetic library, nothing sent): `e2e/library-slip-look.mjs` now also opens the member's "Send fee reminder", edits it, and confirms that the link carries the edit to the member and that the tap posts `final_text`. All checks pass at 360 and 1280 px, and the phone screenshot was looked at.
+- Not done: no physical-device handoff. Railway deployment and 9/10 readiness are NOT claimed.
+

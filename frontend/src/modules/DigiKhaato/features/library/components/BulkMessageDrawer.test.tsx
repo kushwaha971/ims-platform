@@ -1,4 +1,4 @@
-import { screen, within } from '@testing-library/react';
+import { fireEvent, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { resetAllFeatureState } from 'src/redux/actions';
@@ -56,14 +56,19 @@ describe('BulkMessageDrawer', () => {
       expect.objectContaining({ kind: 'fee', audience: 'unpaid' }),
       expect.anything()
     );
-    expect(await screen.findByText('Rs 600.00 is pending')).toBeInTheDocument();
-    expect(screen.getByText('Rs 900.00 is pending')).toBeInTheDocument();
+    expect(await screen.findByDisplayValue('Rs 600.00 is pending')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('Rs 900.00 is pending')).toBeInTheDocument();
     expect(screen.getByText(/2 messages ready · 0 opened/)).toBeInTheDocument();
 
     const [, binaSend] = screen.getAllByTestId('library-bulk-send') as [HTMLElement, HTMLElement];
     binaSend.addEventListener('click', (event) => event.preventDefault());
     await userEvent.click(binaSend);
-    expect(service.recordMessage).toHaveBeenCalledWith('2', 'fee', undefined);
+    expect(service.recordMessage).toHaveBeenCalledWith(
+      '2',
+      'fee',
+      undefined,
+      'Rs 900.00 is pending'
+    );
     expect(await screen.findByText(/2 messages ready · 1 opened/)).toBeInTheDocument();
     const bina = screen.getByTestId('library-bulk-row-2');
     expect(within(bina).getByText('Opened')).toBeInTheDocument();
@@ -84,7 +89,38 @@ describe('BulkMessageDrawer', () => {
     const send = await screen.findByTestId('library-bulk-send');
     send.addEventListener('click', (event) => event.preventDefault());
     await userEvent.click(send);
-    expect(service.recordMessage).toHaveBeenCalledWith('1', 'custom', 'Hi {name}');
+    expect(service.recordMessage).toHaveBeenCalledWith('1', 'custom', 'Hi {name}', 'Hi Asha');
+  });
+
+  it('lets each student’s message be changed on its own, and records what went', async () => {
+    /* Prevents: WP-04 MSG-07 — one student's figure wrong in a group message
+       with no way to fix that one text, and an edit leaking to another row. */
+    jest
+      .mocked(service.prepareBulk)
+      .mockResolvedValue([
+        row('1', 'Asha', 'Rs 600.00 is pending'),
+        row('2', 'Bina', 'Rs 900.00 is pending'),
+      ]);
+    jest.mocked(service.recordMessage).mockResolvedValue(undefined);
+    renderWithProviders(<BulkMessageDrawer onClose={jest.fn()} />);
+    await userEvent.click(screen.getByTestId('library-bulk-prepare'));
+    const bina = await screen.findByTestId('library-bulk-row-2');
+    fireEvent.change(within(bina).getByRole('textbox', { name: 'Message' }), {
+      target: { value: 'Bina, Rs 300 baaki — kal tak 🙏' },
+    });
+    const send = within(bina).getByTestId('library-bulk-send');
+    const href = send.getAttribute('href') ?? '';
+    expect(href.startsWith('https://wa.me/919000000002?text=')).toBe(true);
+    expect(new URL(href).searchParams.get('text')).toBe('Bina, Rs 300 baaki — kal tak 🙏');
+    expect(screen.getByDisplayValue('Rs 600.00 is pending')).toBeInTheDocument();
+    send.addEventListener('click', (event) => event.preventDefault());
+    await userEvent.click(send);
+    expect(service.recordMessage).toHaveBeenCalledWith(
+      '2',
+      'fee',
+      undefined,
+      'Bina, Rs 300 baaki — kal tak 🙏'
+    );
   });
 
   it('asks for a shift before preparing a message to one shift', async () => {

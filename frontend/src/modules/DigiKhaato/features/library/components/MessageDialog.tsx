@@ -11,11 +11,14 @@ import {
   UbButton,
   UbField,
   UbForm,
+  UbMessageBox,
   UbStack,
   UbText,
   UbTextArea,
 } from 'src/design-system';
 import { useAppDispatch } from 'src/hooks/useAppStore';
+import { useEditableMessage } from 'src/hooks/useEditableMessage';
+import { useShareSheetLabels } from 'src/hooks/useShareSheetLabels';
 import { useTranslation } from 'src/hooks/useTranslation';
 import { showSnackbar } from 'src/redux/slice/snackbarSlice';
 
@@ -41,6 +44,10 @@ import 'src/i18n/catalogues/validation';
  * QA F4 / B51 — a custom message asks for the desk's words first; the server
  * fills in this student's {name}, {amount}, {due_date} and {upi_link}, signs it
  * with the library's name, and the preview is what WhatsApp will open with.
+ *
+ * WP-04 M-08 — the prepared words sit in the shared editable box, so the desk
+ * can correct a fee or receipt message before WhatsApp opens; the link carries
+ * exactly what the box holds and the tap records those words (`final_text`).
  */
 export function MessageDialog({
   membershipId,
@@ -62,6 +69,8 @@ export function MessageDialog({
   // prepared the moment the dialog opens.
   const [text, setText] = useState<string | null>(custom ? null : '');
   const formId = useId();
+  const labels = useShareSheetLabels();
+  const editable = useEditableMessage(message?.text ?? '', message?.waUrl);
   const { customSchema } = useMessageSchemas();
   const form = useForm<CustomMessageFormValues>({
     resolver: yupResolver(customSchema),
@@ -91,7 +100,12 @@ export function MessageDialog({
 
   const record = () => {
     void dispatch(
-      recordLibraryMessage({ membershipId, kind, text: custom ? (text ?? '') : undefined })
+      recordLibraryMessage({
+        membershipId,
+        kind,
+        text: custom ? (text ?? '') : undefined,
+        finalText: editable.text,
+      })
     ).then((result) => {
       if (recordLibraryMessage.fulfilled.match(result)) {
         dispatch(
@@ -135,9 +149,9 @@ export function MessageDialog({
               {t('library.messages.custom.edit')}
             </UbButton>
           )}
-          {message?.recipient.hasMobile && message.waUrl && (
+          {message?.recipient.hasMobile && editable.href && (
             <UbActionLink
-              href={message.waUrl}
+              href={editable.href}
               target="_blank"
               rel="noopener noreferrer"
               icon={<MessageCircle className="h-4 w-4" aria-hidden />}
@@ -190,12 +204,12 @@ export function MessageDialog({
                 ? t('library.messages.toGuardian', { name: message.recipient.name })
                 : t('library.messages.to', { name: message.recipient.name })}
             </UbText>
-            <UbText
-              variant="body-sm"
-              className="whitespace-pre-line rounded-control bg-surface-sunken p-3"
-            >
-              {message.text}
-            </UbText>
+            <UbMessageBox
+              message={message.text}
+              draft={editable.draft}
+              onDraftChange={editable.setDraft}
+              labels={labels}
+            />
             {!message.recipient.hasMobile && (
               <UbText variant="body-sm" tone="warning">
                 {t('library.messages.noMobile', { name: message.recipient.name })}

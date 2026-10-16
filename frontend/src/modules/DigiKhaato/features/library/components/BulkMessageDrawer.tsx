@@ -13,6 +13,7 @@ import {
   UbField,
   UbForm,
   UbListItemText,
+  UbMessageBox,
   UbCombobox,
   UbStack,
   UbStatusBadge,
@@ -20,6 +21,8 @@ import {
   UbTextArea,
 } from 'src/design-system';
 import { useAppDispatch, useAppSelector } from 'src/hooks/useAppStore';
+import { useEditableMessage } from 'src/hooks/useEditableMessage';
+import { useShareSheetLabels } from 'src/hooks/useShareSheetLabels';
 import { useTranslation } from 'src/hooks/useTranslation';
 import { showSnackbar } from 'src/redux/slice/snackbarSlice';
 
@@ -50,6 +53,11 @@ import 'src/i18n/catalogues/validation';
  * then opens each in WhatsApp on the library's phone, one tap per student,
  * because the product sends nothing itself (DEC-012). Each tap is recorded and
  * builds the text again, so a fee paid at the desk in between is not asked for.
+ *
+ * WP-04 MSG-07 — each student's prepared text is editable on its own row, in
+ * the shared message box: the row's link carries exactly that row's words,
+ * and the tap records them (`final_text`), so one wrong figure can be fixed
+ * without touching anybody else's message.
  */
 export function BulkMessageDrawer({
   onClose,
@@ -97,23 +105,23 @@ export function BulkMessageDrawer({
     }
   };
 
-  const record = (row: BulkMessageRow) => {
+  const record = (row: BulkMessageRow, finalText: string) => {
     const text = kind === 'custom' ? form.getValues('text').trim() : undefined;
-    void dispatch(recordLibraryMessage({ membershipId: row.membershipId, kind, text })).then(
-      (result) => {
-        if (recordLibraryMessage.fulfilled.match(result)) {
-          setSent((before) => new Set(before).add(row.membershipId));
-        } else if (result.payload) {
-          dispatch(
-            showSnackbar({
-              severity: 'error',
-              message: result.payload.message,
-              requestId: result.payload.requestId,
-            })
-          );
-        }
+    void dispatch(
+      recordLibraryMessage({ membershipId: row.membershipId, kind, text, finalText })
+    ).then((result) => {
+      if (recordLibraryMessage.fulfilled.match(result)) {
+        setSent((before) => new Set(before).add(row.membershipId));
+      } else if (result.payload) {
+        dispatch(
+          showSnackbar({
+            severity: 'error',
+            message: result.payload.message,
+            requestId: result.payload.requestId,
+          })
+        );
       }
-    );
+    });
   };
 
   return (
@@ -229,52 +237,78 @@ export function BulkMessageDrawer({
               : t('library.messages.bulk.ready', { count: rows.length, sent: sent.size })}
           </UbText>
           {rows.map((row) => (
-            <LibraryCard key={row.membershipId} padded>
-              <UbStack gap={2} data-testid={`library-bulk-row-${row.membershipId}`}>
-                <UbListItemText
-                  primary={row.name}
-                  secondary={
-                    row.recipient.isGuardian
-                      ? t('library.messages.toGuardian', { name: row.recipient.name })
-                      : row.memberNumber
-                  }
-                />
-                <UbText
-                  variant="body-sm"
-                  className="whitespace-pre-line rounded-control bg-surface-sunken p-3"
-                >
-                  {row.text}
-                </UbText>
-                <UbStack direction="row" gap={2} align="center" wrap>
-                  {row.recipient.hasMobile && row.waUrl ? (
-                    <UbActionLink
-                      href={row.waUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      icon={<MessageCircle className="h-4 w-4" aria-hidden />}
-                      onClick={() => record(row)}
-                      data-testid="library-bulk-send"
-                    >
-                      {t('library.messages.openWhatsApp')}
-                    </UbActionLink>
-                  ) : (
-                    <UbText variant="caption" tone="warning">
-                      {t('library.messages.noMobile', { name: row.recipient.name })}
-                    </UbText>
-                  )}
-                  {sent.has(row.membershipId) && (
-                    <UbStatusBadge
-                      tone="success"
-                      icon={<Check className="h-3 w-3" aria-hidden />}
-                      label={t('library.messages.bulk.opened')}
-                    />
-                  )}
-                </UbStack>
-              </UbStack>
-            </LibraryCard>
+            <BulkMessageRowCard
+              key={row.membershipId}
+              row={row}
+              opened={sent.has(row.membershipId)}
+              onOpen={record}
+            />
           ))}
         </UbStack>
       )}
     </LibraryDrawer>
+  );
+}
+
+/** One student's prepared message: editable on its own, opened and recorded on its own. */
+function BulkMessageRowCard({
+  row,
+  opened,
+  onOpen,
+}: Readonly<{
+  row: BulkMessageRow;
+  opened: boolean;
+  onOpen: (row: BulkMessageRow, finalText: string) => void;
+}>): React.JSX.Element {
+  const { t } = useTranslation();
+  const labels = useShareSheetLabels();
+  const editable = useEditableMessage(row.text, row.waUrl);
+  return (
+    <LibraryCard padded>
+      <UbStack gap={2} data-testid={`library-bulk-row-${row.membershipId}`}>
+        <UbListItemText
+          primary={row.name}
+          secondary={
+            row.recipient.isGuardian
+              ? t('library.messages.toGuardian', { name: row.recipient.name })
+              : row.memberNumber
+          }
+        />
+        <UbMessageBox
+          message={row.text}
+          draft={editable.draft}
+          onDraftChange={editable.setDraft}
+          labels={labels}
+          rows={4}
+        />
+        <UbStack direction="row" gap={2} align="center" wrap>
+          {!row.recipient.hasMobile || !row.waUrl ? (
+            <UbText variant="caption" tone="warning">
+              {t('library.messages.noMobile', { name: row.recipient.name })}
+            </UbText>
+          ) : (
+            editable.href && (
+              <UbActionLink
+                href={editable.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                icon={<MessageCircle className="h-4 w-4" aria-hidden />}
+                onClick={() => onOpen(row, editable.text)}
+                data-testid="library-bulk-send"
+              >
+                {t('library.messages.openWhatsApp')}
+              </UbActionLink>
+            )
+          )}
+          {opened && (
+            <UbStatusBadge
+              tone="success"
+              icon={<Check className="h-3 w-3" aria-hidden />}
+              label={t('library.messages.bulk.opened')}
+            />
+          )}
+        </UbStack>
+      </UbStack>
+    </LibraryCard>
   );
 }
