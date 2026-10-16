@@ -585,3 +585,9 @@ Read this file, `git status`, current diff, root/frontend AGENTS, and the releva
 - Fixed (6315539): a bill dated 40 days ago read only "16/10/2026, 16:13" in Recent activity. Rows dated another day now read "Dated 31/03/2026 · entered 17/10/2026, 00:20". Fail-before: selector and view-model tests.
 - Found by looking at the first build: the entered time used the device clock, so on a UTC device every record entered after midnight IST looked backdated. It now uses the shop's clock (`formatTimestampInTz`, its own module so three unrelated routes stay in budget).
 - Gates: backend reports and golden tests pass; Jest dates and reports pass; `tsc` clean; ESLint clean; i18n in step; build and bundle gate passed. Railway deployment and 9/10 readiness are NOT claimed.
+
+### 17 October 2026 — WP-06: Cash in hand says the day it counts from (cloud session)
+
+- Fixed (8b42662): a new Shop whose first cash record was a ₹150 tea expense showed "−₹150 since you started using YourKhata", as though the till were short. No opening cash is recorded, so the tile now names the first day the Shop's own cash moved ("since 17/10/2026") and a negative figure reads "More cash paid out ₹150.00 than came in, since 17/10/2026". A UPI receipt or the Udhaar book's cash does not start the count. Fail-before: selector, service, view-model and page tests.
+- Looked: `e2e/dashboard-review.mjs` now also signs up a new shop with one customer and one tea expense; at 360 and 1280 the Today row reads as above (`360-new-shop-cash.png`). The kirana's tile reads "₹250.00 since 17/10/2026" and still equals the cashbook.
+- Gates: backend reports, ledger, expenses and payments tests pass; Jest 4222/4222; `tsc` clean; ESLint clean; i18n in step; build and bundle gate passed. Railway deployment and 9/10 readiness are NOT claimed.
