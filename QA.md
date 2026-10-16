@@ -391,4 +391,12 @@ Read this file, `git status`, current diff, root/frontend AGENTS, and the releva
   - Production build passed.
   - Bundle gate passed after raising only the internal `/design-system` gallery route, by the measured +0.5 / +0.6 KB, explained in `bundle-budgets.json`. Product routes stayed inside their budgets.
 - Not done: no browser pass on a live stack this step, and no physical-device WhatsApp/SMS handoff. The reminder log still stores the server text rather than the edit (MSG-10). Railway deployment and 9/10 readiness are NOT claimed.
+- Follow-up the same session: a browser check on a live stack (runserver + standalone build + Playwright Chromium, synthetic business only, nothing sent). New `e2e/share-composer-look.mjs` opens the Udhaar khata of a person owing ₹500, then opens Send reminder:
+  - the box holds the server default and the WhatsApp link carries it;
+  - typed Hindi + emoji + `&` + a line break reach the WhatsApp and SMS links exactly, and the SMS goes to `+919876500011`;
+  - a blank message removes the links and shows the reason;
+  - "Use the original message" restores the default;
+  - no overflow and no page errors.
+  - Result: 24/24 at 360 and 1280 px.
+- Looking at the screenshots found one defect: Call disappeared while the message was blank, although a call needs no words. It now stays offered. The new sheet test failed before the fix. The build and bundle gate pass, and the browser check passes again after the fix.
 

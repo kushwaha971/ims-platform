@@ -306,6 +306,17 @@ describe('UbShareSheet', () => {
       expect(screen.getByRole('alert')).toHaveTextContent('Write a message before sending.');
     });
 
+    it('still offers Call while the message is blank: a call needs no words', () => {
+      renderSheet({ callHref: 'tel:+919812345678', labels: { ...LABELS, call: 'Call' } });
+      fireEvent.change(screen.getByRole('textbox', { name: 'Message' }), {
+        target: { value: '' },
+      });
+      expect(screen.getByRole('link', { name: 'Call' })).toHaveAttribute(
+        'href',
+        'tel:+919812345678'
+      );
+    });
+
     it("never carries one person's edit to another, or into the next opening", () => {
       const props = {
         open: true,

@@ -216,6 +216,23 @@ function UbShareSheetBase({
     }
   }, [title, text, onShared, onFailed, close]);
 
+  /* A call needs no text, so it stays offered while the message is blank. */
+  const callRow =
+    callHref && labels.call ? (
+      <a
+        href={callHref}
+        onClick={openedVia('call')}
+        className={mlButtonClasses(
+          'ghost',
+          'lg',
+          cn(ROW, 'outline-none focus-visible:shadow-focus')
+        )}
+      >
+        <Phone aria-hidden className="h-4 w-4" />
+        <span>{labels.call}</span>
+      </a>
+    ) : null;
+
   return (
     <UbDialog
       open={open}
@@ -280,6 +297,7 @@ function UbShareSheetBase({
               >
                 {labels.sms}
               </UbButton>
+              {callRow}
               <UbButton
                 variant="ghost"
                 size="lg"
@@ -318,20 +336,7 @@ function UbShareSheetBase({
                 <MessageSquare aria-hidden className="h-4 w-4" />
                 <span>{labels.sms}</span>
               </a>
-              {callHref && labels.call && (
-                <a
-                  href={callHref}
-                  onClick={openedVia('call')}
-                  className={mlButtonClasses(
-                    'ghost',
-                    'lg',
-                    cn(ROW, 'outline-none focus-visible:shadow-focus')
-                  )}
-                >
-                  <Phone aria-hidden className="h-4 w-4" />
-                  <span>{labels.call}</span>
-                </a>
-              )}
+              {callRow}
               <UbButton
                 variant="ghost"
                 size="lg"
