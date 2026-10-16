@@ -51,7 +51,7 @@ from apps.reports.constants import (
     TOP_DEBTORS_LIMIT,
     VOID,
 )
-from apps.reports.selectors.day_book import money_position
+from apps.reports.selectors.day_book import first_cash_day, money_position
 
 _MONEY = DecimalField(max_digits=14, decimal_places=2)
 
@@ -224,6 +224,24 @@ def cash_in_hand(*, tenant: Any, today: dt.date, bucket: str | None = LedgerBuck
         sources=frozenset({"payments", "expenses", "ledger"}),
         bucket=bucket,
     )["cash"]
+
+
+def shop_drawer(*, tenant: Any, today: dt.date) -> dict[str, Any]:
+    """The Shop's Cash in hand and the day it is counted from (WP-06 Finding 4).
+
+    No opening cash is modelled, so the figure is what moved through the Shop's
+    drawer since its first cash record. `since` lets the tile say so with a date,
+    and lets it call a negative figure what it is rather than a short till.
+    """
+    since = first_cash_day(
+        tenant=tenant,
+        before=today + dt.timedelta(days=1),
+        sources=frozenset({"payments", "expenses", "ledger"}),
+    )
+    return {
+        "amount": _money(cash_in_hand(tenant=tenant, today=today)),
+        "since": since.isoformat() if since else None,
+    }
 
 
 def _default_location_id(tenant: Any) -> Any:
@@ -605,9 +623,9 @@ def build_dashboard(*, tenant: Any, today: dt.date) -> dict[str, Any]:
         tiles["cash_in_hand"] = {"amount": _money(every_book)}
     # WP-06 Finding 4 / DEC-019 — the Shop's own drawer: what the day book and
     # the cashbook close on, and what the Shop's Today row shows.
-    shop_cash = _part("shop_cash_in_hand", failed, lambda: cash_in_hand(tenant=tenant, today=today))
+    shop_cash = _part("shop_cash_in_hand", failed, lambda: shop_drawer(tenant=tenant, today=today))
     if shop_cash is not None:
-        tiles["shop_cash_in_hand"] = {"amount": _money(shop_cash)}
+        tiles["shop_cash_in_hand"] = shop_cash
     for key, compute in (
         ("today_received", lambda: money_received_today(tenant=tenant, today=today)),
         ("supplier_bills", lambda: supplier_bills(tenant=tenant, today=today)),

@@ -36,7 +36,11 @@ export interface DashboardTiles {
     readonly count: number;
     readonly yesterdayAmount: MoneyString;
   };
-  readonly cashInHand?: { readonly amount: MoneyString };
+  /**
+   * The Shop's drawer. `since` is the first day its cash moved (null: none yet;
+   * absent: an older server). No opening cash is modelled (WP-06 Finding 4).
+   */
+  readonly cashInHand?: { readonly amount: MoneyString; readonly since?: string | null };
   /** WP-06 — the Shop's receipts dated today (sales is not cash). */
   readonly todayReceived?: CountAmount;
   /** WP-06 — purchase bills overdue (with the oldest's age) and due this week. */

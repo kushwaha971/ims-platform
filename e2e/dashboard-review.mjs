@@ -193,6 +193,34 @@ for (const [size, viewport] of WIDTHS) {
   console.log(`   sections: ${r.sections.map((s) => `${s.text}@${s.top}`).join(', ')}`);
   await ctx.close();
 }
+// WP-06 Finding 4 — a new Shop whose first cash record is a tea expense. No
+// opening cash is recorded, so the drawer is −₹150 by arithmetic; the tile must
+// say it is more paid out than came in since that day, not a till of −₹150.
+const fresh = await newOwner({ shop: 'Naya Kirana', name: 'New Owner', prefix: 'dashnew' });
+// The first-use screen shows no figures; a shop that has added a customer does.
+await must('POST', '/parties', { name: 'Pehla Grahak', is_customer: true, mobile: '9822033333', state_code: '27' }, fresh.token);
+const freshCatsBody = (await api('GET', '/expense-categories', null, fresh.token)).body.data;
+const freshCats = freshCatsBody?.results ?? freshCatsBody ?? [];
+if (freshCats.length) await must('POST', '/expenses', { amount: '150', category_id: freshCats[0].id, expense_date: iso(0), mode: 'cash', note: 'Tea' }, fresh.token);
+const freshCash = (await api('GET', '/reports/dashboard?refresh=true', null, fresh.token)).body.data.tiles.shop_cash_in_hand;
+console.log(`new shop: drawer ${JSON.stringify(freshCash)}`);
+for (const [size, viewport] of WIDTHS.filter(([w]) => w === '360' || w === '1280')) {
+  const ctx = await browser.newContext({ viewport, locale: 'en-IN', serviceWorkers: 'block' });
+  const page = await ctx.newPage();
+  await page.goto(`${FE}/login/email`, { waitUntil: 'networkidle', timeout: 120000 });
+  await page.fill('input[type="email"]', fresh.email);
+  await page.fill('input[type="password"]', fresh.password);
+  await page.click('button[type="submit"]');
+  await page.waitForURL((u) => !u.pathname.startsWith('/login'), { timeout: 60000 });
+  await page.goto(`${FE}/dashboard`, { waitUntil: 'networkidle' });
+  await page.waitForTimeout(1500);
+  await page.screenshot({ path: `${ROOT}/${size}-new-shop.png`, fullPage: true });
+  const today = page.getByRole('region', { name: 'Today' });
+  if (!(await today.count())) { console.log(`   ${size} new shop: no Today region at ${page.url()}`); await ctx.close(); continue; }
+  console.log(`   ${size} new shop Today: ${JSON.stringify((await today.innerText()).replace(/\s+/g, ' '))}`);
+  await today.screenshot({ path: `${ROOT}/${size}-new-shop-cash.png` });
+  await ctx.close();
+}
 await browser.close();
 writeFileSync(`${ROOT}/report.json`, JSON.stringify({ report, network }, null, 2));
 console.log(`\nserver answers at 1280: ${network.map((n) => `${n.status} ${n.url}`).join('\n  ')}`);

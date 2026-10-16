@@ -41,7 +41,7 @@ interface DashboardWire {
       };
       readonly cash_in_hand?: { readonly amount: string };
       /** WP-06 — the Shop's own drawer; `cash_in_hand` is every book's (DEC-019). */
-      readonly shop_cash_in_hand?: { readonly amount: string };
+      readonly shop_cash_in_hand?: { readonly amount: string; readonly since?: string | null };
       readonly today_received?: CountAmountWire;
       readonly supplier_bills?: { readonly overdue: AgedWire; readonly due_week: CountAmountWire };
       readonly low_stock?: { readonly count: number; readonly out_count: number };
@@ -119,8 +119,17 @@ const dues = (wire: { readonly amount: string; readonly advances?: string }) => 
   ...(wire.advances ? { advances: wire.advances } : {}),
 });
 
-const cashInHand = (wire: { readonly amount: string } | undefined) =>
-  wire ? { cashInHand: { amount: wire.amount } } : {};
+const cashInHand = (
+  wire: { readonly amount: string; readonly since?: string | null } | undefined
+) =>
+  wire
+    ? {
+        cashInHand: {
+          amount: wire.amount,
+          ...(wire.since === undefined ? {} : { since: wire.since }),
+        },
+      }
+    : {};
 
 /** Every key copied only when present: an omitted tile stays omitted (FR-6). */
 const toTiles = (wire: DashboardWire['data']['tiles']): DashboardTiles => ({

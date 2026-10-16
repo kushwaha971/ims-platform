@@ -206,6 +206,24 @@ it("shows today's net sales, money received and cash in hand, each opening its r
   expect(mockPush).toHaveBeenCalledWith('/payments?period=today&tab=in');
 });
 
+it('never shows the drawer as a till holding minus money (WP-06 Finding 4)', async () => {
+  // No opening cash is recorded: a new Shop whose first cash record is a tea
+  // expense read "−₹150 · since you started using YourKhata".
+  const data = DATA();
+  service.getDashboard.mockResolvedValue({
+    ...data,
+    tiles: { ...data.tiles, cashInHand: { amount: '-150.00', since: '2026-09-03' } },
+  });
+  signIn(OWNER);
+  renderWithProviders(<DashboardPageContent />);
+  const today = await screen.findByRole('region', { name: 'Today' });
+  const tile = within(today).getByRole('button', { name: /More cash paid out/ });
+  expect(tile).toHaveTextContent('₹150.00');
+  expect(tile).toHaveTextContent('than came in, since 03/09/2026');
+  expect(tile).not.toHaveTextContent('−');
+  expect(within(today).queryByText('Cash in hand')).not.toBeInTheDocument();
+});
+
 it('gives customers and suppliers a panel each, every figure opening its own list', async () => {
   service.getDashboard.mockResolvedValue(DATA());
   signIn(OWNER);

@@ -15,6 +15,7 @@ from typing import Any
 
 import pytest
 
+from apps.common.constants import LedgerBucket
 from apps.reports.selectors.dashboard import build_dashboard, project
 from apps.reports.selectors.day_book import DayBookQuery, day_book
 from apps.reports.tests import builders as b
@@ -605,3 +606,33 @@ def test_recent_activity_says_each_records_own_date(tenant: Any) -> None:
     assert feed[str(spent.id)]["business_date"] == TODAY.isoformat()
     voids = [event for event in events if event["type"].endswith("_void")]
     assert voids and all("business_date" not in event for event in voids)
+
+
+def test_cash_in_hand_says_from_which_day_it_counts(tenant: Any) -> None:
+    """WP-06 Finding 4 — the drawer was captioned "since you started using
+    YourKhata", which is no date at all, and a new Shop whose first cash record
+    is a ₹150 tea expense showed minus ₹150 as though the till were short. The tile
+    now sends the first day the Shop's own cash moved, so the screen can say
+    "since 03/09/2026" and call a negative figure what it is: more paid out than
+    recorded in since then. The Udhaar book's cash and a UPI receipt never moved
+    the Shop's drawer, so they do not start it."""
+    ramesh = b.party(tenant)
+    assert _tiles(tenant)["shop_cash_in_hand"] == {"amount": "0.00", "since": None}
+
+    b.khata(tenant, TODAY - dt.timedelta(days=40), 300, party=ramesh, mode="cash")
+    b.payment(tenant, TODAY - dt.timedelta(days=30), {"upi": 500}, party=ramesh)
+    assert _tiles(tenant)["shop_cash_in_hand"]["since"] is None
+
+    b.expense(tenant, TODAY - dt.timedelta(days=15), 150)
+    b.khata(
+        tenant,
+        TODAY - dt.timedelta(days=5),
+        40,
+        party=ramesh,
+        mode="cash",
+        bucket=LedgerBucket.SHOP,
+    )
+    assert _tiles(tenant)["shop_cash_in_hand"] == {
+        "amount": "-110.00",
+        "since": (TODAY - dt.timedelta(days=15)).isoformat(),
+    }

@@ -25,6 +25,7 @@ import { formatInr } from 'src/utils/money';
 
 import {
   advancesLine,
+  cashTile,
   overdueHref,
   shortInr,
   tileHref,
@@ -109,7 +110,8 @@ export function DashboardTodayRow({
     crore: t('reports.dashboard.short.crore'),
   };
   const broken = failed(data, PARTS.today);
-  if (!tiles.todaySales && !tiles.todayReceived && !tiles.cashInHand && !broken) return null;
+  const cash = tiles.cashInHand ? cashTile(tiles.cashInHand, t) : null;
+  if (!tiles.todaySales && !tiles.todayReceived && !cash && !broken) return null;
   return (
     <UbStack gap={2}>
       <UbStatGrid live label={t('reports.dashboard.today.title')}>
@@ -134,12 +136,12 @@ export function DashboardTodayRow({
             onClick={() => router.push(RECEIVED_TODAY)}
           />
         )}
-        {tiles.cashInHand && (
+        {cash && (
           <UbStatCard
             key="cash"
-            label={t('reports.dashboard.tile.cashInHand')}
-            value={shortInr(tiles.cashInHand.amount, units).text}
-            subtext={t('reports.dashboard.tile.cashInHand.baseline')}
+            label={cash.label}
+            value={shortInr(cash.amount, units).text}
+            subtext={cash.caption}
             onClick={() => router.push(tileHref('cashInHand', tiles))}
           />
         )}

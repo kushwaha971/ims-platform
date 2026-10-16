@@ -430,6 +430,26 @@ def money_position(
     return {"cash": cash or ZERO, "bank": bank or ZERO}
 
 
+def first_cash_day(
+    *,
+    tenant: Any,
+    before: dt.date,
+    sources: frozenset[str] = ALL_SOURCES,
+    bucket: str | None = LedgerBucket.SHOP,
+) -> dt.date | None:
+    """The first business date on which cash moved in this book, or None.
+
+    `money_position`'s own rows, so the date a drawer is counted from is the
+    first row that drawer counts (WP-06 Finding 4): a UPI receipt or another
+    app's cash does not start the Shop's drawer.
+    """
+    sql = f"WITH {_cte(sources)} SELECT MIN(bdate) FROM rows WHERE cash <> 0"  # noqa: S608
+    params = _base_params(
+        tenant, lo=_BEGINNING, hi=before - dt.timedelta(days=1), include_void=False, bucket=bucket
+    )
+    return _fetch(sql, params)[0][0]
+
+
 @dataclass
 class DayBookRow:
     """One row as the selector returns it — values, not presentation."""

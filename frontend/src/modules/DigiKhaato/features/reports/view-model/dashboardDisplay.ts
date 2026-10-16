@@ -1,7 +1,13 @@
 import type { TranslateFn } from 'src/hooks/useTranslation';
 import { ROUTES } from 'src/routes';
 import { formatBusinessDate } from 'src/utils/dates';
-import { formatInr, isNegativeAmount, toDecimal, type MoneyString } from 'src/utils/money';
+import {
+  formatInr,
+  isNegativeAmount,
+  toDecimal,
+  toMoneyString,
+  type MoneyString,
+} from 'src/utils/money';
 import { formatTimestampInTz } from 'src/utils/zonedTime';
 
 import type { ActivityItem, AgedCountAmount, DashboardTiles } from '../types/reports.types';
@@ -205,6 +211,44 @@ export const activityWhen = (
   return own && !entered.startsWith(own)
     ? t('reports.dashboard.activity.dated', { date: own, at: entered })
     : entered;
+};
+
+/**
+ * WP-06 Finding 4 — the Cash in hand tile's words. No opening cash is
+ * recorded, so the figure is what moved through the Shop's drawer since its
+ * first cash record, and the caption names that day. A negative figure is not
+ * a till holding minus money: it is more paid out than came in since then.
+ */
+export const cashTile = (
+  cash: NonNullable<DashboardTiles['cashInHand']>,
+  t: TranslateFn
+): { readonly label: string; readonly amount: MoneyString; readonly caption: string } => {
+  if (cash.since === undefined) {
+    return {
+      label: t('reports.dashboard.tile.cashInHand'),
+      amount: cash.amount,
+      caption: t('reports.dashboard.tile.cashInHand.baseline'),
+    };
+  }
+  if (cash.since === null) {
+    return {
+      label: t('reports.dashboard.tile.cashInHand'),
+      amount: cash.amount,
+      caption: t('reports.dashboard.tile.cashInHand.none'),
+    };
+  }
+  const date = formatBusinessDate(cash.since);
+  return isNegativeAmount(cash.amount)
+    ? {
+        label: t('reports.dashboard.tile.cashOut'),
+        amount: toMoneyString(toDecimal(cash.amount).abs()),
+        caption: t('reports.dashboard.tile.cashOut.caption', { date }),
+      }
+    : {
+        label: t('reports.dashboard.tile.cashInHand'),
+        amount: cash.amount,
+        caption: t('reports.dashboard.tile.cashInHand.since', { date }),
+      };
 };
 
 export const activityTitle = (

@@ -69,3 +69,11 @@ it('carries the oldest overdue bill date for the link', async () => {
     firstBillDate: '2026-03-30',
   });
 });
+
+it('carries the day the drawer is counted from', async () => {
+  jest
+    .mocked(api.get)
+    .mockResolvedValue(body({ shop_cash_in_hand: { amount: '-110.00', since: '2026-09-03' } }));
+  const data = await getDashboard();
+  expect(data.tiles.cashInHand).toEqual({ amount: '-110.00', since: '2026-09-03' });
+});

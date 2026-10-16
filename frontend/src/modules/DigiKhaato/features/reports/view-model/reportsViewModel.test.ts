@@ -8,6 +8,7 @@ import {
   activityLabelId,
   activityTitle,
   activityWhen,
+  cashTile,
   isFirstUse,
   salesDelta,
   secondsSince,
@@ -415,5 +416,38 @@ describe('activityWhen (WP-06 Finding 5)', () => {
       '16/10/2026, 16:13'
     );
     expect(activityWhen({ at } as never, t, 'Asia/Kolkata')).toBe('16/10/2026, 16:13');
+  });
+});
+
+describe('cashTile (WP-06 Finding 4)', () => {
+  const t = ((id: string, params?: Record<string, unknown>) =>
+    params?.date ? `${id} ${String(params.date)}` : id) as never;
+
+  it('counts the drawer from a date, not from "since you started"', () => {
+    expect(cashTile({ amount: '390.00', since: '2026-09-03' }, t)).toEqual({
+      label: 'reports.dashboard.tile.cashInHand',
+      amount: '390.00',
+      caption: 'reports.dashboard.tile.cashInHand.since 03/09/2026',
+    });
+  });
+
+  it('calls a negative drawer more paid out, never a short till', () => {
+    // A new Shop whose first cash record is a ₹150 tea expense read "−₹150"
+    // under "Cash in hand"; nobody's till holds minus money, and the cash it
+    // started with is simply not recorded.
+    expect(cashTile({ amount: '-150.00', since: '2026-09-03' }, t)).toEqual({
+      label: 'reports.dashboard.tile.cashOut',
+      amount: '150.00',
+      caption: 'reports.dashboard.tile.cashOut.caption 03/09/2026',
+    });
+  });
+
+  it('says nothing is recorded yet, or keeps the old words for an older server', () => {
+    expect(cashTile({ amount: '0.00', since: null }, t).caption).toBe(
+      'reports.dashboard.tile.cashInHand.none'
+    );
+    expect(cashTile({ amount: '80.00' }, t).caption).toBe(
+      'reports.dashboard.tile.cashInHand.baseline'
+    );
   });
 });
