@@ -125,10 +125,10 @@ export const fetchReminderSettings = createAsyncThunk<ReminderSettings, void, Re
  */
 export const sendManualReminder = createAsyncThunk<Reminder, SendManualReminderArg, Rejected>(
   'reminders/sendManualReminder',
-  async ({ partyId, channel, note }, { rejectWithValue }) => {
+  async ({ partyId, channel, note, text }, { rejectWithValue }) => {
     try {
       const created = await createReminder(partyId, channel, note);
-      await sendReminder(created.id);
+      await sendReminder(created.id, text);
       return { ...created, status: 'sent' };
     } catch (error) {
       return rejectWithValue(toApiError(error, 'reminders.error.send'));
@@ -149,18 +149,19 @@ export const startBulkReminders = createAsyncThunk<
   }
 });
 
-/** MUTATION. One step of the bulk flow — its link was just tapped. */
-export const sendBulkStep = createAsyncThunk<string, string, Rejected>(
-  'reminders/sendBulkStep',
-  async (reminderId, { rejectWithValue }) => {
-    try {
-      await sendReminder(reminderId);
-      return reminderId;
-    } catch (error) {
-      return rejectWithValue(toApiError(error, 'reminders.error.send'));
-    }
+/** MUTATION. One step of the bulk flow — its link was just tapped, with these words. */
+export const sendBulkStep = createAsyncThunk<
+  string,
+  { readonly reminderId: string; readonly text: string },
+  Rejected
+>('reminders/sendBulkStep', async ({ reminderId, text }, { rejectWithValue }) => {
+  try {
+    await sendReminder(reminderId, text);
+    return reminderId;
+  } catch (error) {
+    return rejectWithValue(toApiError(error, 'reminders.error.send'));
   }
-);
+});
 
 /** MUTATION. FR-9 — Done, Dismissed, or a bulk step the merchant skipped. */
 export const markReminderStatus = createAsyncThunk<

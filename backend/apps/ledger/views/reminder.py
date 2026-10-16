@@ -212,7 +212,9 @@ class ReminderDetailView(_ReminderBase):
 
 class ReminderSendView(_ReminderBase):
     def post(self, request: Any, pk: Any) -> Any:
-        result = send_reminder(ctx=self.ctx(), reminder_id=pk)
+        result = send_reminder(
+            ctx=self.ctx(), reminder_id=pk, text=(request.data or {}).get("text")
+        )
         meta = {"warnings": result["warnings"]}
         if result["status_code"] == 202:
             return StandardResponse.accepted(result["data"], meta=meta)

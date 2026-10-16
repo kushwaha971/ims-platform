@@ -7,8 +7,12 @@
  *   * typed Hindi + emoji + "&" + a line break reach both links unchanged;
  *   * a blank message removes the links and says why;
  *   * "Use the original message" puts the default back;
+ *   * "Remind all" (MSG-07/10): the step's box holds that customer's words, an
+ *     edit rebuilds the WhatsApp link from it, a blank one offers no link, and
+ *     the tap sends the edited words to `/send` so the log keeps what went;
  *   * no page overflow, no page errors.
- * Nothing is sent: the links are read, never followed. Screenshots go to
+ * Nothing is sent: the links are read, never followed (the one tap in the
+ * Remind all check has its navigation cancelled in the page). Screenshots go to
  * /tmp/e2e-shots/share-composer.
  *
  *   node e2e/share-composer-look.mjs   (PW_CHROMIUM=<path> to use an installed Chromium)
@@ -92,6 +96,42 @@ for (const [size, viewport] of [['phone', { width: 360, height: 780 }], ['deskto
 
   await dialog.getByRole('button', { name: 'Use the original message' }).click();
   check(`${size}: the default comes back`, (await box.inputValue()) === original && (await waText()) === original);
+  await page.keyboard.press('Escape');
+
+  // MSG-07/10 — "Remind all", with the merchant's own words for each customer.
+  await must('PATCH', `/parties/${ramesh.id}`, { collection_date: new Date().toISOString().slice(0, 10) }, user.token);
+  const posted = [];
+  page.on('request', (r) => {
+    if (/\/reminders\/[^/]+\/send\/?$/.test(new URL(r.url()).pathname)) posted.push(r.postData() ?? '');
+  });
+  await page.goto(`${FE}/ledger/reminders`, { waitUntil: 'networkidle' });
+  await page.getByRole('button', { name: 'Remind all on this page' }).filter({ visible: true }).first().click();
+  const bulk = page.getByRole('dialog', { name: 'Remind customers' });
+  const bulkBox = bulk.getByRole('textbox', { name: 'Message' });
+  await bulkBox.waitFor({ timeout: 20000 });
+  const bulkLink = bulk.getByRole('link', { name: 'WhatsApp Ramesh Traders' });
+  const bulkDefault = await bulkBox.inputValue();
+  check(`${size}: Remind all opens with this customer's words`, bulkDefault.includes('500'), JSON.stringify(bulkDefault.slice(0, 60)));
+  await look('bulk-default');
+  await bulkBox.fill(EDITED);
+  const bulkHref = (await bulkLink.getAttribute('href')) ?? '';
+  check(`${size}: Remind all's link carries the edit`, new URL(bulkHref).searchParams.get('text') === EDITED);
+  check(`${size}: and goes to the customer`, bulkHref.startsWith('https://wa.me/919876500011'), bulkHref.slice(0, 30));
+  await look('bulk-edited');
+  await bulkBox.fill('  ');
+  check(`${size}: a blank Remind all message has no link`, (await bulkLink.count()) === 0);
+  check(`${size}: and says why`, await bulk.getByRole('alert').filter({ hasText: 'Write a message before sending.' }).isVisible());
+  await look('bulk-blank');
+  await bulk.getByRole('button', { name: 'Use the original message' }).click();
+  check(`${size}: the customer's words come back`, (await bulkBox.inputValue()) === bulkDefault);
+  await bulkBox.fill(EDITED);
+  await page.evaluate(() => document.addEventListener('click', (e) => {
+    if (e.target instanceof Element && e.target.closest('a[href^="https://wa.me"]')) e.preventDefault();
+  }));
+  await bulkLink.click();
+  await page.waitForTimeout(1500);
+  const body = posted.length ? JSON.parse(posted[0] || '{}') : {};
+  check(`${size}: the tap records the edited words`, body.text === EDITED, JSON.stringify(body).slice(0, 80));
   check(`${size}: no page errors`, errors.length === 0, errors.join(' | '));
   await ctx.close();
 }

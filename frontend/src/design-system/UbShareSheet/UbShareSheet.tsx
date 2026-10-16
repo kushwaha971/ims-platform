@@ -3,7 +3,6 @@
 import {
   memo,
   useCallback,
-  useId,
   useState,
   useSyncExternalStore,
   type ReactNode,
@@ -15,10 +14,16 @@ import { Copy, MessageCircle, MessageSquare, Phone, Share2 } from 'lucide-react'
 import { mlButtonClasses } from 'src/design-system/primitives';
 import { UbButton } from 'src/design-system/UbButton';
 import { UbDialog } from 'src/design-system/UbDialog';
-import { UbTextArea } from 'src/design-system/UbTextArea';
 import { copyText } from 'src/utils/clipboard';
 import { cn } from 'src/utils/cn';
 import { buildSmsUrl, buildWhatsAppUrl, canUseNativeShare, isShareAbort } from 'src/utils/share';
+
+import {
+  finalMessage,
+  isBlankMessage,
+  UbMessageBox,
+  type UbMessageBoxLabels,
+} from './UbMessageBox';
 
 /**
  * Part 23 §23.3 / NTF-03 FR-1 — the one share surface.
@@ -71,21 +76,15 @@ import { buildSmsUrl, buildWhatsAppUrl, canUseNativeShare, isShareAbort } from '
  */
 export type UbShareChannel = 'whatsapp' | 'sms' | 'copy' | 'native' | 'call';
 
-export interface UbShareSheetLabels {
+export interface UbShareSheetLabels extends UbMessageBoxLabels {
   readonly whatsapp: string;
   readonly sms: string;
   readonly copy: string;
   /** The platform share sheet — "More…". */
   readonly more: string;
   readonly close: string;
-  /** The caption over the message preview — "Message". */
-  readonly preview: string;
   /** The dial row, drawn only when `callHref` is given (LED-06 FR-4). */
   readonly call?: string;
-  /** Puts the default text back after an edit — "Reset to default". */
-  readonly reset: string;
-  /** Why the channels are off while the message is blank. */
-  readonly empty: string;
 }
 
 export interface UbShareSheetProps {
@@ -123,8 +122,12 @@ export interface UbShareSheetProps {
   /** Any spelling; normalised by `toWhatsAppDigits`. Absent → pick the chat. */
   readonly phone?: string | null;
   readonly labels: UbShareSheetLabels;
-  /** A channel was opened (or the text copied). Never evidence of delivery. */
-  readonly onShared?: (channel: UbShareChannel) => void;
+  /**
+   * A channel was opened (or the text copied). Never evidence of delivery.
+   * `text` is the words that left with it, after any edit — what a caller
+   * records (MSG-10); empty for a call, which carries none.
+   */
+  readonly onShared?: (channel: UbShareChannel, text: string) => void;
   /** The clipboard refused, or the platform sheet failed for a reason other than dismissal. */
   readonly onFailed?: (channel: UbShareChannel) => void;
   /**
@@ -168,9 +171,9 @@ function UbShareSheetBase({
   });
   if (edit.session !== session) setEdit({ session, text: null });
   const draft = edit.session === session ? edit.text : null;
-  const text = draft ?? message;
+  const text = finalMessage(message, draft);
   const smsText = draft ?? smsMessage ?? message;
-  const blank = text.trim() === '';
+  const blank = isBlankMessage(text);
   const setDraft = useCallback(
     (next: string | null) => setEdit((current) => ({ ...current, text: next })),
     []
@@ -183,21 +186,20 @@ function UbShareSheetBase({
   );
 
   const close = useCallback(() => onOpenChange(false), [onOpenChange]);
-  const boxId = useId();
 
   /* The anchor's own default action opens the app; this only reports it and
      closes the sheet once the browser has followed the link. */
   const openedVia = useCallback(
     (channel: UbShareChannel) => () => {
-      onShared?.(channel);
+      onShared?.(channel, channel === 'sms' ? smsText : channel === 'call' ? '' : text);
       window.setTimeout(close, 0);
     },
-    [onShared, close]
+    [onShared, close, text, smsText]
   );
 
   const handleCopy = useCallback(async () => {
     if (await copyText(text)) {
-      onShared?.('copy');
+      onShared?.('copy', text);
       close();
     } else {
       /* The sheet stays open on a failed copy: the preview is right there and
@@ -209,7 +211,7 @@ function UbShareSheetBase({
   const handleNative = useCallback(async () => {
     try {
       await navigator.share({ title, text });
-      onShared?.('native');
+      onShared?.('native', text);
       close();
     } catch (error) {
       if (!isShareAbort(error)) onFailed?.('native');
@@ -248,34 +250,7 @@ function UbShareSheetBase({
       ) : (
         <div className="flex flex-col gap-4">
           {notice}
-          <div className="flex flex-col gap-1">
-            <div className="flex items-center justify-between gap-2">
-              <label htmlFor={boxId} className="ds-body-s-medium text-text-tertiary">
-                {labels.preview}
-              </label>
-              {draft !== null && draft !== message && (
-                <UbButton variant="ghost" size="sm" onClick={() => setDraft(null)}>
-                  {labels.reset}
-                </UbButton>
-              )}
-            </div>
-            {/* The final text, editable. It is also the fallback when the
-              clipboard refuses: the merchant can select it by hand. */}
-            <UbTextArea
-              id={boxId}
-              data-ub-share-preview=""
-              value={text}
-              onChange={setDraft}
-              rows={5}
-              invalid={blank}
-              aria-describedby={blank ? `${boxId}-empty` : undefined}
-            />
-            {blank && (
-              <p id={`${boxId}-empty`} role="alert" className="ds-body-s-regular text-formError">
-                {labels.empty}
-              </p>
-            )}
-          </div>
+          <UbMessageBox message={message} draft={draft} onDraftChange={setDraft} labels={labels} />
 
           {blank ? (
             <div className="flex flex-col gap-1">

@@ -400,3 +400,23 @@ Read this file, `git status`, current diff, root/frontend AGENTS, and the releva
   - Result: 24/24 at 360 and 1280 px.
 - Looking at the screenshots found one defect: Call disappeared while the message was blank, although a call needs no words. It now stays offered. The new sheet test failed before the fix. The build and bundle gate pass, and the browser check passes again after the fix.
 
+### 16 October 2026 — WP-04: "Remind all" words are editable, and reminder logs keep the words sent (cloud session)
+
+- Defect fixed (MSG-10): the khata and record reminder sheets let the merchant change the words, but `/reminders/{id}/send` logged the server's own template. The log said one thing and the customer got another. `/send` now takes the final `text`: it is logged, and the returned link is built from it. Without `text` the server's words are used as before. A call ignores it; a provider SMS refuses it, because that SMS goes out in its approved words.
+- The edited-text rule (blank, over 900 characters, NUL byte, not a string) now has one owner, `notifications/services/whatsapp_text.final_text` / `with_final_text`. Lending's message dialog used to carry its own copy and now uses it.
+- M-06 (MSG-07/08): each "Remind all" step shows that customer's words in an editable box. The box is the share sheet's own, extracted as `UbMessageBox` rather than copied. An edit rebuilds the WhatsApp link from the edit and the customer's number (the bulk response now carries `mobile`). A blank message offers no link and says why, and "Use the original message" brings the default back. The next customer starts from their own words, and the tap sends the final words to `/send`.
+- `UbShareSheet`'s `onShared` now passes the words that left with each channel.
+- Fail-before:
+  - `backend/apps/ledger/tests/test_reminder_final_text.py`: 9 of 11 failed before (the call and no-text cases passed, as they should).
+  - The new record-reminder case in `test_module_reminders.py` failed before.
+  - Two new Remind all cases in `RemindersPageContent.test.tsx` and the edited-words case in `PartyDetailPageContent.test.tsx` failed before. The send assertions in three existing tests were updated to include the text.
+- Gates:
+  - Backend: the full suite passed except the two known timing tests on this shared 4-core sandbox (`dues` 5,000 schedules under a minute, library close-over-20,000-copies under five seconds). They are unrelated to this change.
+  - Frontend Jest: 4149 passed across 370 suites. `tsc`, ESLint (`--max-warnings=0`) and Prettier are clean, and locales are in step (no new keys).
+  - Production build passed. The bundle gate passed after raising only the internal `/design-system` gallery by the measured +0.1 KB, explained in `bundle-budgets.json`. Every product route stayed inside its budget.
+- Browser (live stack, synthetic business, nothing sent): `e2e/share-composer-look.mjs` now covers Remind all as well as the khata sheet. Result: 44/44 at 360 and 1280 px.
+  - Remind all's box opens with the customer's words, and an edit reaches the WhatsApp link for `919876500011`.
+  - A blank message removes the link and shows why, and the original comes back.
+  - The tap posts the edited Hindi + emoji text to `/send`.
+  - No overflow and no page errors. The phone screenshot was looked at.
+- Not done: no physical-device WhatsApp handoff. Receipt and invoice shares still record no text. Railway deployment and 9/10 readiness are NOT claimed.

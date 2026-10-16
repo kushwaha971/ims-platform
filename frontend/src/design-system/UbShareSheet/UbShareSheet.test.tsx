@@ -121,7 +121,7 @@ describe('UbShareSheet', () => {
     // `fireEvent`, not user-event: RTL's async wrapper flushes zero-delay
     // timers under fake timers, which is exactly the tick being asserted.
     fireEvent.click(screen.getByRole('link', { name: 'WhatsApp' }));
-    expect(props.onShared).toHaveBeenCalledWith('whatsapp');
+    expect(props.onShared).toHaveBeenCalledWith('whatsapp', MESSAGE);
     expect(props.onOpenChange).not.toHaveBeenCalled();
     act(() => {
       jest.runOnlyPendingTimers();
@@ -138,7 +138,7 @@ describe('UbShareSheet', () => {
     Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
     const props = renderSheet();
     await user.click(screen.getByRole('button', { name: 'Copy text' }));
-    await waitFor(() => expect(props.onShared).toHaveBeenCalledWith('copy'));
+    await waitFor(() => expect(props.onShared).toHaveBeenCalledWith('copy', MESSAGE));
     expect(writeText).toHaveBeenCalledWith(MESSAGE);
     expect(props.onOpenChange).toHaveBeenCalledWith(false);
     expect(props.onFailed).not.toHaveBeenCalled();
@@ -175,7 +175,7 @@ describe('UbShareSheet', () => {
     const user = userEvent.setup();
     const props = renderSheet();
     await user.click(screen.getByRole('button', { name: 'More…' }));
-    await waitFor(() => expect(props.onShared).toHaveBeenCalledWith('native'));
+    await waitFor(() => expect(props.onShared).toHaveBeenCalledWith('native', MESSAGE));
     expect(share).toHaveBeenCalledWith({ title: 'Send reminder', text: MESSAGE });
     expect(props.onOpenChange).toHaveBeenCalledWith(false);
   });
@@ -257,7 +257,26 @@ describe('UbShareSheet', () => {
       expect(decodeURIComponent(sms.split('&body=')[1] ?? '')).toBe(EDITED);
       fireEvent.click(screen.getByRole('button', { name: 'Copy text' }));
       await waitFor(() => expect(writeText).toHaveBeenCalledWith(EDITED));
-      expect(props.onShared).toHaveBeenCalledWith('copy');
+      expect(props.onShared).toHaveBeenCalledWith('copy', EDITED);
+    });
+
+    it('tells the caller which words left with each channel, so the log can keep them', () => {
+      /* Prevents: MSG-10 — the reminder log storing the server's template
+         while the customer received the merchant's edit. */
+      const props = renderSheet({
+        smsMessage: 'Short SMS default',
+        callHref: 'tel:+910',
+        labels: { ...LABELS, call: 'Call' },
+      });
+      fireEvent.click(screen.getByRole('link', { name: 'SMS' }));
+      expect(props.onShared).toHaveBeenLastCalledWith('sms', 'Short SMS default');
+      fireEvent.change(screen.getByRole('textbox', { name: 'Message' }), {
+        target: { value: EDITED },
+      });
+      fireEvent.click(screen.getByRole('link', { name: 'WhatsApp' }));
+      expect(props.onShared).toHaveBeenLastCalledWith('whatsapp', EDITED);
+      fireEvent.click(screen.getByRole('link', { name: 'Call' }));
+      expect(props.onShared).toHaveBeenLastCalledWith('call', '');
     });
 
     it('keeps the edit when the default is refetched, and follows the default when untouched', () => {

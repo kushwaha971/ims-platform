@@ -1369,8 +1369,25 @@ describe('sending a reminder from the khata page (LED-06)', () => {
     await waitFor(() =>
       expect(reminderService.createReminder).toHaveBeenCalledWith(ID, 'whatsapp_manual', undefined)
     );
-    await waitFor(() => expect(reminderService.sendReminder).toHaveBeenCalledWith('r1'));
+    await waitFor(() =>
+      expect(reminderService.sendReminder).toHaveBeenCalledWith('r1', PREVIEW_TEXT)
+    );
     expect(ledgerService.postLedgerEntry).not.toHaveBeenCalled();
+  });
+
+  it('records the words the merchant actually sent after editing them', async () => {
+    /* Prevents: MSG-10 — the log keeping the server's template while the
+       customer received the merchant's own words. */
+    const user = userEvent.setup();
+    const sheet = await openReminder(user);
+    const box = await within(sheet).findByRole('textbox', { name: 'Message' });
+    await user.clear(box);
+    await user.type(box, 'Ramesh ji, kal aa jaana');
+    await user.click(within(sheet).getByRole('link', { name: 'WhatsApp' }));
+
+    await waitFor(() =>
+      expect(reminderService.sendReminder).toHaveBeenCalledWith('r1', 'Ramesh ji, kal aa jaana')
+    );
   });
 
   it('records nothing for a sheet that was opened and closed', async () => {

@@ -210,7 +210,8 @@ describe('Module reminder tabs', () => {
     await waitFor(() =>
       expect(moduleService.sendSourceReminder).toHaveBeenCalledWith(
         { sourceType: 'lending_instalment', sourceId: 's1' },
-        'whatsapp_manual'
+        'whatsapp_manual',
+        'Namaste Mohan, Instalment 4 of LN-0042 for Rahul of Rs 5,625 is due.'
       )
     );
   });

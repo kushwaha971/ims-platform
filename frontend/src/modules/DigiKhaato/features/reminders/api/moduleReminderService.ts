@@ -96,13 +96,15 @@ export const previewSourceReminder = async (
  */
 export const sendSourceReminder = async (
   source: ReminderSourceRef,
-  channel: Extract<ReminderChannel, 'whatsapp_manual' | 'sms_manual' | 'call'>
+  channel: Extract<ReminderChannel, 'whatsapp_manual' | 'sms_manual' | 'call'>,
+  text?: string
 ): Promise<string> => {
   const created = await api.post<{ readonly data: { readonly id: string } }>(API_PATHS.REMINDERS, {
     source_type: source.sourceType,
     source_id: source.sourceId,
     channel,
   });
-  await api.post(API_PATHS.REMINDER_SEND(created.data.data.id));
+  // MSG-10 — the words the merchant sent, after any edit, are what is logged.
+  await api.post(API_PATHS.REMINDER_SEND(created.data.data.id), text ? { text } : undefined);
   return source.sourceId;
 };

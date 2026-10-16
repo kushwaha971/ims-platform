@@ -23,11 +23,13 @@ button that opens the payer's UPI app (`apps.payments.services.pay_link`).
 from __future__ import annotations
 
 import datetime as dt
-from dataclasses import dataclass
+from dataclasses import dataclass, is_dataclass, replace
 from decimal import Decimal
+from types import SimpleNamespace
 from typing import Any
 from urllib.parse import quote
 
+from apps.common.exceptions import ValidationFailed
 from apps.common.integrations.whatsapp.deep_link import WaMeBackend
 from apps.notifications.constants import TEMPLATE_REMINDER_MANUAL, TEMPLATE_REMINDER_MANUAL_SMS
 from apps.notifications.services.dispatch import whatsapp_digits
@@ -88,6 +90,44 @@ def sms_url(digits: str | None, text: str) -> str:
 
 def tel_url(digits: str | None) -> str | None:
     return f"tel:+{digits}" if digits else None
+
+
+def final_text(text: Any) -> str:
+    """WP-04 — the merchant's own words for a message, checked once for everyone.
+
+    Blank, not a string, longer than a `wa.me` prefill carries, or holding a NUL
+    byte is a field error on `text`. Leading and trailing space is trimmed; the
+    words inside are the merchant's and are not touched.
+    """
+    if not isinstance(text, str) or not text.strip():
+        raise ValidationFailed({"text": ["Enter a message."]})
+    words = text.strip()
+    if len(words) > MAX_SHARE_TEXT:
+        raise ValidationFailed({"text": [f"Keep the message under {MAX_SHARE_TEXT} characters."]})
+    if "\x00" in words:
+        raise ValidationFailed({"text": ["Enter plain text."]})
+    return words
+
+
+def with_final_text(composed: Any, text: Any) -> Any:
+    """The composed message with the merchant's edited words in place (MSG-10).
+
+    `None` means "unchanged" and returns `composed` as it is. Otherwise both the
+    WhatsApp and the SMS text become the edit and both links are rebuilt from
+    it, so the log, the link and what the customer reads are one string.
+    """
+    if text is None:
+        return composed
+    words = final_text(text)
+    changes = {
+        "text": words,
+        "sms_text": words,
+        "wa_url": wa_url(composed.digits, words),
+        "sms_url": sms_url(composed.digits, words),
+    }
+    if is_dataclass(composed):
+        return replace(composed, **changes)
+    return SimpleNamespace(**{**vars(composed), **changes})
 
 
 @dataclass(frozen=True, slots=True)

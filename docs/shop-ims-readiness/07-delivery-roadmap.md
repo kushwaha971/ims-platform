@@ -92,8 +92,7 @@ The outgoing-text inventory is in [11-message-inventory.md](11-message-inventory
 
 The Lending and Library dialogs were already editable. Still open:
 
-- bulk "Remind all" needs a template edit and preview step (MSG-07/08) and a backend `text` field;
-- the reminder log should store the merchant's final text (MSG-10);
+- ~~bulk "Remind all" editable (MSG-07/08)~~ and ~~the reminder log storing the merchant's final text (MSG-10)~~: done 16 Oct 2026;
 - the library counter slip and the pay-link text need moving onto a composer;
 - supplier messages do not exist yet.
 

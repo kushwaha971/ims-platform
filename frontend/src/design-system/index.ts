@@ -317,6 +317,9 @@ export type { UbDialogProps } from './UbDialog';
  */
 export { UbShareSheet } from './UbShareSheet';
 export type { UbShareChannel, UbShareSheetLabels, UbShareSheetProps } from './UbShareSheet';
+/** `UbMessageBox` — the sheet's editable message box, for a flow that is not a sheet ("Remind all"). */
+export { UbMessageBox, finalMessage, isBlankMessage } from './UbShareSheet';
+export type { UbMessageBoxLabels, UbMessageBoxProps } from './UbShareSheet';
 export { UbDateRangePicker } from './UbDateRangePicker';
 export type {
   UbDateRangePickerLabels,

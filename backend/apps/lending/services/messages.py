@@ -406,6 +406,7 @@ def _prepare(loan: LendingLoan, kind: str, collection_id: Any) -> tuple[str, dic
 
 def _compose(loan: LendingLoan, template: str, params: dict, text: Any = None) -> Any:
     from apps.ledger.services.messaging import compose_source_reminder
+    from apps.notifications.services.whatsapp_text import with_final_text
 
     composed = compose_source_reminder(
         tenant=loan.tenant,
@@ -413,23 +414,7 @@ def _compose(loan: LendingLoan, template: str, params: dict, text: Any = None) -
         params={**params, "recipient_name": loan.party.name},
         mobile=loan.party.mobile,
     )
-    if text is not None:
-        from apps.notifications.services.whatsapp_text import MAX_SHARE_TEXT, sms_url, wa_url
-
-        if not isinstance(text, str) or not text.strip():
-            raise ValidationFailed({"text": ["Enter a message."]})
-        words = text.strip()
-        if len(words) > MAX_SHARE_TEXT:
-            raise ValidationFailed(
-                {"text": [f"Keep the message under {MAX_SHARE_TEXT} characters."]}
-            )
-        if "\x00" in words:
-            raise ValidationFailed({"text": ["Enter plain text."]})
-        composed.text = words
-        composed.sms_text = words
-        composed.wa_url = wa_url(composed.digits, words)
-        composed.sms_url = sms_url(composed.digits, words)
-    return composed
+    return with_final_text(composed, text)
 
 
 def _last_today(loan: LendingLoan, source_id: Any) -> dict | None:

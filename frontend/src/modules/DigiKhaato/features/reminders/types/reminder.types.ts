@@ -118,6 +118,8 @@ export interface BulkReminderItem {
   readonly reminderId: string;
   readonly balance: string;
   readonly text: string;
+  /** The party's number, so an edited message gets its own link (MSG-07). */
+  readonly mobile: string | null;
   readonly waUrl: string;
   readonly smsUrl: string;
 }
@@ -202,6 +204,8 @@ export interface SendManualReminderArg {
   readonly partyId: string;
   readonly channel: 'whatsapp_manual' | 'sms_manual' | 'call';
   readonly note?: string;
+  /** The words that left, after any edit — what the log keeps (MSG-10). */
+  readonly text?: string;
 }
 
 export type { RequestStatus };

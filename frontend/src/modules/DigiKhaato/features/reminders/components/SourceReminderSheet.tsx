@@ -40,8 +40,9 @@ const CHANNEL_OF: Readonly<
 
 /**
  * A7 (PLT-X06 §2 flow 2) — the sheet for a reminder about one module record:
- * the server's text (read-only; a `fixed_templates` module's words are not
- * editable anyway), addressed to the recipient, with WhatsApp / SMS / Call.
+ * the server's text, which the merchant may change before it goes (WP-04; the
+ * words that left are what `/send` logs), addressed to the recipient, with
+ * WhatsApp / SMS / Call.
  *
  * Outside the module's hours the channels are REPLACED by the rule and the next
  * allowed time, and nothing can be recorded (§2: "the buttons are replaced").
@@ -77,11 +78,18 @@ export function SourceReminderSheet({
   }, [open, sourceType, sourceId, dispatch]);
 
   const onShared = useCallback(
-    (channel: UbShareChannel) => {
+    (channel: UbShareChannel, text: string) => {
       feedback.onShared(channel);
       const logged = CHANNEL_OF[channel];
+      // MSG-10 — the words that left, after any edit, are what the log keeps.
       if (logged)
-        void dispatch(sendSourceReminder({ source: { sourceType, sourceId }, channel: logged }));
+        void dispatch(
+          sendSourceReminder({
+            source: { sourceType, sourceId },
+            channel: logged,
+            text: text || undefined,
+          })
+        );
     },
     [feedback, dispatch, sourceType, sourceId]
   );

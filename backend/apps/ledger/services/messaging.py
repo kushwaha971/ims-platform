@@ -24,6 +24,12 @@ def compose_reminder(**kwargs: Any) -> Any:
     return _compose(**kwargs)
 
 
+def with_final_text(composed: Any, text: Any) -> Any:
+    from apps.notifications.services.whatsapp_text import with_final_text as _final
+
+    return _final(composed, text)
+
+
 def pay_line(**kwargs: Any) -> str:
     from apps.notifications.services.whatsapp_text import pay_line as _pay_line
 

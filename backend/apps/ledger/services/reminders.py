@@ -236,8 +236,14 @@ def _sent(ctx: Ctx, reminder: Reminder, *, balance: Decimal, log_id: Any, bulk: 
 
 
 @transaction.atomic
-def send_reminder(*, ctx: Ctx, reminder_id: Any, bulk: bool = False) -> dict:
+def send_reminder(*, ctx: Ctx, reminder_id: Any, bulk: bool = False, text: Any = None) -> dict:
     """`POST /reminders/{id}/send` — record the tap, or queue the provider SMS.
+
+    `text` (WP-04 MSG-10) is the message as the merchant sent it, after any
+    edit in the share sheet: the log stores it and the returned link carries
+    it. Without it the server's own words are used. A call has no message and
+    ignores it; a provider SMS goes out in its registered wording, so edited
+    words there are refused rather than recorded as something never sent.
 
     Returns `{"status_code": 200|202, "data": {...}, "warnings": [...]}` so the
     view stays a translation of the service's answer, not a second decision.
@@ -254,7 +260,7 @@ def send_reminder(*, ctx: Ctx, reminder_id: Any, bulk: bool = False) -> dict:
             details={"status": reminder.status},
         )
     if reminder.source_id is not None:
-        return _send_source_reminder(ctx, reminder, bulk=bulk)
+        return _send_source_reminder(ctx, reminder, bulk=bulk, text=text)
     party = _check_remindable(
         lock_party(tenant=ctx.tenant, party_id=reminder.party_id), reminder.channel
     )
@@ -277,6 +283,8 @@ def send_reminder(*, ctx: Ctx, reminder_id: Any, bulk: bool = False) -> dict:
         return {"status_code": 200, "data": {"tel_url": f"tel:+{digits}"}, "warnings": warnings}
 
     if reminder.channel == ReminderChannel.SMS:
+        if text is not None:
+            raise ValidationFailed({"text": ["This SMS goes out in its approved words."]})
         # FR-3 — the provider path. Console-only is refused in production and
         # allowed in dev, where the job records `skipped` (T-LED-06-5).
         if not messaging.sms_configured() and not settings.DEBUG:
@@ -296,12 +304,15 @@ def send_reminder(*, ctx: Ctx, reminder_id: Any, bulk: bool = False) -> dict:
             "warnings": warnings,
         }
 
-    composed = messaging.compose_reminder(
-        tenant=ctx.tenant,
-        party=party,
-        balance=balance,
-        note=reminder.note,
-        reference=_reference(reminder.id),
+    composed = messaging.with_final_text(
+        messaging.compose_reminder(
+            tenant=ctx.tenant,
+            party=party,
+            balance=balance,
+            note=reminder.note,
+            reference=_reference(reminder.id),
+        ),
+        text,
     )
     is_whatsapp = reminder.channel == ReminderChannel.WHATSAPP_MANUAL
     log = messaging.log_manual_share(
@@ -377,6 +388,8 @@ def bulk_reminders(*, ctx: Ctx, payload: dict) -> dict:
                 "party_name": party.name,
                 "reminder_id": str(reminder.id),
                 "balance": str(trade),
+                # MSG-07 — the dialog rebuilds the link from edited words.
+                "mobile": party.mobile,
                 "text": (
                     composed.sms_text if channel == ReminderChannel.SMS_MANUAL else composed.text
                 ),
@@ -628,7 +641,7 @@ def _create_source_reminder(ctx: Ctx, payload: dict) -> Reminder:
     )
 
 
-def _send_source_reminder(ctx: Ctx, reminder: Reminder, *, bulk: bool) -> dict:
+def _send_source_reminder(ctx: Ctx, reminder: Reminder, *, bulk: bool, text: Any = None) -> dict:
     candidate = _source_candidate(ctx, reminder.source_type, reminder.source_id)
     person, recipient = _source_people(ctx, candidate)
     check_reminder_allowed(
@@ -644,6 +657,8 @@ def _send_source_reminder(ctx: Ctx, reminder: Reminder, *, bulk: bool) -> dict:
         raise ValidationFailed({"party_id": ["Party has no mobile"]})
     amount = candidate.get("amount")  # BR-6: frozen at SEND, the source's current figure
     composed = _compose_source(ctx, candidate, person, recipient)
+    if reminder.channel != ReminderChannel.CALL:
+        composed = messaging.with_final_text(composed, text)
     log_id = None
     if reminder.channel != ReminderChannel.CALL:
         is_whatsapp = reminder.channel == ReminderChannel.WHATSAPP_MANUAL

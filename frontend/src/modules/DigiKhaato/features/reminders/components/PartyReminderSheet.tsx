@@ -94,10 +94,12 @@ function PartyReminderSheetBase({
   }, [open, partyId, dispatch]);
 
   const onShared = useCallback(
-    (channel: UbShareChannel) => {
+    (channel: UbShareChannel, text: string) => {
       feedback.onShared(channel);
       const logged = CHANNEL_OF[channel];
-      if (logged) void dispatch(sendManualReminder({ partyId, channel: logged }));
+      // MSG-10 — the words that left, after any edit, are what the log keeps.
+      if (logged)
+        void dispatch(sendManualReminder({ partyId, channel: logged, text: text || undefined }));
     },
     [feedback, dispatch, partyId]
   );

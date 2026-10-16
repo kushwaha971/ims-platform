@@ -201,6 +201,7 @@ beforeEach(() => {
       reminderId: `b${i + 1}`,
       balance: p.balance,
       text: `Namaste ${p.name} ji`,
+      mobile: p.mobile,
       waUrl: `https://wa.me/91${i}?text=hi`,
       smsUrl: `sms:+91${i}?&body=hi`,
     })),
@@ -343,7 +344,9 @@ describe('Remind all (LED-06 FR-7)', () => {
     expect(first).toHaveAttribute('href', 'https://wa.me/910?text=hi');
     expect(first).toHaveAttribute('target', '_blank');
     await user.click(first);
-    await waitFor(() => expect(service.sendReminder).toHaveBeenCalledWith('b1'));
+    await waitFor(() =>
+      expect(service.sendReminder).toHaveBeenCalledWith('b1', 'Namaste Ramesh Traders ji')
+    );
 
     // The next customer is the next tap; Skip records a dismissal.
     await within(dialog).findByRole('link', { name: 'WhatsApp Sunita Kirana' });
@@ -356,6 +359,60 @@ describe('Remind all (LED-06 FR-7)', () => {
     expect(within(dialog).getByText('1 has no mobile number')).toBeInTheDocument();
     expect(open).not.toHaveBeenCalled();
     open.mockRestore();
+  });
+});
+
+describe('Remind all with the merchant’s own words (WP-04 MSG-07/08)', () => {
+  it('lets each message be changed before WhatsApp opens, and records what went', async () => {
+    /* Prevents: "Remind all" handing every customer fixed server text the
+       merchant could not read-and-fix, and the log keeping words that were
+       never sent. */
+    const user = userEvent.setup();
+    renderWithProviders(<RemindersPageContent />);
+    await screen.findByText('Ramesh Traders');
+    await user.click(screen.getByRole('button', { name: 'Remind all on this page' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Remind customers' });
+
+    const box = await within(dialog).findByRole('textbox', { name: 'Message' });
+    expect(box).toHaveValue('Namaste Ramesh Traders ji');
+    await user.clear(box);
+    await user.type(box, 'Ramesh ji, Rs 3,000 baaki hai');
+    const link = within(dialog).getByRole('link', { name: 'WhatsApp Ramesh Traders' });
+    const href = link.getAttribute('href') ?? '';
+    expect(href.startsWith('https://wa.me/919876543210?text=')).toBe(true);
+    expect(new URL(href).searchParams.get('text')).toBe('Ramesh ji, Rs 3,000 baaki hai');
+
+    await user.click(link);
+    await waitFor(() =>
+      expect(service.sendReminder).toHaveBeenCalledWith('b1', 'Ramesh ji, Rs 3,000 baaki hai')
+    );
+    // The next customer starts from their own default, not the last edit.
+    await within(dialog).findByRole('link', { name: 'WhatsApp Sunita Kirana' });
+    expect(within(dialog).getByRole('textbox', { name: 'Message' })).toHaveValue(
+      'Namaste Sunita Kirana ji'
+    );
+  });
+
+  it('opens nothing for a blank message, says why, and can go back to the original', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<RemindersPageContent />);
+    await screen.findByText('Ramesh Traders');
+    await user.click(screen.getByRole('button', { name: 'Remind all on this page' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Remind customers' });
+
+    await user.clear(await within(dialog).findByRole('textbox', { name: 'Message' }));
+    expect(within(dialog).getByRole('alert')).toHaveTextContent('Write a message before sending.');
+    expect(
+      within(dialog).queryByRole('link', { name: 'WhatsApp Ramesh Traders' })
+    ).not.toBeInTheDocument();
+    expect(within(dialog).getByRole('button', { name: 'WhatsApp Ramesh Traders' })).toBeDisabled();
+
+    await user.click(within(dialog).getByRole('button', { name: 'Use the original message' }));
+    expect(within(dialog).getByRole('link', { name: 'WhatsApp Ramesh Traders' })).toHaveAttribute(
+      'href',
+      'https://wa.me/910?text=hi'
+    );
+    expect(service.sendReminder).not.toHaveBeenCalled();
   });
 });
 

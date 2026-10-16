@@ -50,11 +50,13 @@ export const sendSourceReminder = createAsyncThunk<
   {
     readonly source: ReminderSourceRef;
     readonly channel: Extract<ReminderChannel, 'whatsapp_manual' | 'sms_manual' | 'call'>;
+    /** The words that left, after any edit (MSG-10); absent for a call. */
+    readonly text?: string;
   },
   Rejected
->('moduleReminders/send', async ({ source, channel }, { rejectWithValue }) => {
+>('moduleReminders/send', async ({ source, channel, text }, { rejectWithValue }) => {
   try {
-    return await sendSourceReminderRequest(source, channel);
+    return await sendSourceReminderRequest(source, channel, text);
   } catch (error) {
     return rejectWithValue(toApiError(error, 'reminders.error.body'));
   }

@@ -24,7 +24,7 @@ First pass, 16 October 2026 (cloud session). This is the MSG-01 coverage list re
 - A blank message opens no channel and says why.
 - The edit is kept in memory only.
 
-Its words come from `useShareSheetLabels()`. A source-scan guard in `src/tests/sharedOwners.test.ts` forbids `window.open(buildWhatsAppUrl…)`.
+Its words come from `useShareSheetLabels()`. The box itself is `UbMessageBox` (same folder), so a flow that is not a sheet — "Remind all" — uses the same rules rather than a copy. `onShared(channel, text)` hands the caller the words that left with each channel, so the caller can record them (MSG-10). A source-scan guard in `src/tests/sharedOwners.test.ts` forbids `window.open(buildWhatsAppUrl…)`.
 
 The Lending and Library dialogs are server-prepared composers. The server returns `wa_url` built from the edited text, and the tap is recorded. They were already editable and stay the reference for server-recorded messages.
 
@@ -34,12 +34,12 @@ Channel: W = WhatsApp handoff, S = device SMS, C = copy, N = platform share, T =
 
 | # | App | Trigger | Channels | Text owner | Recipient | Editable | Recorded on server | Status / evidence |
 |---|---|---|---|---|---|---|---|---|
-| M-01 | Udhaar / Shop customers | Khata "Remind" (`usePartyReminder` → `PartyReminderSheet`) | W S T C N | Server preview (`ledger/services/reminders.preview_reminder`) | Party mobile | **Yes**, since WP-04 (shared composer) | The reminder log stores the SERVER text, not the edit | Composer tests in `UbShareSheet.test.tsx`; browser `e2e/share-composer-look.mjs` 24/24 at 360/1280 px. Gap: MSG-10 audit of the final text. |
-| M-02 | Shop | Bill/source reminder (`SourceReminderSheet`) | W S T C N | Server source preview | Document party | **Yes**, since WP-04 | Same gap as M-01 | Composer tests |
+| M-01 | Udhaar / Shop customers | Khata "Remind" (`usePartyReminder` → `PartyReminderSheet`) | W S T C N | Server preview (`ledger/services/reminders.preview_reminder`) | Party mobile | **Yes**, since WP-04 (shared composer) | **Yes, the final text** (MSG-10): `/reminders/{id}/send {text}` logs the words that left and builds the returned link from them | `test_reminder_final_text.py` (failed before: the log kept the template); `PartyDetailPageContent.test.tsx` "records the words the merchant actually sent"; browser `e2e/share-composer-look.mjs` |
+| M-02 | Shop / Lending / Library | Record reminder (`SourceReminderSheet`) | W S T C N | Server source preview | Document party or guardian | **Yes**, since WP-04 | **Yes, the final text** (MSG-10), same field | `test_module_reminders.py::test_a_record_reminder_logs_the_words_the_merchant_sent`; `ModuleReminders.test.tsx` |
 | M-03 | Shop / Payments | Receipt share (`PaymentReceiptPageContent`) | W S C N | Client (`receipt.shareText`) | Payment party | **Yes**, since WP-04 | Not recorded | Composer tests |
 | M-04 | Shop sales | Invoice, estimate, order and challan "Share on WhatsApp" (`useInvoiceDetail`) | W S C N | Client `shareText`, with the live share link minted first | Party or walk-in mobile | **Yes**, since WP-04. Before, it opened WhatsApp with fixed text through `window.open` after a request, which phones and in-app browsers block. | The share link is recorded, the text is not | `useInvoiceDetail.share.test.tsx` failed before (pop-up and no composer) and passes after |
 | M-05 | Shop sales | "Copy link" | C (link only) | n/a (URL) | n/a | Not applicable: no prose | Link minted | Unchanged |
-| M-06 | Udhaar / Shop | "Remind all" bulk (`BulkReminderDialog`) | W, one tap per party | Server (`bulk_reminders` → `wa_url` per party) | Each party | **No**. Fixed server text per party. | Scheduled row per party, marked on tap | **Open (MSG-07/08)**: needs a template edit + preview step before the batch is built |
+| M-06 | Udhaar / Shop | "Remind all" bulk (`BulkReminderDialog`) | W, one tap per party | Server (`bulk_reminders` → text, `wa_url` and now `mobile` per party) | Each party | **Yes**, per customer, since WP-04 (MSG-07/08): each step shows that customer's words in `UbMessageBox`; an edit rebuilds the link from the edit and the number; a blank message offers no link; the next customer starts from their own default | Scheduled row per party; the tap sends the final words to `/send`, which logs them | `RemindersPageContent.test.tsx` "Remind all with the merchant's own words" (failed before); `test_reminder_final_text.py` bulk case. Not built: one shared edit applied to everyone at once (the per-customer edit covers the need for now; a shop-wide template editor is not built). |
 | M-07 | Lending | Borrower reminder / receipt (`lending/MessageDialog`) | W S T | Server (`lending/services/messages`) with `text` | Borrower | **Yes** (reference) | Recorded with text | Existing `MessageDialog.test.tsx` |
 | M-08 | Library | Member fee / receipt / custom message (`library/MessageDialog`) | W | Server (`fee_messages.preview/send`, `custom_body`) | Member or guardian | **Yes** | Recorded | Existing tests |
 | M-09 | Library | Bulk fee message (`BulkMessageDrawer`) | W, one tap per member | Server `bulk_prepare` with shared text | Audience | **Yes**, one shared text; no per-member override | Recorded per tap | MSG-07 per-recipient override not built |
@@ -51,7 +51,7 @@ Channel: W = WhatsApp handoff, S = device SMS, C = copy, N = platform share, T =
 
 ## Next
 
-1. M-06 bulk reminders: add a template edit and preview step before `POST /reminders/bulk`, sending the approved text so each `wa_url` uses it (MSG-07/08). This needs a backend `text` field on the bulk endpoint.
-2. M-01/M-02: send the edited final text to the reminder log when the merchant taps a channel (MSG-10). This is a server change on the reminder `mark` / `send` path.
-3. M-10 and M-11 onto a composer.
+1. ~~M-06 bulk reminders editable (MSG-07/08)~~ and ~~M-01/M-02 final text in the log (MSG-10)~~: done 16 Oct 2026. `final_text` / `with_final_text` in `notifications/services/whatsapp_text.py` is the one owner of the edited-text rule (blank, over 900 characters, NUL, not a string), and Lending's dialog uses it too. A provider SMS refuses `text`, because it goes out in its approved words.
+2. M-10 and M-11 onto a composer.
+3. M-03/M-04: the receipt and invoice texts are not recorded at all; recording them needs a message-log row for a share that is not a reminder (decide with WP-08).
 4. M-12 supplier messages, when built, start on the composer.

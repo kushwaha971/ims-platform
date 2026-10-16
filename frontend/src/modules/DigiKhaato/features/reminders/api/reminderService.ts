@@ -217,8 +217,13 @@ export const createReminder = async (
   return toReminder(response.data.data);
 };
 
-export const sendReminder = async (reminderId: string): Promise<void> => {
-  await api.post(API_PATHS.REMINDER_SEND(reminderId));
+/**
+ * Records the tap. `text` is the message as the merchant sent it, after any
+ * edit (WP-04 MSG-10): the server logs those words, not its own template.
+ * Omitted for a call, which carries none.
+ */
+export const sendReminder = async (reminderId: string, text?: string): Promise<void> => {
+  await api.post(API_PATHS.REMINDER_SEND(reminderId), text ? { text } : undefined);
 };
 
 export const markReminder = async (
@@ -243,6 +248,7 @@ export const bulkReminders = async (
         reminder_id: string;
         balance: string;
         text: string;
+        mobile: string | null;
         wa_url: string;
         sms_url: string;
       }[];
@@ -260,6 +266,7 @@ export const bulkReminders = async (
       reminderId: i.reminder_id,
       balance: i.balance,
       text: i.text,
+      mobile: i.mobile ?? null,
       waUrl: i.wa_url,
       smsUrl: i.sms_url,
     })),

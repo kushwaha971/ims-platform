@@ -126,26 +126,30 @@ Shared owners (reuse these, do not copy them):
   `backend/tests/architecture/test_shared_owners.py` and
   `backend/apps/purchases/tests/test_bill_due_owner.py`. When you clear a debt,
   add its pattern there.
-- Browser checks: `node e2e/purchase-recovery-look.mjs` and
-  `node e2e/sales-recovery-look.mjs`, on a live stack.
+- Browser checks: `node e2e/purchase-recovery-look.mjs`,
+  `node e2e/sales-recovery-look.mjs` and `node e2e/share-composer-look.mjs`
+  (khata reminder + Remind all, 44 checks), on a live stack.
 
 WP-04 has started: read 11-message-inventory.md. `UbShareSheet` is the
 editable composer for client-built messages, and its labels come from
-`src/hooks/useShareSheetLabels.ts`. Never `window.open` a WhatsApp/SMS link
+`src/hooks/useShareSheetLabels.ts`. Its message box is `UbMessageBox` (use it
+for any flow that is not a sheet, as "Remind all" does), and `onShared(channel,
+text)` gives the words that left. Reminders send those words to
+`POST /reminders/{id}/send {text}`; the server rule for edited text (blank,
+over 900 characters, NUL) is `notifications/services/whatsapp_text.final_text` /
+`with_final_text`, shared with Lending. Never `window.open` a WhatsApp/SMS link
 built from text; the source-scan guard fails on it. Lending/Library dialogs are
 the server-prepared reference.
 
 **Next, in order:**
-1. WP-04 M-06: bulk "Remind all" (`BulkReminderDialog`,
-   `ledger/services/reminders.bulk_reminders`). Add an editable template and
-   preview step before the batch is built, and pass the approved text to the
-   server so each `wa_url` uses it (MSG-07/08). Fail-first API and UI tests.
-2. WP-04 MSG-10: when a khata/source reminder channel is tapped, record the
-   merchant's final text, not only the server default.
-3. WP-04 M-10 (library counter slip) and M-11 (pay-link text) onto a composer.
-4. The UI-composition audit (WP-03 D-04) goes alongside WP-05. D-05
+1. WP-04 M-10 (library counter slip, `CounterPrompts`) and M-11 (pay-link
+   text, `UpiPayQrDialog`) onto a composer. Done before this: M-06 Remind all
+   and MSG-10 final text (16 Oct; see 11-message-inventory.md).
+2. WP-04 M-03/M-04: decide (with WP-08) whether receipt/invoice share text is
+   recorded; today only the share link is.
+3. The UI-composition audit (WP-03 D-04) goes alongside WP-05. D-05
    (quantities) is optional.
-5. Still owed to WP-02, needing the owner or a device: a physical
+4. Still owed to WP-02, needing the owner or a device: a physical
    network-interruption check on a phone, and the owner's SH-011 release
    review in the tracker. Do not wait on these.
 

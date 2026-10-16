@@ -340,3 +340,25 @@ def test_a_party_reminder_quotes_the_shop_figure_never_the_loan(tenant: Any, api
     assert str(borrower.id) in due_ids and str(only_loan.id) not in due_ids
     refused = client.post(reverse(PREVIEW), {"party_id": str(only_loan.id)}, format="json")
     assert refused.json()["error"]["code"] == "nothing_due"
+
+
+def test_a_record_reminder_logs_the_words_the_merchant_sent(world: dict) -> None:
+    """WP-04 MSG-10 — the sheet is editable, so `/send` takes the final `text`
+    and the log and the returned link carry it, not the template's words."""
+    from urllib.parse import unquote
+
+    from apps.notifications.models import MessageLog
+
+    tenant, rahul, mohan = world["tenant"], world["rahul"], world["mohan"]
+    cand = candidate(rahul, recipient=mohan)
+    CANDIDATES[tenant.pk] = [cand]
+    client = world["client"]
+    rid = _create(client, cand).json()["data"]["id"]
+
+    words = "Mohan ji, kal kist jama kar dena."
+    sent = client.post(reverse("v1:reminder-send", args=[rid]), {"text": words}, format="json")
+
+    assert sent.status_code == 200, sent.content
+    assert unquote(sent.json()["data"]["wa_url"]).endswith(words)
+    log = MessageLog.objects.get(pk=Reminder.objects.get(pk=rid).message_log_id)
+    assert log.payload["body"] == words
