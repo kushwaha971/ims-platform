@@ -25,7 +25,6 @@ export interface PurchaseBillHeader {
 
 export interface PurchaseBillSchemas {
   readonly purchaseBillSchema: Yup.ObjectSchema<PurchaseBillHeader>;
-  readonly voidReasonSchema: Yup.ObjectSchema<{ reason: string }>;
 }
 
 export const usePurchaseBillSchemas = (): PurchaseBillSchemas => {
@@ -43,10 +42,6 @@ export const usePurchaseBillSchemas = (): PurchaseBillSchemas => {
       notes: v.boundedText(2000),
     }) as Yup.ObjectSchema<PurchaseBillHeader>;
 
-    const voidReasonSchema = Yup.object({
-      reason: v.reasonText('purchases.void.reasonRequired'),
-    }) as Yup.ObjectSchema<{ reason: string }>;
-
-    return { purchaseBillSchema, voidReasonSchema };
+    return { purchaseBillSchema };
   }, [v, t]);
 };

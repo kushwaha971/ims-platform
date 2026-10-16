@@ -1,38 +1,24 @@
 'use client';
 
-import { useCallback, useId, useState } from 'react';
+import { useCallback, useState } from 'react';
 
-import { yupResolver } from '@hookform/resolvers/yup';
 import { BookOpen, Package, Wallet } from 'lucide-react';
-import { useForm, useWatch } from 'react-hook-form';
 
-import {
-  UbButton,
-  UbDialog,
-  UbField,
-  UbForm,
-  UbLink,
-  UbStack,
-  UbStatusBanner,
-  UbText,
-  UbTextArea,
-} from 'src/design-system';
+import { ReasonConfirmDialog } from 'src/components/records/ReasonConfirmDialog';
+import { UbButton, UbDialog, UbLink, UbStack, UbStatusBanner, UbText } from 'src/design-system';
 import { useAppDispatch } from 'src/hooks/useAppStore';
 import { useTranslation } from 'src/hooks/useTranslation';
 import { showSnackbar } from 'src/redux/slice/snackbarSlice';
 import { ROUTES } from 'src/routes';
 import { formatInr, sumMoney } from 'src/utils/money';
-import { hasReason } from 'src/utils/reason';
 
 import { originHref } from '../originLinks';
 import { voidCreditNote, voidInvoice } from '../redux/salesFlowThunk';
-import { useSalesFlowSchemas } from '../validation/salesFlowSchemas';
 import { voidConsequences } from '../view-model/voidConsequences';
 
 import type { SalesDocument } from '../types/sales.types';
 import type { UnallocatedPayment } from '../types/salesFlows.types';
 import 'src/i18n/catalogues/sales';
-import 'src/i18n/catalogues/validation';
 
 const ICONS = { stock: Package, ledger: BookOpen, payment: Wallet } as const;
 
@@ -67,6 +53,10 @@ const ICONS = { stock: Package, ledger: BookOpen, payment: Wallet } as const;
  * the answer will not change until something changes over there. A question
  * (409 `document_origin_confirm`) shows the module's words and turns the button
  * into "Void anyway", which resends with `confirm_origin: true`.
+ *
+ * The reason step is `ReasonConfirmDialog` (WP-03 D-04c): the consequences,
+ * refusals and origin banners are this file's; the reason, the footer and
+ * "no closing mid-request" are the shell's.
  */
 const LIVE_NOTE = (status: string): boolean => status !== 'void' && status !== 'draft';
 
@@ -76,31 +66,23 @@ export function VoidDocumentDialog({
 }: Readonly<{ doc: SalesDocument; onClose: () => void }>): React.JSX.Element {
   const { t } = useTranslation();
   const dispatch = useAppDispatch();
-  const { voidReasonSchema } = useSalesFlowSchemas();
-  const formId = useId();
   const [busy, setBusy] = useState(false);
   const [left, setLeft] = useState<readonly UnallocatedPayment[] | null>(null);
   const [refusal, setRefusal] = useState<string | null>(null);
   const [originLock, setOriginLock] = useState<string | null>(null);
   const [originQuestion, setOriginQuestion] = useState<string | null>(null);
-  const rhf = useForm<{ reason: string }>({
-    resolver: yupResolver(voidReasonSchema),
-    mode: 'onTouched',
-    defaultValues: { reason: '' },
-  });
   const credit = doc.kind === 'credit_note';
-  const reason = useWatch({ control: rhf.control, name: 'reason' }) ?? '';
   const blocking = credit ? undefined : doc.links.creditNotes.find((n) => LIVE_NOTE(n.status));
 
   const submit = useCallback(
-    async (values: { reason: string }) => {
+    async (reason: string) => {
       setBusy(true);
       setRefusal(null);
       const thunk = credit ? voidCreditNote : voidInvoice;
       const result = await dispatch(
         thunk({
           id: doc.id,
-          reason: values.reason.trim(),
+          reason,
           ...(originQuestion ? { confirmOrigin: true } : {}),
         })
       );
@@ -194,36 +176,28 @@ export function VoidDocumentDialog({
     );
   }
 
-  return (
-    <UbDialog
-      open
-      onOpenChange={(next) => !next && onClose()}
-      title={t(credit ? 'sales.void.titleCreditNote' : 'sales.void.title', {
-        number: doc.number ?? '',
-      })}
-      closeLabel={t('common.action.close')}
-      footer={
-        <>
-          <UbButton variant="secondary" onClick={onClose} disabled={busy}>
-            {t('common.action.cancel')}
-          </UbButton>
-          <UbButton
-            type="submit"
-            form={formId}
-            variant="destructive"
-            busy={busy}
-            busyLabel={t('sales.void.working')}
-            disabled={!!blocking || !!originLock || !hasReason(reason)}
-            data-testid="void-confirm"
-          >
-            {originQuestion
-              ? t('sales.void.confirmAnyway')
-              : t(credit ? 'sales.void.confirmCreditNote' : 'sales.void.confirm')}
-          </UbButton>
-        </>
-      }
-    >
-      {blocking ? (
+  const title = t(credit ? 'sales.void.titleCreditNote' : 'sales.void.title', {
+    number: doc.number ?? '',
+  });
+
+  if (blocking) {
+    return (
+      <UbDialog
+        open
+        onOpenChange={(next) => !next && onClose()}
+        title={title}
+        closeLabel={t('common.action.close')}
+        footer={
+          <>
+            <UbButton variant="secondary" onClick={onClose}>
+              {t('common.action.cancel')}
+            </UbButton>
+            <UbButton variant="destructive" disabled data-testid="void-confirm">
+              {t(credit ? 'sales.void.confirmCreditNote' : 'sales.void.confirm')}
+            </UbButton>
+          </>
+        }
+      >
         <UbStack gap={2} data-testid="void-blocked">
           <UbStatusBanner
             tone="warning"
@@ -234,49 +208,59 @@ export function VoidDocumentDialog({
             {t('sales.void.openCreditNote', { number: blocking.number ?? '' })}
           </UbLink>
         </UbStack>
-      ) : (
-        <UbForm id={formId} form={rhf} onSubmit={submit}>
-          {refusal && <UbStatusBanner tone="error" title={refusal} />}
-          {originLock && (
-            <UbStack gap={2} data-testid="void-origin-locked">
-              <UbStatusBanner
-                tone="warning"
-                title={originLock}
-                description={t('sales.void.originLockedBody')}
-                action={
-                  originLink ? (
-                    <UbLink href={originLink}>{t('sales.void.openOrigin')}</UbLink>
-                  ) : undefined
-                }
-              />
-            </UbStack>
-          )}
-          {originQuestion && (
-            <UbStack gap={2} data-testid="void-origin-confirm">
-              <UbStatusBanner tone="warning" title={originQuestion} />
-            </UbStack>
-          )}
-          <UbStack gap={2} data-testid="void-consequences">
-            {voidConsequences(doc).map(({ key, id, values }) => {
-              const Icon = ICONS[key];
-              return (
-                <UbStack key={key} direction="row" gap={2} align="start">
-                  <Icon className="mt-0.5 h-4 w-4 shrink-0 text-text-tertiary" aria-hidden />
-                  <UbText variant="body-sm">{t(id, values)}</UbText>
-                </UbStack>
-              );
-            })}
-          </UbStack>
-          <UbField
-            name="reason"
-            label={t('sales.void.reason')}
-            placeholder={t('sales.void.reasonPlaceholder')}
-            required
-          >
-            {(field) => <UbTextArea {...field} maxLength={160} rows={2} />}
-          </UbField>
-        </UbForm>
+      </UbDialog>
+    );
+  }
+
+  return (
+    <ReasonConfirmDialog
+      title={title}
+      confirmLabel={
+        originQuestion
+          ? t('sales.void.confirmAnyway')
+          : t(credit ? 'sales.void.confirmCreditNote' : 'sales.void.confirm')
+      }
+      workingLabel={t('sales.void.working')}
+      reasonLabel={t('sales.void.reason')}
+      reasonPlaceholder={t('sales.void.reasonPlaceholder')}
+      requiredMessageId="sales.void.reasonRequired"
+      busy={busy}
+      onConfirm={submit}
+      onClose={onClose}
+      confirmDisabled={!!originLock}
+      confirmTestId="void-confirm"
+    >
+      {refusal && <UbStatusBanner tone="error" title={refusal} />}
+      {originLock && (
+        <UbStack gap={2} data-testid="void-origin-locked">
+          <UbStatusBanner
+            tone="warning"
+            title={originLock}
+            description={t('sales.void.originLockedBody')}
+            action={
+              originLink ? (
+                <UbLink href={originLink}>{t('sales.void.openOrigin')}</UbLink>
+              ) : undefined
+            }
+          />
+        </UbStack>
       )}
-    </UbDialog>
+      {originQuestion && (
+        <UbStack gap={2} data-testid="void-origin-confirm">
+          <UbStatusBanner tone="warning" title={originQuestion} />
+        </UbStack>
+      )}
+      <UbStack gap={2} data-testid="void-consequences">
+        {voidConsequences(doc).map(({ key, id, values }) => {
+          const Icon = ICONS[key];
+          return (
+            <UbStack key={key} direction="row" gap={2} align="start">
+              <Icon className="mt-0.5 h-4 w-4 shrink-0 text-text-tertiary" aria-hidden />
+              <UbText variant="body-sm">{t(id, values)}</UbText>
+            </UbStack>
+          );
+        })}
+      </UbStack>
+    </ReasonConfirmDialog>
   );
 }

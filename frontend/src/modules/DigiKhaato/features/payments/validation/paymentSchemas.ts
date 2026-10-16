@@ -32,7 +32,6 @@ import type { ApplyFormValues, PaymentFormValues } from '../types/payment.types'
  */
 export interface PaymentSchemas {
   readonly paymentSchema: Yup.ObjectSchema<PaymentFormValues>;
-  readonly voidReasonSchema: Yup.ObjectSchema<{ reason: string }>;
   /**
    * A4a — Apply to bills: each row ≤ its bill's due ("Max ₹…"), Σ ≤ what is not yet applied,
    * and at least one row. Built for the payment's figure, because the cap is the payment's.
@@ -87,10 +86,6 @@ export const usePaymentSchemas = (): PaymentSchemas => {
       return true;
     }) as unknown as Yup.ObjectSchema<PaymentFormValues>;
 
-    const voidReasonSchema = Yup.object({
-      reason: v.reasonText('payments.void.reason.required'),
-    }) as Yup.ObjectSchema<{ reason: string }>;
-
     const applySchemaFor = (unallocated: string): Yup.ObjectSchema<ApplyFormValues> =>
       Yup.object({
         rows: Yup.array(
@@ -124,7 +119,7 @@ export const usePaymentSchemas = (): PaymentSchemas => {
         return true;
       }) as unknown as Yup.ObjectSchema<ApplyFormValues>;
 
-    return { paymentSchema, voidReasonSchema, applySchemaFor };
+    return { paymentSchema, applySchemaFor };
   }, [v, t]);
 };
 

@@ -205,17 +205,32 @@ describe('the delivery challan (Shop item 4)', () => {
 });
 
 describe('the void dialog (SAL-05 §7)', () => {
-  it('T-SAL05-8: states the consequences and keeps Void disabled below three characters', async () => {
+  /**
+   * WP-03 D-04c — Void is not greyed for a short reason any more (the shared
+   * reason dialog says why instead), so the rule is asserted on what is SENT:
+   * nothing below three characters, the reason once it has three.
+   */
+  it('T-SAL05-8: states the consequences and sends no void below three characters', async () => {
     signIn(['sales.invoice.read', 'sales.invoice.void']);
     const doc = makeDocument({ lines: [wireLine({ qty: '2.000' })] });
+    credits.voidInvoice.mockResolvedValue({
+      document: { ...doc, status: 'void' },
+      warnings: [],
+      rule46: null,
+      partyBalance: null,
+      ledgerEntryId: null,
+      voidResult: { documentId: doc.id, partyBalance: null, unallocatedPayments: [] },
+    });
     renderWithProviders(<VoidDocumentDialog doc={doc} onClose={jest.fn()} />);
     expect(screen.getByTestId('void-consequences')).toHaveTextContent('Stock: +2 Basmati Rice 5kg');
     const confirm = screen.getByTestId('void-confirm');
-    expect(confirm).toBeDisabled();
     await userEvent.type(screen.getByLabelText('Reason'), 'no');
-    expect(confirm).toBeDisabled();
+    await userEvent.click(confirm);
+    expect(credits.voidInvoice).not.toHaveBeenCalled();
+    expect(screen.getByLabelText('Reason')).toHaveAccessibleDescription(/.+/);
     await userEvent.type(screen.getByLabelText('Reason'), 't mine');
-    expect(confirm).toBeEnabled();
+    await userEvent.click(confirm);
+    await waitFor(() => expect(credits.voidInvoice).toHaveBeenCalledTimes(1));
   });
 
   it('FR-7: after voiding a paid walk-in bill, says the money goes back over the counter', async () => {

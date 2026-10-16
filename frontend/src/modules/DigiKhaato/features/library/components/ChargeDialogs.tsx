@@ -6,6 +6,7 @@ import { yupResolver } from '@hookform/resolvers/yup';
 import { useForm, useWatch } from 'react-hook-form';
 import * as Yup from 'yup';
 
+import { ReasonConfirmDialog } from 'src/components/records/ReasonConfirmDialog';
 import {
   UbButton,
   UbChoiceChips,
@@ -13,6 +14,7 @@ import {
   UbForm,
   UbMoneyInput,
   UbStack,
+  UbStatusBanner,
   UbText,
   UbTextArea,
   UbTextInput,
@@ -22,7 +24,7 @@ import { useTranslation } from 'src/hooks/useTranslation';
 import { useValidationSchemas } from 'src/hooks/useValidationSchemas';
 import { readDetailString } from 'src/utils/errorDetails';
 import { addMoney, formatInr, isNegativeAmount, moneyOrZero, subtractMoney } from 'src/utils/money';
-import { REASON_MAX_CHARS, hasReason } from 'src/utils/reason';
+import { REASON_MAX_CHARS } from 'src/utils/reason';
 
 import {
   MANUAL_CHARGE_KINDS,
@@ -32,7 +34,7 @@ import {
   type WaiveFormValues,
 } from '../types/charge.types';
 
-import { LibraryDialog } from './LibraryOverlays';
+import { LIBRARY_OVERLAY_CLASSNAME, LibraryDialog } from './LibraryOverlays';
 
 import type { ChargeOutcome } from '../hooks/useMemberCharges';
 
@@ -167,6 +169,7 @@ export function WaiveChargeDialog({
 /**
  * F06 (LIB-07 FR-8) — a charge made in error is reversed with a reason; a
  * charge with payments against it is refused, and the dialog says so in place.
+ * The dialog is `ReasonConfirmDialog` (WP-03 D-04c).
  */
 export function ReverseChargeDialog({
   charge,
@@ -180,15 +183,11 @@ export function ReverseChargeDialog({
   onSubmit: (reason: string) => Promise<ChargeOutcome>;
 }>): React.JSX.Element {
   const { t } = useTranslation();
-  const [reason, setReason] = useState('');
   const [failure, setFailure] = useState<string | null>(null);
 
-  const send = async () => {
-    if (!hasReason(reason)) {
-      setFailure(t('library.member.reason.required'));
-      return;
-    }
-    const outcome = await onSubmit(reason.trim());
+  const send = async (reason: string) => {
+    setFailure(null);
+    const outcome = await onSubmit(reason);
     if (outcome.ok) onClose();
     else
       setFailure(
@@ -199,49 +198,24 @@ export function ReverseChargeDialog({
   };
 
   return (
-    <LibraryDialog
-      open
-      onOpenChange={(next) => !next && onClose()}
+    <ReasonConfirmDialog
       title={t('library.charge.reverse.title')}
       description={charge.description}
-      closeLabel={t('common.action.close')}
-      footer={
-        <>
-          <UbButton variant="secondary" onClick={onClose} disabled={busy} autoFocus>
-            {t('common.action.cancel')}
-          </UbButton>
-          <UbButton
-            variant="destructive"
-            onClick={() => void send()}
-            busy={busy}
-            busyLabel={t('library.working')}
-          >
-            {t('library.charge.reverse')}
-          </UbButton>
-        </>
-      }
+      confirmLabel={t('library.charge.reverse')}
+      workingLabel={t('library.working')}
+      reasonLabel={t('library.member.reason')}
+      reasonPlaceholder={t('library.charge.reverse.placeholder')}
+      requiredMessageId="library.member.reason.required"
+      busy={busy}
+      onConfirm={send}
+      onClose={onClose}
+      className={LIBRARY_OVERLAY_CLASSNAME}
     >
-      <UbStack gap={3}>
-        <UbText variant="body-sm" tone="secondary">
-          {t('library.charge.reverse.body', { amount: formatInr(charge.amount) })}
-        </UbText>
-        <UbTextInput
-          id="library-reverse-reason"
-          name="library-reverse-reason"
-          aria-label={t('library.member.reason')}
-          placeholder={t('library.charge.reverse.placeholder')}
-          value={reason}
-          onChange={setReason}
-          maxLength={REASON_MAX_CHARS}
-          invalid={!!failure}
-        />
-        {failure && (
-          <UbText variant="body-sm" tone="formError">
-            {failure}
-          </UbText>
-        )}
-      </UbStack>
-    </LibraryDialog>
+      <UbText variant="body-sm" tone="secondary">
+        {t('library.charge.reverse.body', { amount: formatInr(charge.amount) })}
+      </UbText>
+      {failure && <UbStatusBanner tone="error" title={failure} />}
+    </ReasonConfirmDialog>
   );
 }
 

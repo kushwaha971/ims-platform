@@ -43,15 +43,6 @@ export interface LedgerSchemas {
    * out again — see `entryFields` below.
    */
   readonly ledgerCorrectionSchema: Yup.ObjectSchema<LedgerCorrectionFormValues>;
-  /**
-   * The reverse dialog's single field.
-   *
-   * It IS `ledgerCorrectionSchema`'s `reason`, pulled out so the dialog does not
-   * carry five controls' rules to validate one box — and so the two can never
-   * disagree about how short a reason may be, which would mean a merchant being
-   * refused in one dialog for what the other accepted.
-   */
-  readonly reverseReasonSchema: Yup.ObjectSchema<{ reason: string }>;
 }
 
 export const useLedgerSchemas = (): LedgerSchemas => {
@@ -136,10 +127,6 @@ export const useLedgerSchemas = (): LedgerSchemas => {
         t('ledger.entry.mode.required'),
         creditNeedsAMode
       ) as Yup.ObjectSchema<LedgerCorrectionFormValues>,
-
-      reverseReasonSchema: Yup.object({
-        reason: reasonField,
-      }) as Yup.ObjectSchema<{ reason: string }>,
 
       openingBalanceSchema: Yup.object({
         // `> 0` by default, which is EC-3: a ₹0.00 opening is "no opening", and

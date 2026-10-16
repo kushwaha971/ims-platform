@@ -47,7 +47,6 @@ export interface ReturnCaps {
 }
 
 export interface SalesFlowSchemas {
-  readonly voidReasonSchema: Yup.ObjectSchema<{ reason: string }>;
   readonly applySchemaFor: (max: string) => Yup.ObjectSchema<{ invoiceId: string; amount: string }>;
   readonly creditNoteSchemaFor: (caps: ReturnCaps) => Yup.ObjectSchema<CreditNoteFormValues>;
 }
@@ -57,10 +56,6 @@ export const useSalesFlowSchemas = (): SalesFlowSchemas => {
   const { t } = useTranslation();
 
   return useMemo(() => {
-    const voidReasonSchema = Yup.object({
-      reason: v.reasonText('sales.void.reasonRequired'),
-    }) as Yup.ObjectSchema<{ reason: string }>;
-
     const applySchemaFor = (max: string) =>
       Yup.object({
         invoiceId: Yup.string().defined().default('').required(t('sales.creditNote.apply.pick')),
@@ -123,6 +118,6 @@ export const useSalesFlowSchemas = (): SalesFlowSchemas => {
         });
       }) as Yup.ObjectSchema<CreditNoteFormValues>;
 
-    return { voidReasonSchema, applySchemaFor, creditNoteSchemaFor };
+    return { applySchemaFor, creditNoteSchemaFor };
   }, [v, t]);
 };

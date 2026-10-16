@@ -25,7 +25,6 @@ import type { ExpenseFormValues } from '../types/expense.types';
  */
 export interface ExpenseSchemas {
   readonly expenseSchema: Yup.ObjectSchema<ExpenseFormValues>;
-  readonly voidReasonSchema: Yup.ObjectSchema<{ reason: string }>;
 }
 
 export const useExpenseSchemas = (): ExpenseSchemas => {
@@ -68,10 +67,6 @@ export const useExpenseSchemas = (): ExpenseSchemas => {
       return true;
     }) as Yup.ObjectSchema<ExpenseFormValues>;
 
-    const voidReasonSchema = Yup.object({
-      reason: v.reasonText('expenses.void.reason.required'),
-    }) as Yup.ObjectSchema<{ reason: string }>;
-
-    return { expenseSchema, voidReasonSchema };
+    return { expenseSchema };
   }, [v, t]);
 };
