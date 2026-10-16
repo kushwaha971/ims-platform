@@ -544,3 +544,9 @@ Read this file, `git status`, current diff, root/frontend AGENTS, and the releva
 - Defect found by looking (`e2e/pick-list-look.mjs`, 360 and 1280): on a phone the receipt sheet split its own number, "RCT/26-" over "27/0001". The check failed first (2 lines) and now passes; 14/14.
 - Left as they are, with the reason recorded in `10-reuse-inventory.md`: the paid-now drawers' mode rows, and the library and lending card rows.
 - Gates: Jest 4205 passed; `tsc` clean; ESLint clean on the changed files; build passed; the bundle gate passed with no budget change. Railway deployment and 9/10 readiness are NOT claimed.
+
+### 16 October 2026 — WP-06: the Shop dashboard reviewed before any build (cloud session)
+
+- New `e2e/dashboard-review.mjs` measured `/dashboard` at 360 to 1920 px with a synthetic kirana. Nothing overflows; one long name is cut with an ellipsis at 360. Findings and three arrangements are in `docs/shop-ims-readiness/13-shop-dashboard-design-review.md`.
+- Checked on the live server: "To collect ₹2,100 from all your customers" opens a ₹1,800 list (a supplier paid ahead was counted), and "To pay ₹700 to all your suppliers" opens an empty one (it was a customer's advance). Overdue reads a status set nightly, so a bill entered today with a past due date is not counted until 00:15, and its list defaults to this financial year.
+- The owner is asked to choose A, B or C. Nothing is built yet. Railway deployment and 9/10 readiness are NOT claimed.

@@ -24,8 +24,8 @@ Status values: Not started, In progress, Needs acceptance review, Pass, Fail, Bl
 | UX-02 | [design-and-dashboard-specification](02-design-and-dashboard-specification.md) | Design/frontend | Needs acceptance review | — | — |
 | UX-03 | [design-and-dashboard-specification](02-design-and-dashboard-specification.md) | Design/frontend | Needs acceptance review | — | — |
 | UX-04 | [design-and-dashboard-specification](02-design-and-dashboard-specification.md) | Design/frontend | Needs acceptance review | WP-05 (16 Oct, 9ed67e2, ff1a45b): bill editors draw the line table whenever its columns fit (1024–1440 laptops included) with totals docked below under 1536 px; measured by `e2e/counter-editor-review.mjs` at 8 widths, no overflow or cut text | Owner's acceptance review of the laptop layout |
-| DASH-01 | [design-and-dashboard-specification](02-design-and-dashboard-specification.md) | Product/reporting | Needs acceptance review | — | — |
-| DASH-02 | [design-and-dashboard-specification](02-design-and-dashboard-specification.md) | Product/reporting | Needs acceptance review | — | — |
+| DASH-01 | [design-and-dashboard-specification](02-design-and-dashboard-specification.md) | Product/reporting | Needs acceptance review | WP-06 review (16 Oct, 13-shop-dashboard-design-review): To collect ₹2,100 opened a ₹1,800 list and To pay ₹700 an empty one, on the live server; Overdue's list defaults to this FY | Figure fixes and the owner's layout choice |
+| DASH-02 | [design-and-dashboard-specification](02-design-and-dashboard-specification.md) | Product/reporting | Needs acceptance review | WP-06 review: the dues tiles are not role-scoped; suppliers have no panel | Role-scoped tiles; D-03 for dual-role net position |
 | DASH-03 | [design-and-dashboard-specification](02-design-and-dashboard-specification.md) | Product/reporting | Needs acceptance review | — | — |
 | DASH-04 | [design-and-dashboard-specification](02-design-and-dashboard-specification.md) | Product/reporting | Needs acceptance review | — | — |
 | UX-05 | [design-and-dashboard-specification](02-design-and-dashboard-specification.md) | Design/frontend | Needs acceptance review | — | — |

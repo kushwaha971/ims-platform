@@ -170,7 +170,10 @@ the server-prepared reference.
    (as WP-05 did in 12-counter-editor-design-review.md): what each figure
    means and which server query owns it, separate customer and supplier
    panels, and that every figure reconciles with its drill-down. Do not build
-   before the owner has chosen.
+   before the owner has chosen. The review is 13-shop-dashboard-design-review.md
+   (`e2e/dashboard-review.mjs`); the owner was asked A/B/C on 16 Oct. Its
+   "Done whichever option is chosen" list is not layout and can go first,
+   test-first: To collect / To pay from the same query as the list they open.
 4. Still owed to WP-02, needing the owner or a device: a physical
    network-interruption check on a phone, and the owner's SH-011 release
    review in the tracker. Do not wait on these.
