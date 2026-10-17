@@ -1,0 +1,1765 @@
+<title>YourKhata Counter Mode</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Mukta:wght@400;500;600&display=swap">
+<style>
+
+/* Layout: a long proposal page; the two product previews sit in framed "devices" so they read as the product, the rest reads as the brief. */
+:root{
+  /* product tokens, copied from frontend/src/styles/tokens/light.css (17 Oct 2026) */
+  --canvas:#FFFFFF; --card:#FFFFFF; --sunken:#F4F5F7; --line:#E5E7EB; --line-strong:#D1D5DB;
+  --ink:#1B1E24; --ink-2:#4A505A; --ink-3:#656D78;
+  --teal:#0E7C86; --teal-ink:#0B5F67; --teal-wash:#E6F3F3;
+  --cta:#F59E1B; --cta-ink:#1B1E24; --cta-wash:#FEF1DC;
+  --get:#1F7A1F; --get-wash:#E9F6EC; --give:#B3261E; --give-wash:#FDF0EF;
+  --warn:#9A6A07; --warn-wash:#FFF3D6;
+  --shadow:0 1px 2px rgba(27,30,36,.06),0 8px 24px rgba(27,30,36,.06);
+  --f-ui:"Plus Jakarta Sans","Mukta",system-ui,sans-serif;
+  --f-hi:"Mukta","Plus Jakarta Sans",system-ui,sans-serif;
+  --ease:cubic-bezier(.2,0,.1,1); --ease-in:cubic-bezier(.16,1,.3,1);
+  --dur-fast:140ms; --dur-base:220ms; --dur-slow:360ms;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --canvas:#121417; --card:#1B1E23; --sunken:#23272D; --line:#2E333A; --line-strong:#3A4048;
+  --ink:#ECEEF0; --ink-2:#C4C8CE; --ink-3:#A3A9B2;
+  --teal:#2BA3AD; --teal-ink:#6CC6CD; --teal-wash:#14302F;
+  --cta:#F7AC45; --cta-ink:#1B1E24; --cta-wash:#3A2C14;
+  --get:#6FCF7C; --get-wash:#16301C; --give:#FF8279; --give-wash:#3A1D1B;
+  --warn:#F2C25C; --warn-wash:#33290F;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px rgba(0,0,0,.3); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --canvas:#121417; --card:#1B1E23; --sunken:#23272D; --line:#2E333A; --line-strong:#3A4048;
+  --ink:#ECEEF0; --ink-2:#C4C8CE; --ink-3:#A3A9B2;
+  --teal:#2BA3AD; --teal-ink:#6CC6CD; --teal-wash:#14302F;
+  --cta:#F7AC45; --cta-ink:#1B1E24; --cta-wash:#3A2C14;
+  --get:#6FCF7C; --get-wash:#16301C; --give:#FF8279; --give-wash:#3A1D1B;
+  --warn:#F2C25C; --warn-wash:#33290F;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px rgba(0,0,0,.3); color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--canvas);color:var(--ink);font-family:var(--f-ui);font-size:15px;line-height:1.55;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1180px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:32px 80px}
+.num{font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+h1,h2,h3{text-wrap:balance;margin:0;letter-spacing:-.015em}
+h2{font-size:clamp(1.35rem,1.1rem + 1vw,1.75rem);font-weight:700;margin-bottom:6px}
+h3{font-size:1.05rem;font-weight:700}
+p{margin:0}
+.lede{color:var(--ink-2);max-width:68ch}
+section{margin-top:64px}
+.eyebrow{font-size:.72rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--teal-ink)}
+a{color:var(--teal-ink)}
+:focus-visible{outline:2px solid var(--teal);outline-offset:2px;border-radius:6px}
+
+/* hero */
+.hero{display:grid;gap:20px;padding-bottom:8px}
+.hero h1{font-size:clamp(2rem,1.4rem + 2.6vw,3.25rem);font-weight:800;line-height:1.08;max-width:20ch}
+.hero h1 em{font-style:normal;color:var(--teal-ink)}
+.hero .lede{font-size:1.05rem}
+.pills{display:flex;flex-wrap:wrap;gap:8px}
+.pill{font-size:.78rem;font-weight:600;padding:4px 10px;border-radius:999px;background:var(--card);border:1px solid var(--line);color:var(--ink-2)}
+.pill.k{background:var(--teal-wash);border-color:transparent;color:var(--teal-ink)}
+
+/* audit */
+.audit{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin-top:20px}
+.fact{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px;display:grid;gap:6px;align-content:start}
+.fact .tag{justify-self:start;font-size:.7rem;font-weight:700;padding:2px 8px;border-radius:999px}
+.t-ver{background:var(--teal-wash);color:var(--teal-ink)}
+.t-def{background:var(--give-wash);color:var(--give)}
+.t-ux{background:var(--warn-wash);color:var(--warn)}
+.fact p{font-size:.9rem;color:var(--ink-2)}
+.fact b{color:var(--ink)}
+.src{font-size:.75rem;color:var(--ink-3);font-family:ui-monospace,SFMono-Regular,Menlo,monospace;word-break:break-word}
+
+/* research */
+.refs{display:grid;gap:12px;margin-top:20px}
+.ref{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;display:grid;grid-template-columns:200px 1fr;gap:16px}
+.ref .who{display:grid;gap:4px;align-content:start}
+.ref .who b{font-size:1rem}
+.ref .who span{font-size:.78rem;color:var(--ink-3)}
+.ref dl{margin:0;display:grid;grid-template-columns:120px 1fr;gap:6px 14px;font-size:.88rem}
+.ref dt{color:var(--ink-3);font-weight:600}
+.ref dd{margin:0;color:var(--ink-2);min-width:0}
+@media (max-width:720px){.ref{grid-template-columns:1fr}.ref dl{grid-template-columns:1fr;gap:2px}.ref dd{margin-bottom:8px}}
+.matrix{overflow-x:auto;margin-top:16px;border:1px solid var(--line);border-radius:12px;background:var(--card)}
+.matrix table{border-collapse:collapse;width:100%;min-width:760px;font-size:.84rem}
+.matrix th,.matrix td{padding:9px 12px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+.matrix thead th{background:var(--sunken);font-weight:700;font-size:.78rem;color:var(--ink-2)}
+.matrix tbody th{font-weight:700;white-space:nowrap}
+.matrix tr:last-child td,.matrix tr:last-child th{border-bottom:0}
+.note{font-size:.8rem;color:var(--ink-3);margin-top:8px}
+
+/* principles */
+.ideas{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px;margin-top:20px}
+.idea{border-top:3px solid var(--teal);background:var(--card);border-radius:0 0 12px 12px;padding:16px;display:grid;gap:8px;align-content:start;box-shadow:var(--shadow)}
+.idea h3 small{display:block;font-size:.75rem;font-weight:600;color:var(--ink-3);margin-top:2px}
+.idea p{font-size:.9rem;color:var(--ink-2)}
+.idea .from{font-size:.78rem;color:var(--teal-ink);font-weight:600}
+
+/* ============ PRODUCT PREVIEW ============ */
+.stage{margin-top:20px;display:grid;gap:24px}
+.device{background:var(--card);border:1px solid var(--line-strong);border-radius:14px;box-shadow:var(--shadow);overflow:hidden}
+.device-bar{display:flex;align-items:center;gap:6px;padding:8px 12px;border-bottom:1px solid var(--line);background:var(--sunken);font-size:.72rem;color:var(--ink-3)}
+.device-bar i{width:9px;height:9px;border-radius:50%;background:var(--line-strong);display:inline-block}
+.device-bar span{margin-left:8px}
+.scrollx{overflow-x:auto}
+.app{min-width:1080px;display:grid;grid-template-columns:200px 1fr;background:var(--canvas)}
+.side{background:var(--card);border-right:1px solid var(--line);padding:14px 10px;display:grid;gap:2px;align-content:start;font-size:.84rem}
+.brand{display:flex;align-items:center;gap:8px;padding:2px 6px 14px;font-weight:700}
+.mark{width:26px;height:26px;border-radius:7px;background:var(--teal);color:#fff;display:grid;place-items:center;font-weight:800;font-size:.85rem}
+.navi{padding:8px 10px;border-radius:8px;color:var(--ink-2);display:flex;justify-content:space-between}
+.navi.on{background:var(--teal-wash);color:var(--teal-ink);font-weight:700}
+.navi small{color:var(--ink-3)}
+.navgap{height:10px}
+.main{padding:18px 24px 24px;display:grid;gap:16px;align-content:start}
+
+/* counter bar */
+.counter{display:flex;gap:10px;align-items:center}
+.cbar{flex:1;position:relative}
+.cbar input{width:100%;height:44px;border-radius:10px;border:1.5px solid var(--line-strong);background:var(--card);padding:0 120px 0 42px;font:inherit;font-size:.95rem;color:var(--ink);transition:border-color var(--dur-fast) var(--ease),box-shadow var(--dur-fast) var(--ease)}
+.cbar input:focus{outline:none;border-color:var(--teal);box-shadow:0 0 0 3px var(--teal-wash)}
+.cbar .ic{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--ink-3);font-size:1rem}
+.cbar kbd{position:absolute;right:10px;top:50%;transform:translateY(-50%);font:600 .7rem var(--f-ui);color:var(--ink-3);border:1px solid var(--line);border-radius:6px;padding:2px 6px;background:var(--sunken)}
+.sugg{position:absolute;left:0;right:0;top:50px;background:var(--card);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);padding:6px;z-index:5;display:grid;gap:2px;transform-origin:top;animation:drop var(--dur-base) var(--ease-in)}
+@keyframes drop{from{opacity:0;transform:translateY(-4px) scale(.99)}to{opacity:1;transform:none}}
+.sg{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;font-size:.88rem;cursor:pointer;border:0;background:none;text-align:left;color:var(--ink);font-family:inherit;width:100%}
+.sg:hover,.sg.hl{background:var(--teal-wash)}
+.sg .v{font-weight:700}
+.sg .m{color:var(--ink-3);font-size:.78rem;margin-left:auto;white-space:nowrap}
+.btn{height:40px;padding:0 16px;border-radius:8px;font:600 .88rem var(--f-ui);border:1px solid var(--line-strong);background:var(--card);color:var(--ink);display:inline-flex;align-items:center;gap:6px;cursor:pointer;white-space:nowrap;transition:transform var(--dur-fast) var(--ease),background var(--dur-fast) var(--ease)}
+.btn:active{transform:scale(.97)}
+.btn.cta{background:var(--cta);border-color:var(--cta);color:var(--cta-ink)}
+.btn.lg{height:44px}
+.btn.sm{height:28px;padding:0 10px;font-size:.78rem;border-radius:7px}
+
+.again{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.again .lbl{font-size:.75rem;font-weight:700;color:var(--ink-3);margin-right:2px}
+.chip{height:32px;padding:0 12px;border-radius:999px;border:1px solid var(--line);background:var(--card);font:500 .8rem var(--f-ui);color:var(--ink-2);display:inline-flex;align-items:center;gap:6px;cursor:pointer;transition:border-color var(--dur-fast) var(--ease)}
+.chip:hover{border-color:var(--teal)}
+.chip b{color:var(--ink);font-weight:600}
+
+/* day sentence */
+.day{display:grid;grid-template-columns:1fr auto;gap:20px;align-items:end;padding:4px 0 2px}
+.day .date{font-size:.8rem;color:var(--ink-3);font-weight:600}
+.sentence{font-size:1.9rem;line-height:1.25;font-weight:500;letter-spacing:-.02em;max-width:34ch}
+.sentence .num{font-weight:800}
+.sentence .g{color:var(--get)} .sentence .r{color:var(--give)}
+.basis{font-size:.74rem;color:var(--ink-3);margin-top:6px}
+.hours{display:grid;gap:4px;justify-items:end}
+.hours svg{display:block}
+.hours .cap{font-size:.72rem;color:var(--ink-3)}
+
+/* body grid */
+.body{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:16px;align-items:start}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.ph{display:flex;align-items:baseline;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--line)}
+.ph h4{margin:0;font-size:.92rem}
+.ph .meta{font-size:.75rem;color:var(--ink-3)}
+.tabs{display:flex;gap:4px;padding:6px 8px 0 8px;border-bottom:1px solid var(--line)}
+.tab{padding:8px 10px;font:600 .82rem var(--f-ui);color:var(--ink-3);border:0;background:none;border-bottom:2px solid transparent;cursor:pointer}
+.tab.on{color:var(--ink);border-bottom-color:var(--teal)}
+.tab .ct{display:inline-block;min-width:18px;padding:0 5px;border-radius:9px;background:var(--cta-wash);color:var(--warn);font-size:.7rem;margin-left:4px}
+
+/* register */
+.reg{list-style:none;margin:0;padding:0;position:relative}
+.reg li{display:grid;grid-template-columns:52px 22px minmax(0,1fr) auto;gap:10px;align-items:center;padding:9px 16px;border-bottom:1px solid var(--line);font-size:.86rem}
+.reg li:last-child{border-bottom:0}
+.reg .t{font-size:.75rem;color:var(--ink-3)}
+.reg .k{width:22px;height:22px;border-radius:6px;display:grid;place-items:center;font-size:.7rem;font-weight:800}
+.k.bill{background:var(--teal-wash);color:var(--teal-ink)}
+.k.in{background:var(--get-wash);color:var(--get)}
+.k.out{background:var(--give-wash);color:var(--give)}
+.k.stk{background:var(--sunken);color:var(--ink-2)}
+.reg .w{min-width:0}
+.reg .w b{font-weight:600;display:block;overflow-wrap:anywhere}
+.reg .w small{color:var(--ink-3);font-size:.75rem}
+.reg .a{font-weight:700;text-align:right;white-space:nowrap}
+.a.g{color:var(--get)} .a.r{color:var(--give)}
+.thread{display:inline-flex;gap:3px;align-items:center;margin-left:6px;vertical-align:middle}
+.thread i{width:14px;height:3px;border-radius:2px;background:var(--line-strong)}
+.thread i.d{background:var(--teal)}
+.sugg[hidden]{display:none}
+.reg li.now{display:flex;border-bottom:0;align-items:center;gap:8px;padding:4px 16px;font-size:.7rem;font-weight:700;color:var(--warn);background:var(--cta-wash)}
+.now::after{content:"";flex:1;height:1px;background:var(--cta)}
+.reg li.fresh{animation:land var(--dur-slow) var(--ease-in)}
+@keyframes land{from{background:var(--get-wash);transform:translateY(-6px);opacity:0}60%{background:var(--get-wash);opacity:1;transform:none}to{background:transparent}}
+
+/* lanes */
+.lanes{display:grid;gap:16px}
+.lane .tot{display:flex;align-items:baseline;gap:8px;padding:12px 16px 4px}
+.lane .tot .big{font-size:1.5rem;font-weight:800}
+.lane .tot .who{font-size:.78rem;color:var(--ink-3)}
+.age{display:flex;height:8px;border-radius:4px;overflow:hidden;margin:6px 16px 4px;gap:2px}
+.age span{display:block;height:100%}
+.agelbl{display:flex;justify-content:space-between;gap:8px;padding:0 16px 10px;font-size:.72rem;color:var(--ink-3)}
+.agelbl b{color:var(--ink-2)}
+.people{list-style:none;margin:0;padding:0;border-top:1px solid var(--line)}
+.people li{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:10px;align-items:center;padding:8px 16px;border-bottom:1px solid var(--line);font-size:.85rem}
+.people li:last-child{border-bottom:0}
+.people .nm{min-width:0}
+.people .nm b{font-weight:600;display:block;overflow-wrap:anywhere}
+.people .nm small{color:var(--ink-3);font-size:.74rem}
+.people .amt{font-weight:700;white-space:nowrap}
+.both{display:inline-block;font-size:.66rem;font-weight:700;padding:1px 6px;border-radius:999px;background:var(--warn-wash);color:var(--warn);margin-left:4px;vertical-align:1px}
+.lane.collect .big{color:var(--get)} .lane.pay .big{color:var(--give)}
+
+/* phone */
+.phones{display:flex;gap:24px;flex-wrap:wrap;align-items:flex-start}
+.phone{width:390px;max-width:100%;border:10px solid var(--ink);border-radius:36px;overflow:hidden;background:var(--canvas);box-shadow:var(--shadow);position:relative}
+.phone.w320{width:340px}
+.pscreen{height:760px;overflow:auto;position:relative;display:grid;grid-template-rows:auto 1fr auto}
+.ptop{padding:12px 14px 10px;background:var(--canvas);display:grid;gap:10px;position:sticky;top:0;z-index:3;border-bottom:1px solid var(--line)}
+.ptop .row{display:flex;justify-content:space-between;align-items:center;font-size:.8rem}
+.ptop .row b{font-size:.92rem}
+.pbody{padding:12px 14px 16px;display:grid;gap:12px;align-content:start}
+.psent{font-size:1.32rem;line-height:1.3;font-weight:500;letter-spacing:-.015em}
+.psent .num{font-weight:800}
+.pact{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.pact .btn{justify-content:center;width:100%}
+.seg{display:grid;grid-template-columns:repeat(3,1fr);background:var(--sunken);border-radius:10px;padding:3px}
+.seg button{height:34px;border:0;background:none;border-radius:8px;font:600 .8rem var(--f-ui);color:var(--ink-3);cursor:pointer;transition:background var(--dur-fast) var(--ease)}
+.seg button.on{background:var(--card);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.pnav{display:grid;grid-template-columns:repeat(5,1fr);border-top:1px solid var(--line);background:var(--card);padding:6px 4px calc(6px + env(safe-area-inset-bottom,0px));position:sticky;bottom:0;z-index:3}
+.pnav span{display:grid;justify-items:center;gap:2px;font-size:.66rem;color:var(--ink-3)}
+.pnav span i{font-style:normal;font-size:1.05rem;line-height:1.2}
+.pnav span.on{color:var(--teal-ink);font-weight:700}
+.pnav .plus i{width:40px;height:40px;border-radius:12px;background:var(--cta);color:var(--cta-ink);display:grid;place-items:center;font-weight:800;margin-top:-14px;box-shadow:var(--shadow)}
+.minilane{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.ml{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px;display:grid;gap:2px}
+.ml small{font-size:.7rem;color:var(--ink-3);font-weight:600}
+.ml .v{font-size:1.15rem;font-weight:800}
+.ml.c .v{color:var(--get)} .ml.p .v{color:var(--give)}
+.ml .s{font-size:.7rem;color:var(--ink-3)}
+.hi{font-family:var(--f-hi)}
+.hi .psent{font-size:1.28rem;line-height:1.45}
+
+/* specimen */
+.spec{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;margin-top:20px}
+.motion{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;display:grid;gap:8px;align-content:start}
+.motion .ms{font-size:.75rem;font-weight:700;color:var(--teal-ink);font-variant-numeric:tabular-nums}
+.motion p{font-size:.88rem;color:var(--ink-2)}
+.when{margin-top:20px;overflow-x:auto;border:1px solid var(--line);border-radius:12px;background:var(--card)}
+.when table{border-collapse:collapse;width:100%;min-width:680px;font-size:.86rem}
+.when th,.when td{padding:9px 12px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+.when thead th{background:var(--sunken);font-size:.78rem;color:var(--ink-2)}
+.when tr:last-child td,.when tr:last-child th{border-bottom:0}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.84em;background:var(--sunken);padding:1px 5px;border-radius:5px;overflow-wrap:anywhere}
+.gap{display:inline-block;font-size:.68rem;font-weight:700;padding:1px 7px;border-radius:999px;background:var(--cta-wash);color:var(--warn);margin-left:4px}
+.ok{display:inline-block;font-size:.68rem;font-weight:700;padding:1px 7px;border-radius:999px;background:var(--teal-wash);color:var(--teal-ink);margin-left:4px}
+.callout{margin-top:20px;border:1px solid var(--give);background:var(--give-wash);border-radius:12px;padding:14px 16px;display:grid;gap:6px}
+.callout b{color:var(--give)}
+.callout p{font-size:.9rem;color:var(--ink)}
+ul.plain{margin:8px 0 0;padding-left:18px;color:var(--ink-2);font-size:.9rem;display:grid;gap:4px}
+@media (max-width:760px){.day{grid-template-columns:1fr}.hours{justify-items:start}.sentence{font-size:1.5rem}}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+/* ---- theme switch ---- */
+.themesw{position:fixed;top:calc(12px + env(safe-area-inset-top,0px));right:max(12px,env(safe-area-inset-right,0px));z-index:20;display:flex;background:var(--card);border:1px solid var(--line-strong);border-radius:999px;padding:3px;box-shadow:var(--shadow)}
+.themesw button{height:32px;padding:0 12px;border:0;border-radius:999px;background:none;font:600 .78rem var(--f-ui);color:var(--ink-3);cursor:pointer}
+.themesw button[aria-pressed="true"]{background:var(--teal);color:#fff}
+.pagehead{display:flex;align-items:baseline;gap:10px}
+.pagehead b{font-size:1.35rem;font-weight:800;letter-spacing:-.015em}
+.pagehead span{font-size:.78rem;color:var(--ink-3);font-weight:600}
+/* ---- kit ---- */
+.kh{margin-top:36px;font-size:1.1rem}
+.ksub{color:var(--ink-2);font-size:.92rem;max-width:72ch;margin-top:4px}
+.pair{display:flex;gap:20px;flex-wrap:wrap;align-items:flex-start;margin-top:14px}
+.pair>.device{flex:1 1 560px;min-width:0}
+.btn.danger{background:var(--give);border-color:var(--give);color:#fff}
+.btn.ghost{background:none;border-color:transparent;color:var(--ink-2)}
+.btn.icon{width:40px;padding:0;justify-content:center}
+.btn.sm.icon{width:28px}
+.btn.sm2{width:32px;height:32px;padding:0;justify-content:center;border-color:transparent;background:none;font-size:1rem}
+.btn.grow,.grow{flex:1}
+.badge{min-width:18px;height:18px;border-radius:9px;background:var(--teal);color:#fff;font-size:.68rem;display:inline-grid;place-items:center;padding:0 5px}
+.specimen{margin-top:14px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;display:grid;gap:18px}
+.sprow{display:flex;flex-wrap:wrap;gap:16px 20px;align-items:flex-end}
+.spcell{display:grid;gap:6px;justify-items:start}
+.spcell.grow{flex:1;min-width:260px}
+.spl{font-size:.72rem;color:var(--ink-3);font-weight:600}
+.toolbar{display:flex;gap:8px;align-items:center;width:100%}
+.toolbar.wide{padding:0 16px}
+.fakeinput{height:40px;border:1px solid var(--line-strong);border-radius:8px;background:var(--card);display:flex;align-items:center;gap:8px;padding:0 12px;color:var(--ink-3);font-size:.9rem;flex:1;min-width:0;white-space:nowrap;overflow:hidden}
+.fakeinput.sel{justify-content:space-between;color:var(--ink)}
+.fakeinput.focus{border-color:var(--teal);box-shadow:0 0 0 3px var(--teal-wash);color:var(--ink)}
+.fakeinput.big{height:48px;font-size:1rem}
+.fakeinput.mini{flex:0 0 72px}
+.fakeinput.mini2{flex:0 0 auto;gap:10px}
+.fakeinput.picked{height:auto;min-height:40px;padding:6px 12px}
+.fakeinput.picked span{display:grid;line-height:1.3;white-space:normal}
+.fakeinput.picked small{color:var(--ink-3);font-size:.75rem}
+.fakeinput.ta2{height:auto;min-height:64px;align-items:flex-start;padding:10px 12px;white-space:normal;color:var(--ink)}
+.caret{color:var(--ink-3);font-size:.8rem}
+.caretline{display:inline-block;width:1.5px;height:18px;background:var(--teal);margin-left:-6px;animation:blink 1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+.fchip{height:32px;padding:0 12px;border-radius:999px;border:1px solid var(--line-strong);background:var(--card);font:500 .8rem var(--f-ui);color:var(--ink-2);display:inline-flex;align-items:center;white-space:nowrap}
+.fchip.on{background:var(--teal-wash);border-color:var(--teal);color:var(--teal-ink);font-weight:700}
+.chiprow{display:flex;gap:8px;overflow-x:auto;padding-block:2px}
+.chiprow.wrap{flex-wrap:wrap;overflow:visible;gap:12px}
+.hitdemo{position:relative;display:inline-grid;place-items:center;min-width:44px;min-height:44px}
+.hitdemo::after{content:"";position:absolute;inset:50% auto auto 50%;transform:translate(-50%,-50%);min-width:44px;min-height:44px;width:100%;height:44px;border:1.5px dashed var(--teal);border-radius:8px;pointer-events:none}
+.spacing{gap:10px 22px;align-items:center;font-size:.76rem;color:var(--ink-2)}
+.spacing span{display:inline-flex;align-items:center;gap:8px}
+.spacing i{display:inline-block;height:16px;background:var(--cta);border-radius:2px}
+/* overlays */
+.dwin{min-width:640px;height:660px;position:relative;background:var(--canvas);overflow:hidden}
+.dwin.short{height:420px}
+.ghostpage{position:absolute;inset:0;padding:28px;display:grid;gap:18px;align-content:start}
+.ghostpage span{display:block;height:14px;border-radius:7px;background:var(--line)}
+.scrim{position:absolute;inset:0;background:rgba(18,20,23,.38)}
+.drawer{position:absolute;top:0;right:0;bottom:0;width:440px;background:var(--card);display:grid;grid-template-rows:auto 1fr auto;box-shadow:-12px 0 32px rgba(0,0,0,.12)}
+.dialog{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:440px;max-width:calc(100% - 32px);background:var(--card);border-radius:14px;display:grid;grid-template-rows:auto auto auto;box-shadow:var(--shadow)}
+.dialog.wide{width:500px}
+.pscreen.solo{display:block;position:relative}
+.phone.short .pscreen{height:560px}
+.sheet{position:absolute;left:0;right:0;bottom:0;background:var(--card);border-radius:18px 18px 0 0;display:grid;grid-template-rows:auto auto 1fr auto;max-height:92%;box-shadow:0 -8px 24px rgba(0,0,0,.14)}
+.sheet.tall{top:7%}
+.sheet.full{top:0;border-radius:0;max-height:none;grid-template-rows:auto 1fr auto}
+.sheet:not(:has(.grab)){grid-template-rows:auto 1fr auto}
+.grab{width:36px;height:4px;border-radius:2px;background:var(--line-strong);margin:8px auto 0}
+.shead{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:12px 16px;border-bottom:1px solid var(--line)}
+.shead>div{display:grid}
+.shead b{font-size:1rem}
+.psub{font-size:.75rem;color:var(--ink-3);font-weight:500}
+.sbody{padding:14px 16px;display:grid;gap:16px;align-content:start;overflow:auto;min-height:0}
+.sbody.nopad{padding:4px 0;gap:0}
+.sfoot{display:flex;gap:8px;align-items:center;justify-content:flex-end;padding:12px 16px calc(12px + env(safe-area-inset-bottom,0px));border-top:1px solid var(--line);background:var(--card)}
+.sfoot .left{margin-right:auto;display:grid;line-height:1.2}
+.sfoot .left small{font-size:.7rem;color:var(--ink-3)}
+.sfoot .left b{font-size:1.05rem}
+.field{display:grid;gap:4px;min-width:0}
+.flabel{font-size:.82rem;font-weight:600;color:var(--ink);display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.fhint{font-size:.74rem;color:var(--ink-3)}
+.fhint.inl{font-weight:500}
+.fmsg{font-size:.78rem;color:var(--ink-3);min-height:1.2em}
+.fmsg.err{color:var(--give);font-weight:600}
+.fmsg.warn{color:var(--warn);font-weight:600}
+.money{display:flex;align-items:center;height:44px;border:1.5px solid var(--teal);border-radius:8px;background:var(--card);padding:0 12px;gap:6px;box-shadow:0 0 0 3px var(--teal-wash)}
+.money.err{border-color:var(--give);box-shadow:0 0 0 3px var(--give-wash)}
+.money .rs{color:var(--ink-3);font-weight:600}
+.money input{border:0;outline:0;background:none;font:800 1.2rem var(--f-ui);color:var(--ink);width:100%;min-width:0}
+.alloc{display:grid;grid-template-columns:20px minmax(0,1fr) auto;gap:10px;align-items:center;border:1px solid var(--line);border-radius:8px;padding:8px 12px;font-size:.86rem}
+.alloc .nm{display:grid}
+.alloc small{color:var(--ink-3);font-size:.74rem}
+.cb{width:18px;height:18px;border-radius:5px;border:1.5px solid var(--line-strong);display:grid;place-items:center;font-size:.7rem}
+.cb.on{background:var(--teal);border-color:var(--teal);color:#fff}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.ta{width:100%;border:1px solid var(--line-strong);border-radius:8px;background:var(--card);color:var(--ink);font:inherit;font-size:.9rem;padding:8px 12px;resize:vertical}
+.ta:focus{outline:none;border-color:var(--teal);box-shadow:0 0 0 3px var(--teal-wash)}
+.ta.msg{font-family:var(--f-hi),var(--f-ui);line-height:1.5}
+.switchrow{display:flex;align-items:center;gap:10px;font-size:.86rem}
+.sw{width:36px;height:20px;border-radius:10px;background:var(--line-strong);position:relative;flex:0 0 auto}
+.sw::after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff;transition:left var(--dur-fast) var(--ease)}
+.sw.on{background:var(--teal)}.sw.on::after{left:18px}
+.conseq{margin:0;padding-left:18px;display:grid;gap:6px;font-size:.9rem;color:var(--ink-2)}
+.honest{font-size:.8rem;color:var(--ink-2);background:var(--sunken);border-radius:8px;padding:8px 10px}
+.linkbtn{border:0;background:none;color:var(--teal-ink);font:600 .78rem var(--f-ui);cursor:pointer;padding:0;text-decoration:underline;text-underline-offset:2px}
+/* table */
+.tablewin{min-width:960px;background:var(--canvas);padding:16px 0 18px;display:grid;gap:12px}
+.thead-row{display:flex;justify-content:space-between;align-items:center;padding:0 16px}
+.thead-row>div:first-child{display:grid}
+.ptl{font-size:1.25rem;font-weight:800;letter-spacing:-.015em}
+.row-actions{display:flex;gap:8px}
+.spacer{flex:1}
+.applied{display:flex;gap:10px;align-items:center;padding:0 16px;font-size:.8rem}
+.achip{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 4px 0 10px;border-radius:999px;background:var(--teal-wash);color:var(--teal-ink);font-weight:600}
+.achip button{border:0;background:none;color:inherit;width:22px;height:22px;border-radius:50%;cursor:pointer;font-size:.95rem}
+.tsum{margin-left:auto;color:var(--ink-3);font-size:.8rem}
+.tsum b{color:var(--get)}
+.pbody>.tsum{margin-left:0}
+table.grid{margin:0 16px;border-collapse:separate;border-spacing:0;width:calc(100% - 32px);background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden;font-size:.86rem}
+table.grid th{height:44px;background:var(--sunken);text-align:left;padding:0 14px;font-size:.76rem;font-weight:700;color:var(--ink-2);border-bottom:1px solid var(--line)}
+table.grid td{padding:10px 14px;border-bottom:1px solid var(--line);vertical-align:middle}
+table.grid tr:last-child td{border-bottom:0}
+table.grid td b{font-weight:600;overflow-wrap:anywhere}
+table.grid td small{display:block;color:var(--ink-3);font-size:.74rem}
+table.grid .r{text-align:right;white-space:nowrap}
+table.grid .num{font-weight:700}
+table.grid tbody tr:hover td{background:var(--teal-wash)}
+.g{color:var(--get)} .r.g{color:var(--get)}
+.age-pill{font-size:.74rem;font-weight:600;padding:2px 8px;border-radius:999px;background:var(--sunken);color:var(--ink-2)}
+.age-pill.bad{background:var(--give-wash);color:var(--give)}
+.archived td{color:var(--ink-3)}
+.arch{font-size:.66rem;font-weight:700;padding:1px 6px;border-radius:999px;background:var(--sunken);color:var(--ink-2);margin-left:4px}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--cta);position:absolute;top:8px;right:8px}
+.btn.icon{position:relative}
+.plist{list-style:none;margin:0;padding:0;background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.plist li{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;padding:10px 12px;border-bottom:1px solid var(--line);align-items:center}
+.plist li:last-child{border-bottom:0}
+.plist .nm b{font-weight:600;font-size:.88rem;overflow-wrap:anywhere}
+.plist .nm small{display:block;font-size:.74rem;color:var(--ink-3)}
+.plist .end{display:grid;justify-items:end;gap:4px}
+.plist .end b{font-size:.92rem;white-space:nowrap}
+.fgroup{display:grid;gap:8px}
+/* pickers */
+.pop-stage{padding:20px;background:var(--canvas);display:grid;gap:6px;justify-items:start;min-height:420px}
+.pop-stage>.fakeinput,.pop-stage>.field>.fakeinput{flex:none;width:100%}
+.pscreen.solo>.dock{position:absolute;left:0;right:0;bottom:0}
+.popover{background:var(--card);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);width:100%;max-width:420px}
+.popover.cal{max-width:320px;padding:12px;display:grid;gap:10px}
+.popover.list{max-width:520px;padding:6px 0}
+.sbody.cal{gap:10px}
+.quick{display:flex;gap:8px;flex-wrap:wrap}
+.calhead{display:flex;gap:6px;align-items:center}
+.calgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center;font-size:.82rem}
+.calgrid span{height:36px;display:grid;place-items:center;border-radius:8px;color:var(--ink)}
+.calgrid .dw{height:24px;font-size:.7rem;color:var(--ink-3);font-weight:700}
+.calgrid .mute{color:var(--ink-3);opacity:.5}
+.calgrid .td{outline:1.5px solid var(--teal);outline-offset:-1.5px}
+.calgrid .sel{background:var(--teal);color:#fff;font-weight:700}
+.sheet .calgrid span{height:42px}
+.opt{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;padding:9px 14px;font-size:.86rem}
+.opt.hl{background:var(--teal-wash)}
+.opt .nm{display:grid}
+.opt .nm b{font-weight:600}
+.opt small{font-size:.74rem;color:var(--ink-3)}
+.opt.create b{color:var(--teal-ink)}
+.ogroup{padding:10px 14px 4px;font-size:.68rem;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-3)}
+.warnword{color:var(--warn);font-weight:700}
+.badword{color:var(--give);font-weight:700}
+.kbd{height:200px;background:var(--sunken);display:grid;place-items:center;color:var(--ink-3);font-size:.78rem;border-top:1px solid var(--line)}
+kbd.k2,kbd.k3{font:600 .68rem var(--f-ui);color:var(--ink-3);border:1px solid var(--line);border-radius:6px;padding:2px 6px;background:var(--sunken);margin-left:auto}
+kbd.k3{margin-left:6px;background:rgba(0,0,0,.08);border-color:transparent;color:inherit}
+/* dock */
+.dockwin{min-width:900px;background:var(--canvas);padding-top:40px}
+.dock{display:flex;align-items:center;gap:10px;padding:12px 20px calc(12px + env(safe-area-inset-bottom,0px));background:var(--card);border-top:1px solid var(--line)}
+.dsum{display:grid;line-height:1.15;margin-right:auto;min-width:0}
+.dsum small{font-size:.72rem;color:var(--ink-3)}
+.dsum b{font-size:1.5rem;font-weight:800;white-space:nowrap}
+.dmeta{font-size:.75rem;color:var(--ink-3)}
+.dock.stack{flex-direction:column;align-items:stretch;gap:8px;padding:10px 14px calc(10px + env(safe-area-inset-bottom,0px))}
+.dock.stack .dsum{margin:0}
+.dbtns{display:grid;grid-template-columns:1fr 1.4fr;gap:8px}
+.dbtns .btn{justify-content:center;height:44px}
+.phone .pscreen>.dock{position:sticky;bottom:0}
+/* settings */
+.setwin{min-width:960px;display:grid;grid-template-columns:240px 1fr;background:var(--canvas);min-height:520px}
+.setnav{background:var(--card);border-right:1px solid var(--line);padding:18px 10px;display:grid;gap:2px;align-content:start;font-size:.86rem}
+.setnav .ptl{padding:0 10px 10px}
+.setnav span{padding:9px 10px;border-radius:8px;color:var(--ink-2)}
+.setnav span.on{background:var(--teal-wash);color:var(--teal-ink);font-weight:700}
+.setbody{padding:20px 24px;display:grid;gap:14px;align-content:start;position:relative}
+.sethead{display:grid}
+.sethead b{font-size:1.15rem;font-weight:800}
+.setgroup{background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.srow{display:flex;gap:16px;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--line)}
+.srow:last-child{border-bottom:0}
+.srow .sl{display:grid;min-width:0}
+.srow .sl b{font-weight:600;font-size:.9rem}
+.srow .sl small{font-size:.76rem;color:var(--ink-3)}
+.srow .sc{display:flex;gap:8px;align-items:center;flex:0 0 auto}
+.srow.col{flex-direction:column;align-items:stretch;gap:8px}
+.srow.col .sc{flex:1}
+.seg2{display:inline-grid;grid-auto-flow:column;grid-auto-columns:1fr;background:var(--sunken);border-radius:8px;padding:3px;font-size:.82rem;font-weight:600}
+.seg2 span{height:34px;display:grid;place-items:center;padding:0 14px;border-radius:6px;color:var(--ink-3)}
+.seg2 span.on{background:var(--card);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.savebar{display:flex;gap:8px;align-items:center;justify-content:flex-end;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px;box-shadow:var(--shadow)}
+.savebar span{margin-right:auto;font-size:.84rem;font-weight:600;color:var(--warn)}
+.slist{list-style:none;margin:0;padding:0;background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.slist li{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:11px 14px;border-bottom:1px solid var(--line);min-height:56px}
+.slist li:last-child{border-bottom:0}
+.slist span{display:grid;min-width:0}
+.slist b{font-weight:600;font-size:.9rem}
+.slist small{font-size:.75rem;color:var(--ink-3)}
+.slist i{font-style:normal;color:var(--ink-3);font-size:1.2rem}
+@media (max-width:640px){.drawer{width:100%}}
+
+/* ===== revision 3 ===== */
+.ico{width:18px;height:18px;flex:0 0 auto;vertical-align:-4px}
+.navi .ico{margin-right:8px}.navi{justify-content:flex-start;align-items:center}.navi small{margin-left:auto}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.toc{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:.85rem}
+.toc a{text-decoration:none;border-bottom:1px solid var(--line-strong)}
+
+/* verdicts */
+.verdicts{display:grid;gap:8px;margin-top:18px}
+.vrow{display:grid;grid-template-columns:72px minmax(0,1fr);gap:12px;align-items:start;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;font-size:.9rem;color:var(--ink-2)}
+.vrow b{color:var(--ink)}
+.vtag{font-size:.7rem;font-weight:800;padding:3px 8px;border-radius:999px;text-align:center;letter-spacing:.02em}
+.vtag.agree{background:var(--get-wash);color:var(--get)}
+.vtag.amend{background:var(--warn-wash);color:var(--warn)}
+.vtag.reject{background:var(--give-wash);color:var(--give)}
+
+/* dataset */
+.datagrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,360px),1fr));gap:12px;margin-top:16px;align-items:start}
+.dstack{display:grid;gap:12px;align-content:start}
+.dtable{background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:auto}
+.dtable table{border-collapse:collapse;width:100%;font-size:.84rem}
+.dtable caption{text-align:left;font-weight:700;padding:10px 14px 6px;font-size:.86rem}
+.dtable th,.dtable td{padding:6px 14px;border-top:1px solid var(--line);text-align:left;vertical-align:top}
+.dtable thead th{font-size:.72rem;color:var(--ink-3);font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+.dtable tfoot th{background:var(--sunken)}
+.dtable .r{text-align:right;white-space:nowrap}
+
+/* home */
+.homehead{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.homehead>div:first-child{display:grid}
+.ptl{font-size:1.25rem;font-weight:800;letter-spacing:-.015em}
+.repeat{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.repeat .lbl{font-size:.72rem;font-weight:700;color:var(--ink-3);text-transform:uppercase;letter-spacing:.06em}
+.why{flex-basis:100%;font-size:.74rem;color:var(--ink-3)}
+.dayline{display:grid;grid-template-columns:repeat(4,minmax(0,1fr)) minmax(0,1.5fr);border-top:1.5px solid var(--ink);border-bottom:1px solid var(--line)}
+.dayline.four{grid-template-columns:repeat(4,minmax(0,1fr))}
+.dayline.grid2{grid-template-columns:1fr 1fr;border-top-width:1px;background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.dl{display:grid;gap:1px;padding:10px 14px 10px 0;align-content:start;min-width:0}
+.dl+.dl{padding-left:14px;border-left:1px solid var(--line)}
+.dayline.grid2 .dl{padding:10px 12px;border-left:0}
+.dayline.grid2 .dl:nth-child(even){border-left:1px solid var(--line)}
+.dayline.grid2 .dl:nth-child(n+3){border-top:1px solid var(--line)}
+.dlab{font-size:.72rem;font-weight:700;color:var(--ink-3)}
+.dl b{font-size:1.4rem;font-weight:800;letter-spacing:-.02em;line-height:1.2}
+.dayline.grid2 .dl b,.dayline.four .dl b{font-size:1.12rem}
+.dl small{font-size:.72rem;color:var(--ink-3);line-height:1.35}
+.dl .g,.g{color:var(--get)} .dl .r,.reg2 .a.r{color:var(--give)}
+.dayline.tiny .dl b{font-size:.95rem}
+.dl.chart{gap:4px}
+table.mini{font-size:.74rem;border-collapse:collapse;width:100%}
+table.mini td{padding:1px 4px;border-bottom:1px solid var(--line)}
+table.mini td+td{text-align:right}
+
+.reg2{list-style:none;margin:0;padding:0}
+.reg2 li{display:grid;grid-template-columns:38px 62px minmax(0,1fr) auto 72px;gap:10px;align-items:center;padding:9px 16px;border-bottom:1px solid var(--line);font-size:.86rem}
+.reg2 li:last-child{border-bottom:0}
+.reg2 .t{font-size:.75rem;color:var(--ink-3)}
+.reg2 .ty{font-size:.74rem;font-weight:700;color:var(--ink-2)}
+.reg2 .w{display:grid;min-width:0}
+.reg2 .w b{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.reg2 .w small{font-size:.74rem;color:var(--ink-3)}
+.reg2 .st{justify-self:start;font-size:.7rem;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--warn-wash);color:var(--warn)}
+.reg2 .st.ok{background:var(--get-wash);color:var(--get)}
+.reg2 .st.none{background:none;padding:0}
+.reg2 .a{font-weight:700;text-align:right;white-space:nowrap}
+.reg2 .a.g{color:var(--get)}
+.reg2 li.nowline{display:flex;padding:4px 16px;font-size:.7rem;font-weight:700;color:var(--teal-ink);background:var(--teal-wash)}
+.reg2.compact li{grid-template-columns:36px minmax(0,1fr) auto;padding:9px 12px;gap:8px}
+.reg2.compact .w b{white-space:normal}
+.reg2.compact .ty{font-size:.68rem;color:var(--ink-3)}
+.reg2 li.fresh{animation:land var(--dur-slow) var(--ease-in);background:var(--get-wash)}
+.pfoot{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 16px;font-size:.78rem;color:var(--ink-3);border-top:1px solid var(--line)}
+.fup{list-style:none;margin:0;padding:0}
+.fup li{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center;padding:10px 16px;border-bottom:1px solid var(--line);font-size:.86rem}
+.fup .w{display:grid}.fup .w small{font-size:.74rem;color:var(--ink-3)}
+.ins{display:grid;grid-template-columns:1fr 1fr;gap:20px;padding:14px 16px}
+.ins small{font-size:.72rem;color:var(--ink-3)}
+.cols{display:flex;gap:6px;align-items:flex-end;height:120px;margin:8px 0 4px;border-bottom:1px solid var(--line-strong)}
+.cols span{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:3px;height:100%;font-size:.66rem;color:var(--ink-3)}
+.cols i{display:block;width:100%;height:calc(var(--h) * 1% - 14px);background:var(--teal);opacity:.8;border-radius:3px 3px 0 0}
+.cols .part i{background:var(--cta);opacity:1}
+.rank{list-style:none;margin:8px 0 0;padding:0;display:grid;gap:8px;font-size:.8rem}
+.rank li{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 10px}
+.rank i{grid-column:1/-1;grid-row:2;height:6px;border-radius:3px;background:var(--teal);width:calc(var(--w) * 1%);opacity:.8}
+.bothnote{background:var(--warn-wash);border-radius:12px;padding:10px 14px;font-size:.82rem;color:var(--ink-2)}
+.bothnote b{color:var(--ink)}
+.tab768{width:768px;padding:16px;display:grid;gap:14px;background:var(--canvas)}
+.twolane{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.pnav2{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));border-top:1px solid var(--line);background:var(--card);padding:6px 2px calc(6px + env(safe-area-inset-bottom,0px));position:sticky;bottom:0;z-index:3}
+.pnav2 span{display:grid;justify-items:center;gap:2px;font-size:.66rem;font-weight:600;color:var(--ink-3);padding:4px 0;min-height:44px;text-align:center;line-height:1.15}
+.pnav2 .ico{width:22px;height:22px}
+.pnav2 span.on{color:var(--teal-ink)}
+.pnav2 span.on .ico{background:var(--teal-wash);border-radius:999px;padding:1px 10px;width:42px;box-sizing:content-box;margin:0 -10px}
+.phone.w320 .pnav2 span{font-size:.62rem}
+
+/* states */
+.states{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,250px),1fr));gap:12px;margin-top:14px}
+.stcard{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;display:grid;gap:10px;align-content:start;font-size:.86rem;color:var(--ink-2)}
+.stcard b{color:var(--ink)}
+.stcard.wide{flex:1 1 300px}
+.sttag{justify-self:start;font-size:.68rem;font-weight:800;padding:2px 8px;border-radius:999px;background:var(--teal-wash);color:var(--teal-ink);text-transform:uppercase;letter-spacing:.05em}
+.sttag.bad{background:var(--give-wash);color:var(--give)}
+.small{font-size:.74rem;color:var(--ink-3)}
+.steps{margin:0;padding-left:18px;display:grid;gap:3px}
+.skel{display:grid;gap:8px}
+.skel i{display:block;height:14px;border-radius:6px;background:linear-gradient(90deg,var(--sunken),var(--line),var(--sunken));background-size:200% 100%;animation:shim 1.4s linear infinite}
+@keyframes shim{to{background-position:-200% 0}}
+.failbox{background:var(--give-wash);border-radius:8px;padding:8px 10px;font-size:.82rem;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.lockline{display:flex;gap:6px;align-items:center;color:var(--ink-2)}
+
+/* controls */
+.hitpair{display:inline-flex;gap:12px}
+.hitpair.tight{gap:4px}
+.hitdemo.bad::after{border-color:var(--give);background:color-mix(in srgb,var(--give) 10%,transparent)}
+
+/* payment */
+.statebar{display:flex;flex-wrap:wrap;gap:6px;margin:16px 0 8px}
+.statebar button{height:32px;padding:0 12px;border-radius:999px;border:1px solid var(--line-strong);background:var(--card);font:600 .8rem var(--f-ui);color:var(--ink-2);cursor:pointer}
+.statebar button.on{background:var(--ink);color:var(--canvas);border-color:var(--ink)}
+.statenote{font-size:.84rem;color:var(--ink-2);min-height:2.6em;max-width:80ch;margin-bottom:12px}
+.toast{position:absolute;left:16px;right:16px;bottom:16px;max-width:460px;margin:0 auto;background:var(--ink);color:var(--canvas);border-radius:12px;padding:12px 14px;font-size:.86rem;display:flex;gap:10px;align-items:center;flex-wrap:wrap;box-shadow:var(--shadow);animation:land var(--dur-base) var(--ease-in);z-index:5}
+.toast .linkbtn{color:var(--cta)}
+.toast[hidden]{display:none}
+.pfield{display:grid;gap:4px}
+.picked2{display:flex;justify-content:space-between;gap:8px;align-items:center;border:1px solid var(--line);border-radius:8px;padding:8px 12px;background:var(--sunken);font-size:.88rem}
+.picked2 small{color:var(--ink-3);font-size:.76rem}
+.allocs{display:grid;gap:6px}
+.alloc .amt{font-weight:700;text-align:right}
+.alloc .amt small{display:block;font-weight:500}
+.alloc.adv{border-style:dashed}
+.banner{border-radius:8px;padding:10px 12px;font-size:.84rem;display:grid;gap:6px}
+.banner.warn{background:var(--warn-wash);color:var(--ink)}
+.banner.err{background:var(--give-wash);color:var(--ink)}
+.banner .row-actions{display:flex;gap:8px;flex-wrap:wrap}
+.disc{display:flex;justify-content:space-between;align-items:center;width:100%;background:none;border:0;border-top:1px solid var(--line);padding:10px 0 0;font:600 .84rem var(--f-ui);color:var(--ink);cursor:pointer}
+.disc small{color:var(--ink-3);font-weight:500}
+.dis{opacity:.55;pointer-events:none}
+.spin{width:14px;height:14px;border-radius:50%;border:2px solid currentColor;border-right-color:transparent;animation:rot .7s linear infinite;display:inline-block}
+@keyframes rot{to{transform:rotate(360deg)}}
+.money.err{border-color:var(--give);box-shadow:0 0 0 3px var(--give-wash)}
+.money.focus{border-color:var(--teal)}
+.mv{font-weight:800;font-size:1.2rem;color:var(--ink)}
+.kbwin{grid-template-rows:1fr auto}
+.kbsheet{position:absolute;left:0;right:0;bottom:236px;top:auto;max-height:calc(100% - 236px - 40px)}
+.keypad{position:absolute;left:0;right:0;bottom:0;height:236px;background:var(--sunken);display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:8px;border-top:1px solid var(--line)}
+.keypad span{display:grid;place-items:center;background:var(--card);border-radius:8px;font-weight:700;font-size:1.1rem}
+
+/* customers */
+.age-pill.warn{background:var(--warn-wash);color:var(--warn)}
+.settle{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.settle>div{display:grid;border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.settle small,.after span:first-child{font-size:.74rem;color:var(--ink-3)}
+.settle b{font-size:1.2rem;font-weight:800}
+.settle .r{color:var(--give)}
+.after{display:flex;gap:16px;flex-wrap:wrap;align-items:baseline;background:var(--sunken);border-radius:8px;padding:8px 12px;font-size:.86rem}
+.dwin.short2{height:540px}
+.dwin.short3{height:500px}
+.choice{display:grid;gap:2px;text-align:left;width:100%;background:none;border:0;border-bottom:1px solid var(--line);padding:12px 16px;font:500 .9rem var(--f-ui);color:var(--ink);cursor:pointer}
+.choice:last-child{border-bottom:0}
+.choice:hover:not(:disabled){background:var(--teal-wash)}
+.choice small{font-size:.78rem;color:var(--ink-3)}
+.choice:disabled{cursor:not-allowed;opacity:.55}
+.checked{font-size:.82rem;color:var(--get);background:var(--get-wash);border-radius:8px;padding:8px 10px}
+
+/* share, pickers */
+.legend{display:flex;flex-wrap:wrap;gap:8px 16px;font-size:.8rem;color:var(--ink-2);margin-top:12px}
+.legend i{display:inline-block;width:18px;height:18px;border-radius:5px;vertical-align:-4px;margin-right:6px}
+.lg-today{outline:1.5px solid var(--teal);outline-offset:-1.5px}
+.lg-sel{background:var(--teal)}
+.lg-focus{box-shadow:0 0 0 2px var(--canvas),0 0 0 4px var(--cta)}
+.lg-off{background:var(--sunken);opacity:.6}
+.calgrid .focus{box-shadow:inset 0 0 0 2px var(--cta)}
+.calgrid .off{color:var(--ink-3);opacity:.4;text-decoration:line-through;text-decoration-color:transparent}
+.calgrid span{cursor:default}
+.opt.off{opacity:.6}
+.opt .pr{display:grid;justify-items:end;text-align:right}
+.lockt{display:inline-flex;align-items:center;gap:3px;color:var(--ink-2)}
+.lockt .ico{width:12px;height:12px;vertical-align:0}
+.ofoot{border-top:1px solid var(--line);padding:6px 14px 2px;font-size:.72rem;color:var(--ink-3)}
+.nomatch{display:grid;gap:10px;padding:18px 16px}
+.nomatch small{font-size:.76rem;color:var(--ink-3)}
+.nomatch .btn{justify-content:center}
+.stress{position:absolute;top:12px;left:12px;right:12px;font-size:.72rem;font-weight:700;color:var(--warn);background:var(--warn-wash);border-radius:8px;padding:6px 10px}
+
+/* settings */
+.setcols{display:grid;grid-template-columns:minmax(0,1fr) 230px;gap:16px;align-items:start}
+.preview80{background:#fff;color:#1B1E24;border:1px solid var(--line);border-radius:4px;padding:14px 12px;display:grid;gap:4px;font:500 .74rem/1.4 ui-monospace,Menlo,Consolas,monospace;box-shadow:var(--shadow)}
+.preview80 b{text-align:center;font-size:.82rem}
+.preview80>small{text-align:center;color:#4A505A}
+.preview80 .pl{display:flex;justify-content:space-between;gap:8px}
+.preview80 .pl.tot{border-top:1px dashed #999;padding-top:4px;font-weight:800}
+.preview80 em{font-style:normal;text-align:center;color:#656D78;font-size:.66rem;margin-top:6px;font-family:var(--f-ui)}
+.fakeinput.err{border-color:var(--give);box-shadow:0 0 0 3px var(--give-wash);color:var(--ink)}
+.srow.col{flex-wrap:wrap}
+.srow.col>.fmsg{flex-basis:100%}
+.backrow{display:flex;align-items:center;gap:6px}
+
+/* ratings */
+.rate td{vertical-align:top}
+.scoregrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr));gap:6px;margin-top:14px}
+.scoregrid span{display:flex;justify-content:space-between;gap:8px;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:8px 12px;font-size:.84rem}
+.scoregrid b{font-variant-numeric:tabular-nums}
+
+@media (max-width:760px){
+  .vrow{grid-template-columns:1fr}
+  .vtag{justify-self:start}
+  .setcols{grid-template-columns:1fr}
+}
+@media (prefers-reduced-motion:reduce){.skel i,.spin{animation:none}.toast,.reg2 li.fresh{animation:none}}
+[hidden]{display:none!important}
+.specimen{grid-template-columns:minmax(0,1fr)}
+.specimen>*{min-width:0}
+.sprow{flex-wrap:wrap}
+.sheet,.drawer,.dialog{grid-template-columns:minmax(0,1fr)}
+.pop-stage{min-width:0;overflow:hidden}
+.pop-stage>*{max-width:100%}
+.spcell.grow{min-width:0;flex-basis:100%}
+.spcell.grow>.toolbar{width:100%;min-width:0}
+.spl{white-space:normal}
+/* dark sidebar on a white page */
+:root{--side:#0B3F45;--side-line:#0B3F45;--side-on:rgba(255,255,255,.14);--side-ink:#D5ECEE;--side-ink-on:#FFFFFF}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--side:#0E2427;--side-line:#1C3A3D;--side-on:rgba(255,255,255,.10)}}
+:root[data-theme="dark"]{--side:#0E2427;--side-line:#1C3A3D;--side-on:rgba(255,255,255,.10)}
+.side,.setnav{background:var(--side);border-right-color:var(--side-line);color:var(--side-ink)}
+.side .brand{color:#fff}
+.side .mark{background:var(--cta);color:#1B1E24}
+.side .navi,.setnav span{color:var(--side-ink)}
+.side .navgap{border-color:rgba(255,255,255,.12)}
+.navi.on,.setnav span.on{background:var(--side-on);color:var(--side-ink-on);box-shadow:inset 3px 0 0 var(--cta)}
+.navi small{color:var(--side-ink);opacity:.75}
+.setnav .ptl{color:#fff}
+</style>
+<div class="themesw" role="group" aria-label="Theme"><button type="button" data-t="light" aria-pressed="true">Light</button><button type="button" data-t="dark" aria-pressed="false">Dark</button></div>
+<div class="wrap">
+
+<header class="hero">
+  <span class="eyebrow">YourKhata Shop · Design direction · revision 3 · Saturday 17 Oct 2026</span>
+  <h1>Counter Mode, corrected: <em>right numbers first</em>, then a calmer, faster screen.</h1>
+  <p class="lede">This revision answers the outside review point by point. Every screen now uses one example shop whose totals add up, every flow says what really happens in the product today, and anything that would need a new rule or a change to a shared component is marked. It is still design only: no code, data or deployment was touched.</p>
+  <nav class="toc" aria-label="On this page"><a href="#verdicts">Review verdicts</a><a href="#data">Example data</a><a href="#home">Home</a><a href="#controls">Controls</a><a href="#pay">Receive payment</a><a href="#customers">Customers and filters</a><a href="#billactions">Cancel, return, refund, settle</a><a href="#share">Receipt message</a><a href="#pickers">Date and item pickers</a><a href="#footer">Total bar</a><a href="#settings">Settings</a><a href="#map">Components and gaps</a><a href="#ratings">Ratings</a><a href="#research">Research</a></nav>
+</header>
+
+<!-- ============ VERDICTS ============ -->
+<section id="verdicts">
+  <span class="eyebrow">Step 1</span>
+  <h2>Where I agree with the review, and where I don't</h2>
+  <p class="lede">The review scored the last version about 7.4 out of 10 from screenshots. Most of its points are right, and three found real mistakes in my data. A few needed amending once I checked them against the code.</p>
+  <div class="verdicts">
+    <div class="vrow"><span class="vtag agree">Agree</span><div><b>₹12,40,000 beside a ₹18,450 total was wrong.</b> It was meant as a width test but sat in real data. The example shop now has all 12 customers listed, and they add up to ₹18,450. Large amounts are tested separately and labelled as a stress test.</div></div>
+    <div class="vrow"><span class="vtag agree">Agree</span><div><b>17 Oct 2026 is a Saturday.</b> Every date and comparison now says Saturday, and "last Saturday" is 10 Oct.</div></div>
+    <div class="vrow"><span class="vtag agree">Agree</span><div><b>The hourly chart ran to 7 pm at 4:40 pm.</b> It now stops at the current hour, names its metric ("billed, with GST, after returns") and its range, and the comparison is a sentence, not a hidden line.</div></div>
+    <div class="vrow"><span class="vtag agree">Agree</span><div><b>The void example mixed up a return and a cancellation.</b> Bill actions now start with "What happened?" and lead to four separate flows. The void dialog lists what the code actually does: stock comes back, the bill leaves the dues, any payment stays with the customer as an advance, and a bill with a credit note can't be voided.</div></div>
+    <div class="vrow"><span class="vtag agree">Agree</span><div><b>Tiny register marks, the vague "Start" tab and the "People" tab.</b> Rows now name their type in words, status is a word pill, and the phone bar reads Home · Bills · Customers · Suppliers · More with drawn icons.</div></div>
+    <div class="vrow"><span class="vtag agree">Agree</span><div><b>Hindi lacked the tabs and actions.</b> The Hindi phone now has the same parts as English, in the same order.</div></div>
+    <div class="vrow"><span class="vtag amend">Amend</span><div><b>"Don't claim the touch area solves accessibility."</b> Fair, and the claim is narrower now. The 44 × 44 area is real (<code>.ub-hit</code> in <code>app/globals.css</code>) and the axe sweep checks it at 390 px (DESIGN-SYSTEM §5). What's still unproven is overlap between neighbours, which needs 12 px between them on a phone.</div></div>
+    <div class="vrow"><span class="vtag amend">Amend</span><div><b>"Show allocation errors."</b> The current payment form can't produce a mismatch: "Auto, oldest first" is on by default, and manual amounts are capped at each bill's due, with the rest shown as "kept as advance" (<code>PaymentAllocationPicker.tsx</code>). The real cases to design for are an advance, and a bill that was paid on another device while the form was open. Both are shown.</div></div>
+    <div class="vrow"><span class="vtag amend">Amend</span><div><b>"Clarify what the receipt share sends."</b> The server's receipt text already has a "Receipt: link" line to the public receipt page (<code>payments/services/receipt.py</code>). So the share is text with a link, and the sheet now says so. The words that left are not recorded yet (message inventory M-03).</div></div>
+    <div class="vrow"><span class="vtag amend">Amend</span><div><b>"Paid ahead" label in filters.</b> The list's real balance filter has three values: owes you, you owe them, settled (<code>partyFilters.ts</code>). For a customer, "you owe them" means they paid in advance, so it is labelled "Paid you in advance". Other liabilities don't exist in this filter, so none are invented.</div></div>
+    <div class="vrow"><span class="vtag reject">Disagree</span><div><b>"A one-line day sentence is too big."</b> I agree it was oversized and vague, so it's gone. But I've kept the four figures as one ruled line rather than return to cards, because each figure needs its basis written under it. The line is the register's header, not a row of tiles.</div></div>
+    <div class="vrow"><span class="vtag reject">Open</span><div><b>Settling a person who is both customer and supplier.</b> You decided balances stay separate until explicitly settled (D-03). How a settlement is recorded (one linked pair of entries, or a new document) is not decided. The settle screen below is a proposal for you to approve, not a rule I'm assuming.</div></div>
+  </div>
+</section>
+
+<!-- ============ DATASET ============ -->
+<section id="data">
+  <span class="eyebrow">Step 2</span>
+  <h2>One example shop, used on every screen</h2>
+  <p class="lede">Shree Ganesh Kirana, Saturday 17 Oct 2026, 4:40 pm. Credit bills are due 15 days after the bill date. "Late by" means days past the due date of the oldest unpaid bill, not the bill's age.</p>
+  <div class="datagrid">
+    <div class="dtable"><table>
+      <caption>Customers who owe you · Shop book</caption>
+      <thead><tr><th>Customer</th><th class="r">Owes you</th><th>Late by</th></tr></thead>
+      <tbody>
+        <tr><td>Shri Balaji Hardware &amp; Electricals Private Limited</td><td class="r num">₹4,200</td><td>12 days</td></tr>
+        <tr><td>Sharma General Store</td><td class="r num">₹3,100</td><td>42 days</td></tr>
+        <tr><td>Mohan Dairy</td><td class="r num">₹2,860</td><td>Not due yet</td></tr>
+        <tr><td>Kavya Tiffin Centre</td><td class="r num">₹1,850</td><td>9 days</td></tr>
+        <tr><td>Gupta Sweets</td><td class="r num">₹1,320</td><td>5 days</td></tr>
+        <tr><td>Lakshmi Provisions</td><td class="r num">₹1,155</td><td>17 days</td></tr>
+        <tr><td>Ramesh Traders <span class="both">Also a supplier</span></td><td class="r num">₹1,000</td><td>Not due yet</td></tr>
+        <tr><td>Imran Tailors</td><td class="r num">₹980</td><td>Not due yet</td></tr>
+        <tr><td>Patel Medical</td><td class="r num">₹640</td><td>Not due yet</td></tr>
+        <tr><td>Suresh Auto Parts</td><td class="r num">₹520</td><td>3 days</td></tr>
+        <tr><td>Anita Verma</td><td class="r num">₹445</td><td>Not due yet</td></tr>
+        <tr><td>Neha Beauty Parlour</td><td class="r num">₹380</td><td>Not due yet</td></tr>
+      </tbody>
+      <tfoot><tr><th>12 customers</th><th class="r num">₹18,450</th><th></th></tr></tfoot>
+    </table></div>
+    <div class="dstack">
+      <div class="dtable"><table>
+        <caption>Suppliers you owe · Shop book</caption>
+        <thead><tr><th>Supplier</th><th class="r">You owe</th><th>Due</th></tr></thead>
+        <tbody>
+          <tr><td>Mahalaxmi Wholesale</td><td class="r num">₹5,000</td><td>30 Oct</td></tr>
+          <tr><td>Gupta Oil Mills</td><td class="r num">₹4,200</td><td>19 Oct</td></tr>
+          <tr><td>Ramesh Traders <span class="both">Also a customer</span></td><td class="r num">₹600</td><td>3 days late</td></tr>
+        </tbody>
+        <tfoot><tr><th>3 suppliers</th><th class="r num">₹9,800</th><th></th></tr></tfoot>
+      </table></div>
+      <div class="dtable"><table>
+        <caption>Today so far</caption>
+        <tbody>
+          <tr><td>Billed · 23 bills, with GST, after returns</td><td class="r num">₹14,280</td></tr>
+          <tr><td>Received · cash ₹6,140 + UPI ₹3,500</td><td class="r num">₹9,640</td></tr>
+          <tr><td>Paid out · Gupta Oil ₹1,800 + expenses ₹350</td><td class="r num">₹2,150</td></tr>
+          <tr><td>Cash by your records · opened with ₹680, + ₹6,140 cash in, − ₹350 cash out</td><td class="r num">₹6,470</td></tr>
+        </tbody>
+      </table></div>
+      <div class="dtable"><table>
+        <caption>Bills used in the payment examples</caption>
+        <tbody>
+          <tr><td>Anita · INV-0412 · 8 Oct · ₹945, ₹500 paid, due 23 Oct</td><td class="r num">₹445</td></tr>
+          <tr><td>Mohan · INV-0385 · 5 Oct · due 20 Oct</td><td class="r num">₹1,100</td></tr>
+          <tr><td>Mohan · INV-0391 · 9 Oct · ₹1,960, ₹1,500 paid today</td><td class="r num">₹460</td></tr>
+          <tr><td>Mohan · INV-0402 · 13 Oct · due 28 Oct</td><td class="r num">₹1,300</td></tr>
+        </tbody>
+      </table></div>
+    </div>
+  </div>
+  <p class="note">Check sums: Late over 30 days ₹3,100; late 1–30 days ₹9,045 (₹4,200 + ₹1,850 + ₹1,320 + ₹1,155 + ₹520); not due yet ₹6,305. Together ₹18,450. Suppliers: late ₹600, due in the next 7 days ₹4,200, later ₹5,000, together ₹9,800. Billed per hour, 9 am to the 4 pm hour so far: 1,120 + 1,860 + 2,540 + 1,900 + 720 + 2,180 + 2,460 + 1,500 = ₹14,280.</p>
+</section>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-home" viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></symbol>
+  <symbol id="i-bill" viewBox="0 0 24 24"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6M9 16h3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/></symbol>
+  <symbol id="i-cust" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M4 21c1-4 4.5-6 8-6s7 2 8 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+  <symbol id="i-supp" viewBox="0 0 24 24"><path d="M2 7h11v9H2zM13 10h4l4 4v2h-8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="6" cy="18" r="2" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="17" cy="18" r="2" fill="none" stroke="currentColor" stroke-width="1.8"/></symbol>
+  <symbol id="i-more" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.8"/><rect x="14" y="3" width="7" height="7" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.8"/><rect x="3" y="14" width="7" height="7" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.8"/><rect x="14" y="14" width="7" height="7" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.8"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="m16 16 4.5 4.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+  <symbol id="i-filter" viewBox="0 0 24 24"><path d="M4 6h16M7 12h10M10 18h4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+  <symbol id="i-sort" viewBox="0 0 24 24"><path d="M8 4v16M4 16l4 4 4-4M16 20V4M12 8l4-4 4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-cal" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M3.5 10h17M8 3v4M16 3v4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+  <symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+  <symbol id="i-back" viewBox="0 0 24 24"><path d="M15 5 8 12l7 7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-dots" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.7" fill="currentColor"/><circle cx="12" cy="12" r="1.7" fill="currentColor"/><circle cx="19" cy="12" r="1.7" fill="currentColor"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M8 11V8a4 4 0 0 1 8 0v3" fill="none" stroke="currentColor" stroke-width="1.8"/></symbol>
+</svg>
+
+<!-- ============ HOME ============ -->
+<section id="home">
+  <span class="eyebrow">Step 3 · Home</span>
+  <h2>Home, the Shop dashboard</h2>
+  <p class="lede">What changed: the big sentence became one ruled line of four figures, each with its basis written under it. Register rows say what they are in words. The chart says what it counts and stops at the current hour. "Repeat" suggestions say where they come from and only open a filled form. Try the Counter Bar (type <b>mohan 2000</b> or <b>rice</b>), the tabs, and "Show as table".</p>
+
+  <div class="device"><div class="device-bar"><i></i><i></i><i></i><span>Desktop 1280 · Home</span></div>
+  <div class="scrollx"><div class="app">
+    <nav class="side" aria-label="Preview navigation">
+      <div class="brand"><span class="mark">K</span>Shree Ganesh Kirana</div>
+      <div class="navi on"><svg class="ico"><use href="#i-home"/></svg>Home</div>
+      <div class="navi"><svg class="ico"><use href="#i-bill"/></svg>Bills</div>
+      <div class="navi"><svg class="ico"><use href="#i-cust"/></svg>Customers <small>12 owe</small></div>
+      <div class="navi"><svg class="ico"><use href="#i-supp"/></svg>Suppliers <small>3 due</small></div>
+      <div class="navi"><svg class="ico"><use href="#i-more"/></svg>Items</div>
+      <div class="navi"><svg class="ico"><use href="#i-bill"/></svg>Purchases</div>
+      <div class="navgap"></div>
+      <div class="navi">Money book</div>
+      <div class="navi">Reports</div>
+      <div class="navi">Settings</div>
+    </nav>
+    <div class="main">
+      <div class="homehead">
+        <div><b class="ptl">Home</b><span class="psub">Shop · Saturday 17 Oct 2026 · 4:40 pm</span></div>
+        <div class="row-actions"><button class="btn" type="button">Receive money</button><button class="btn" type="button">Pay supplier</button><button class="btn cta" type="button">+ New bill</button></div>
+      </div>
+      <div class="cbar">
+        <svg class="ic ico" aria-hidden="true"><use href="#i-search"/></svg>
+        <input id="cbar-desk" type="text" autocomplete="off" placeholder="Find or start: a name, item, bill number or amount" aria-label="Find or start something: type a name, item, bill number or amount">
+        <kbd>Ctrl K</kbd>
+        <div class="sugg" id="sugg-desk" hidden role="listbox" aria-label="Suggestions"></div>
+      </div>
+      <div class="repeat">
+        <span class="lbl">Repeat</span>
+        <button class="chip" type="button">Bill for Ramesh Traders, same items as Tue 13 Oct</button>
+        <button class="chip" type="button">Purchase from Mahalaxmi: rice 25 kg × 4</button>
+        <button class="chip" type="button">Expense: tea ₹60</button>
+        <span class="why">From what you did most in the last 14 days. Each opens a filled form; nothing is saved until you press Save.</span>
+      </div>
+
+      <div class="dayline" role="group" aria-label="Today so far">
+        <div class="dl"><span class="dlab">Billed</span><b class="num">₹14,280</b><small>23 bills · with GST, after returns</small></div>
+        <div class="dl"><span class="dlab">Received</span><b class="num g">₹9,640</b><small>Cash ₹6,140 · UPI ₹3,500</small></div>
+        <div class="dl"><span class="dlab">Paid out</span><b class="num r">₹2,150</b><small>Suppliers ₹1,800 · expenses ₹350</small></div>
+        <div class="dl"><span class="dlab">Cash by your records</span><b class="num">₹6,470</b><small>Not counted · <a href="#home">Count cash</a></small></div>
+        <div class="dl chart">
+          <span class="dlab">Billed per hour today</span>
+          <div id="hours-chart"><svg width="236" height="64" viewBox="0 0 236 64" role="img" aria-label="Billed per hour today from 9 am. Highest at 11 am, ₹2,540. The 4 pm hour is still going: ₹1,500 so far."><line x1="0" y1="52" x2="236" y2="52" stroke="var(--line-strong)"/><g id="bars"></g><text x="0" y="63" font-size="9" fill="var(--ink-3)">9 am</text><text x="196" y="63" font-size="9" fill="var(--ink-3)">4 pm</text></svg></div>
+          <table class="mini" id="hours-table" hidden><tbody></tbody></table>
+          <small>Last Saturday by 4:40 pm: ₹12,960 · <button class="linkbtn" type="button" id="toggle-hours">Show as table</button></small>
+        </div>
+      </div>
+
+      <div class="body">
+        <div class="panel">
+          <div class="tabs" role="tablist" aria-label="Home sections">
+            <button class="tab on" type="button" role="tab" aria-selected="true" data-tab="reg">Register</button>
+            <button class="tab" type="button" role="tab" aria-selected="false" data-tab="fup">Follow-ups <span class="ct">5</span></button>
+            <button class="tab" type="button" role="tab" aria-selected="false" data-tab="ins">Insights</button>
+          </div>
+          <div data-pane="reg">
+            <ul class="reg2">
+              <li class="nowline">Now · 4:40 pm</li>
+              <li><span class="t num">4:31</span><span class="ty">Bill</span><span class="w"><b>Sharma General Store</b><small>INV-0418 · credit · 6 items</small></span><span class="st">Not paid</span><span class="a num">₹1,240</span></li>
+              <li><span class="t num">4:12</span><span class="ty">Received</span><span class="w"><b>Mohan Dairy</b><small>UPI · for INV-0391</small></span><span class="st none"></span><span class="a g num">+₹1,500</span></li>
+              <li><span class="t num">3:58</span><span class="ty">Bill</span><span class="w"><b>Walk-in customer</b><small>INV-0417 · cash · 3 items</small></span><span class="st ok">Paid</span><span class="a num">₹386</span></li>
+              <li><span class="t num">3:20</span><span class="ty">Paid out</span><span class="w"><b>Gupta Oil Mills</b><small>Bank · part of PB-0207 · ₹4,200 still due</small></span><span class="st none"></span><span class="a r num">−₹1,800</span></li>
+              <li><span class="t num">2:47</span><span class="ty">Purchase</span><span class="w"><b>Mahalaxmi Wholesale</b><small>PB-0211 · on credit, due 30 Oct · stock in</small></span><span class="st">Not paid</span><span class="a num">₹5,000</span></li>
+              <li><span class="t num">1:15</span><span class="ty">Expense</span><span class="w"><b>Porter</b><small>Cash</small></span><span class="st none"></span><span class="a r num">−₹290</span></li>
+              <li><span class="t num">10:40</span><span class="ty">Expense</span><span class="w"><b>Tea and snacks</b><small>Cash</small></span><span class="st none"></span><span class="a r num">−₹60</span></li>
+            </ul>
+            <div class="pfoot"><span>7 of 31 entries today · 2 bills on hold</span><button class="btn sm" type="button">Open day book</button></div>
+          </div>
+          <div data-pane="fup" hidden>
+            <ul class="fup">
+              <li><span class="w"><b>Sharma General Store promised ₹1,500 today</b><small>Owes ₹3,100 · 42 days late</small></span><button class="btn sm" type="button">Remind</button></li>
+              <li><span class="w"><b>Order SO-118 for Kavya Tiffin Centre</b><small>Deliver today · 4 items</small></span><button class="btn sm" type="button">Open</button></li>
+              <li><span class="w"><b>Gupta Oil Mills, ₹4,200 due Monday 19 Oct</b><small>PB-0207, rest after today's ₹1,800</small></span><button class="btn sm" type="button">Pay</button></li>
+              <li><span class="w"><b>Rice 25 kg: 3 left</b><small>You reorder at 5 · last bought from Mahalaxmi</small></span><button class="btn sm" type="button">Order</button></li>
+              <li><span class="w"><b>Purchase order PO-042 not received</b><small>Mahalaxmi Wholesale · sent 12 Oct</small></span><button class="btn sm" type="button">Open</button></li>
+            </ul>
+            <div class="pfoot"><span>Most urgent first</span></div>
+          </div>
+          <div data-pane="ins" hidden>
+            <div class="ins">
+              <div><span class="dlab">Billed per day, Sun 11 to Sat 17 Oct</span>
+                <div class="cols" role="img" aria-label="Billed per day: Sun ₹9,800, Mon ₹15,200, Tue ₹13,900, Wed ₹12,400, Thu ₹16,050, Fri ₹17,300, Sat so far ₹14,280">
+                  <span style="--h:57"><i></i>Sun</span><span style="--h:88"><i></i>Mon</span><span style="--h:80"><i></i>Tue</span><span style="--h:72"><i></i>Wed</span><span style="--h:93"><i></i>Thu</span><span style="--h:100"><i></i>Fri</span><span class="part" style="--h:83"><i></i>Sat*</span>
+                </div><small>Columns start at ₹0. *Saturday is so far.</small></div>
+              <div><span class="dlab">Top items this week, by amount billed</span>
+                <ul class="rank"><li><span>Basmati rice 5 kg</span><i style="--w:100"></i><b class="num">₹13,950</b></li><li><span>Sunflower oil 1 L</span><i style="--w:62"></i><b class="num">₹8,640</b></li><li><span>Toor dal 1 kg</span><i style="--w:41"></i><b class="num">₹5,760</b></li><li><span>Sugar 5 kg</span><i style="--w:30"></i><b class="num">₹4,200</b></li></ul></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="lanes">
+          <div class="panel lane collect">
+            <div class="ph"><h4>To collect · customers</h4><span class="meta">Shop book · now</span></div>
+            <div class="tot"><span class="big num">₹18,450</span><span class="who">12 customers</span></div>
+            <div class="age" role="img" aria-label="Over 30 days late ₹3,100; 1 to 30 days late ₹9,045; not due yet ₹6,305"><span style="flex:3100;background:var(--give)"></span><span style="flex:9045;background:var(--cta)"></span><span style="flex:6305;background:var(--line-strong)"></span></div>
+            <div class="agelbl"><span>Over 30 days late <b class="num">₹3,100</b></span><span>1–30 late <b class="num">₹9,045</b></span><span>Not due <b class="num">₹6,305</b></span></div>
+            <ul class="people">
+              <li><span class="nm"><b>Sharma General Store</b><small>42 days late · promised ₹1,500 today</small></span><span class="amt num">₹3,100</span><button class="btn sm" type="button">Remind</button></li>
+              <li><span class="nm"><b>Lakshmi Provisions</b><small>17 days late</small></span><span class="amt num">₹1,155</span><button class="btn sm" type="button">Remind</button></li>
+              <li><span class="nm"><b>Shri Balaji Hardware &amp; Electricals Private Limited</b><small>12 days late</small></span><span class="amt num">₹4,200</span><button class="btn sm" type="button">Remind</button></li>
+            </ul>
+            <div class="pfoot"><span>Most late first</span><button class="linkbtn" type="button">All 12 customers</button></div>
+          </div>
+          <div class="panel lane pay">
+            <div class="ph"><h4>To pay · suppliers</h4><span class="meta">Shop book · now</span></div>
+            <div class="tot"><span class="big num">₹9,800</span><span class="who">3 suppliers</span></div>
+            <div class="age" role="img" aria-label="Late ₹600; due in the next 7 days ₹4,200; later ₹5,000"><span style="flex:600;background:var(--give)"></span><span style="flex:4200;background:var(--cta)"></span><span style="flex:5000;background:var(--line-strong)"></span></div>
+            <div class="agelbl"><span>Late <b class="num">₹600</b></span><span>Next 7 days <b class="num">₹4,200</b></span><span>Later <b class="num">₹5,000</b></span></div>
+            <ul class="people">
+              <li><span class="nm"><b>Ramesh Traders</b><small>3 days late · PB-0198</small></span><span class="amt num">₹600</span><button class="btn sm" type="button">Pay</button></li>
+              <li><span class="nm"><b>Gupta Oil Mills</b><small>Due Mon 19 Oct</small></span><span class="amt num">₹4,200</span><button class="btn sm" type="button">Pay</button></li>
+              <li><span class="nm"><b>Mahalaxmi Wholesale</b><small>Due Fri 30 Oct</small></span><span class="amt num">₹5,000</span><button class="btn sm" type="button">Pay</button></li>
+            </ul>
+          </div>
+          <div class="bothnote"><b>Ramesh Traders is in both lists.</b> He owes you ₹1,000 as a customer and you owe him ₹600 as a supplier. These stay separate until you settle them. <button class="linkbtn" type="button">Settle…</button></div>
+        </div>
+      </div>
+    </div>
+  </div></div></div>
+  <p class="note">"Remind" here must use the Shop's reminder flow. Today it uses the Udhaar book's and refuses Shop-only dues (TV-02); that server fix comes before this screen.</p>
+
+  <h3 class="kh">Tablet 768</h3>
+  <div class="device"><div class="device-bar"><i></i><i></i><i></i><span>Tablet 768 · Home, portrait</span></div>
+  <div class="scrollx"><div class="tab768">
+    <div class="homehead"><div><b class="ptl">Home</b><span class="psub">Sat 17 Oct · 4:40 pm</span></div><div class="row-actions"><button class="btn" type="button">Receive money</button><button class="btn cta" type="button">+ New bill</button></div></div>
+    <div class="cbar"><svg class="ic ico" aria-hidden="true"><use href="#i-search"/></svg><input type="text" placeholder="Find or start: a name, item, bill or amount" aria-label="Find or start something"></div>
+    <div class="dayline four">
+      <div class="dl"><span class="dlab">Billed</span><b class="num">₹14,280</b><small>23 bills · with GST</small></div>
+      <div class="dl"><span class="dlab">Received</span><b class="num g">₹9,640</b><small>Cash ₹6,140 · UPI ₹3,500</small></div>
+      <div class="dl"><span class="dlab">Paid out</span><b class="num r">₹2,150</b><small>Suppliers ₹1,800 · exp. ₹350</small></div>
+      <div class="dl"><span class="dlab">Cash by records</span><b class="num">₹6,470</b><small>Not counted</small></div>
+    </div>
+    <div class="twolane">
+      <div class="ml c"><small>To collect · 12 customers</small><span class="v num">₹18,450</span><span class="s">₹3,100 over 30 days late</span></div>
+      <div class="ml p"><small>To pay · 3 suppliers</small><span class="v num">₹9,800</span><span class="s">₹600 late · ₹4,200 in 7 days</span></div>
+    </div>
+    <div class="panel"><div class="tabs"><button class="tab on" type="button">Register</button><button class="tab" type="button">Follow-ups <span class="ct">5</span></button><button class="tab" type="button">Insights</button></div>
+      <ul class="reg2">
+        <li><span class="t num">4:31</span><span class="ty">Bill</span><span class="w"><b>Sharma General Store</b><small>INV-0418 · credit</small></span><span class="st">Not paid</span><span class="a num">₹1,240</span></li>
+        <li><span class="t num">4:12</span><span class="ty">Received</span><span class="w"><b>Mohan Dairy</b><small>UPI · for INV-0391</small></span><span class="st none"></span><span class="a g num">+₹1,500</span></li>
+        <li><span class="t num">3:58</span><span class="ty">Bill</span><span class="w"><b>Walk-in customer</b><small>INV-0417 · cash</small></span><span class="st ok">Paid</span><span class="a num">₹386</span></li>
+      </ul></div>
+  </div></div></div>
+
+  <h3 class="kh">Phone 390 in English, 320 in Hindi</h3>
+  <p class="ksub">Both phones have the same parts in the same order: find-or-start box, two general actions, the day figures, the two lanes, the three tabs, and the bottom bar with Customers and Suppliers as separate destinations. "Receive money" asks who first; it no longer shows an amount without a customer.</p>
+  <div class="phones" style="margin-top:14px">
+    <div class="phone" aria-label="Phone, English, 390 px"><div class="pscreen">
+      <div class="ptop"><div class="row"><b>Shree Ganesh Kirana</b><span class="psub">Sat 17 Oct · 4:40 pm</span></div>
+        <div class="cbar"><svg class="ic ico" aria-hidden="true"><use href="#i-search"/></svg><input id="cbar-phone" type="text" autocomplete="off" placeholder="Find or start" aria-label="Find or start something"><div class="sugg" id="sugg-phone" hidden role="listbox" aria-label="Suggestions"></div></div></div>
+      <div class="pbody">
+        <div class="pact"><button class="btn" type="button" id="demo-receive">Receive money</button><button class="btn cta" type="button">+ New bill</button></div>
+        <div class="dayline grid2">
+          <div class="dl"><span class="dlab">Billed</span><b class="num">₹14,280</b><small>23 bills · with GST</small></div>
+          <div class="dl"><span class="dlab">Received</span><b class="num g">₹9,640</b><small>Cash ₹6,140 · UPI ₹3,500</small></div>
+          <div class="dl"><span class="dlab">Paid out</span><b class="num r">₹2,150</b><small>Suppliers ₹1,800 · exp. ₹350</small></div>
+          <div class="dl"><span class="dlab">Cash by records</span><b class="num">₹6,470</b><small>Not counted</small></div>
+        </div>
+        <div class="minilane">
+          <div class="ml c"><small>To collect</small><span class="v num">₹18,450</span><span class="s">12 customers · ₹3,100 over 30 days late</span></div>
+          <div class="ml p"><small>To pay</small><span class="v num">₹9,800</span><span class="s">3 suppliers · ₹600 late</span></div>
+        </div>
+        <div class="seg" role="tablist" aria-label="Home sections"><button class="on" type="button" role="tab" aria-selected="true">Register</button><button type="button" role="tab" aria-selected="false">Follow-ups 5</button><button type="button" role="tab" aria-selected="false">Insights</button></div>
+        <div class="panel"><ul class="reg2 compact" id="reg-phone">
+          <li><span class="t num">4:31</span><span class="w"><span class="ty">Bill · Not paid</span><b>Sharma General Store</b><small>INV-0418 · credit</small></span><span class="a num">₹1,240</span></li>
+          <li><span class="t num">4:12</span><span class="w"><span class="ty">Received</span><b>Mohan Dairy</b><small>UPI · for INV-0391</small></span><span class="a g num">+₹1,500</span></li>
+          <li><span class="t num">3:58</span><span class="w"><span class="ty">Bill · Paid</span><b>Walk-in customer</b><small>INV-0417 · cash</small></span><span class="a num">₹386</span></li>
+          <li><span class="t num">3:20</span><span class="w"><span class="ty">Paid out</span><b>Gupta Oil Mills</b><small>Bank · ₹4,200 still due</small></span><span class="a r num">−₹1,800</span></li>
+        </ul></div>
+      </div>
+      <nav class="pnav2" aria-label="Main"><span class="on"><svg class="ico"><use href="#i-home"/></svg>Home</span><span><svg class="ico"><use href="#i-bill"/></svg>Bills</span><span><svg class="ico"><use href="#i-cust"/></svg>Customers</span><span><svg class="ico"><use href="#i-supp"/></svg>Suppliers</span><span><svg class="ico"><use href="#i-more"/></svg>More</span></nav>
+    </div></div>
+
+    <div class="phone w320 hi" lang="hi" aria-label="फ़ोन, हिंदी, 320 px"><div class="pscreen">
+      <div class="ptop"><div class="row"><b>श्री गणेश किराना</b><span class="psub">शनि 17 अक्टू · 4:40</span></div>
+        <div class="cbar"><svg class="ic ico" aria-hidden="true"><use href="#i-search"/></svg><input type="text" placeholder="खोजें या शुरू करें" aria-label="खोजें या शुरू करें"></div></div>
+      <div class="pbody">
+        <div class="pact"><button class="btn" type="button">पैसे मिले</button><button class="btn cta" type="button">+ नया बिल</button></div>
+        <div class="dayline grid2">
+          <div class="dl"><span class="dlab">बिल बने</span><b class="num">₹14,280</b><small>23 बिल · GST सहित</small></div>
+          <div class="dl"><span class="dlab">पैसे मिले</span><b class="num g">₹9,640</b><small>नकद ₹6,140 · UPI ₹3,500</small></div>
+          <div class="dl"><span class="dlab">पैसे दिए</span><b class="num r">₹2,150</b><small>सप्लायर ₹1,800 · खर्च ₹350</small></div>
+          <div class="dl"><span class="dlab">हिसाब से नकद</span><b class="num">₹6,470</b><small>गिना नहीं</small></div>
+        </div>
+        <div class="minilane">
+          <div class="ml c"><small>आना है</small><span class="v num">₹18,450</span><span class="s">12 ग्राहक · ₹3,100 30 दिन से ज़्यादा देर</span></div>
+          <div class="ml p"><small>देना है</small><span class="v num">₹9,800</span><span class="s">3 सप्लायर · ₹600 देर</span></div>
+        </div>
+        <div class="seg" role="tablist" aria-label="होम के हिस्से"><button class="on" type="button" role="tab" aria-selected="true">रजिस्टर</button><button type="button" role="tab" aria-selected="false">बाकी काम 5</button><button type="button" role="tab" aria-selected="false">जानकारी</button></div>
+        <div class="panel"><ul class="reg2 compact">
+          <li><span class="t num">4:31</span><span class="w"><span class="ty">बिल · बाकी</span><b>शर्मा जनरल स्टोर</b><small>INV-0418 · उधार</small></span><span class="a num">₹1,240</span></li>
+          <li><span class="t num">4:12</span><span class="w"><span class="ty">मिले</span><b>मोहन डेयरी</b><small>UPI · INV-0391</small></span><span class="a g num">+₹1,500</span></li>
+          <li><span class="t num">3:58</span><span class="w"><span class="ty">बिल · चुकता</span><b>नकद ग्राहक</b><small>INV-0417</small></span><span class="a num">₹386</span></li>
+        </ul></div>
+      </div>
+      <nav class="pnav2" aria-label="मुख्य"><span class="on"><svg class="ico"><use href="#i-home"/></svg>होम</span><span><svg class="ico"><use href="#i-bill"/></svg>बिल</span><span><svg class="ico"><use href="#i-cust"/></svg>ग्राहक</span><span><svg class="ico"><use href="#i-supp"/></svg>सप्लायर</span><span><svg class="ico"><use href="#i-more"/></svg>और</span></nav>
+    </div></div>
+  </div>
+  <p class="note">Hindi wording is a first draft for you to check, especially "हिसाब से नकद" (cash by your records) and "बाकी काम" (follow-ups). Five bottom-bar labels fit at 320 px in both languages in this preview; that needs checking on real devices with large system text.</p>
+
+  <h3 class="kh">Home when things aren't normal</h3>
+  <div class="states">
+    <div class="stcard"><span class="sttag">First day, no data</span><div class="dayline grid2 tiny"><div class="dl"><span class="dlab">Billed</span><b class="num">₹0</b></div><div class="dl"><span class="dlab">Received</span><b class="num">₹0</b></div></div><p><b>No bills yet today.</b> Your first bill appears here.</p><ul class="steps"><li>Add your items, or import a list</li><li>Add customers who buy on credit</li><li>Make a bill</li></ul><p class="small">No chart is drawn until there are bills to chart.</p></div>
+    <div class="stcard"><span class="sttag">Loading</span><div class="skel"><i style="width:40%"></i><i style="width:90%;height:38px"></i><i style="width:100%;height:70px"></i><i style="width:85%"></i><i style="width:70%"></i></div><p class="small">Placeholders have the same shape as the figures, so nothing jumps when they arrive.</p></div>
+    <div class="stcard"><span class="sttag">One part failed</span><div class="dayline grid2 tiny"><div class="dl"><span class="dlab">Billed</span><b class="num">₹14,280</b></div><div class="dl"><span class="dlab">Received</span><b class="num g">₹9,640</b></div></div><div class="failbox"><b>Couldn't load supplier dues.</b> Everything else is up to date. <button class="btn sm" type="button">Try again</button></div><p class="small">Built on the existing per-part <code>unavailable</code> list (DashboardPanels <code>PARTS</code>).</p></div>
+    <div class="stcard"><span class="sttag">Staff with limited access</span><div class="dayline grid2 tiny"><div class="dl"><span class="dlab">Billed by you</span><b class="num">₹3,420</b></div><div class="dl"><span class="dlab">Bills</span><b class="num">6</b></div></div><p class="lockline"><svg class="ico" aria-hidden="true"><use href="#i-lock"/></svg>Shop money totals are hidden for your role.</p><p class="small">Which figures a role sees must follow the existing role permissions. This example needs checking against them before it's built.</p></div>
+  </div>
+</section>
+
+<!-- ============ CONTROLS ============ -->
+<section id="controls">
+  <span class="eyebrow">Step 4 · Controls</span>
+  <h2>Buttons, fields and spacing</h2>
+  <p class="lede">Only sizes that exist in source today: buttons 28, 40 and 44 px (<code>mlPrimitives.tsx</code>), inputs 40 px (<code>mlFormPrimitives.tsx</code>), chips 32 px. Neighbours in one row share one height.</p>
+  <div class="specimen">
+    <div class="sprow">
+      <div class="spcell"><button class="btn sm" type="button">Remind</button><span class="spl">sm · 28</span></div>
+      <div class="spcell"><button class="btn" type="button">Cancel</button><span class="spl">md · 40 · secondary</span></div>
+      <div class="spcell"><button class="btn cta" type="button">Receive ₹200</button><span class="spl">md · 40 · primary</span></div>
+      <div class="spcell"><button class="btn lg cta" type="button">+ New bill</button><span class="spl">lg · 44 · page action</span></div>
+      <div class="spcell"><button class="btn danger" type="button">Cancel bill</button><span class="spl">md · 40 · danger</span></div>
+      <div class="spcell"><button class="btn ghost" type="button">Reset</button><span class="spl">md · 40 · quiet</span></div>
+    </div>
+    <div class="sprow">
+      <div class="spcell grow"><div class="toolbar"><span class="fakeinput"><svg class="ico" aria-hidden="true"><use href="#i-search"/></svg> Search name or mobile</span><button class="btn icon" type="button" aria-label="Sort"><svg class="ico"><use href="#i-sort"/></svg></button><button class="btn" type="button"><svg class="ico" aria-hidden="true"><use href="#i-filter"/></svg>Filters <span class="badge">1</span></button></div><span class="spl">40 px input + 40 px icon button + 40 px button, 8 px apart, one baseline</span></div>
+    </div>
+    <div class="sprow">
+      <div class="spcell"><span class="hitdemo"><button class="btn sm" type="button">Remind</button></span><span class="spl">Phone: 28 px look, 44 px touch area</span></div>
+      <div class="spcell"><span class="hitpair"><span class="hitdemo"><span class="fchip">Overdue · 5</span></span><span class="hitdemo"><span class="fchip">Settled</span></span></span><span class="spl">Two chips 12 px apart: touch areas don't overlap</span></div>
+      <div class="spcell"><span class="hitpair tight"><span class="hitdemo bad"><span class="fchip">Overdue</span></span><span class="hitdemo bad"><span class="fchip">Settled</span></span></span><span class="spl">4 px apart: areas overlap, so a tap can hit the wrong one</span></div>
+    </div>
+    <div class="sprow spacing">
+      <span><i style="width:4px"></i>4 · label to field</span><span><i style="width:8px"></i>8 · items in a row</span><span><i style="width:12px"></i>12 · between phone targets</span><span><i style="width:16px"></i>16 · fields in a drawer <span class="gap">proposed</span></span><span><i style="width:24px"></i>24 · fields on a full page</span>
+    </div>
+    <p class="note">Measured, not assumed: the 44 × 44 area comes from <code>.ub-hit</code> below the <code>sm</code> breakpoint and is checked by the axe sweep at 390 px. Overlap between neighbours is only prevented by spacing, so the 12 px rule stays. The proposed 16 px drawer spacing makes short forms shorter; whether a form then fits above a given keyboard depends on the phone, so the footer is docked above the keyboard instead of relying on it.</p>
+  </div>
+</section>
+
+<!-- ============ RECEIVE PAYMENT ============ -->
+<section id="pay">
+  <span class="eyebrow">Step 5 · A form in a drawer</span>
+  <h2>Receive payment, in every state</h2>
+  <p class="lede">The structure follows the existing <code>PaymentFormDrawer</code>: one customer, an amount, the payment mode as a field, "Auto, oldest first" bill matching (on by default), and the rest kept as advance. The date and note are tucked under "More details" because most counter payments are today's. The receipt number is shown as given by the system, not as something to type. Pick a state:</p>
+  <div class="statebar" role="tablist" aria-label="Payment form state">
+    <button type="button" class="on" data-ps="ready">Ready</button>
+    <button type="button" data-ps="multi">Several bills</button>
+    <button type="button" data-ps="empty">Amount missing</button>
+    <button type="button" data-ps="over">More than due</button>
+    <button type="button" data-ps="stale">Changed elsewhere</button>
+    <button type="button" data-ps="saving">Saving</button>
+    <button type="button" data-ps="failed">Didn't go through</button>
+    <button type="button" data-ps="saved">Saved</button>
+  </div>
+  <p class="statenote" id="ps-note"></p>
+  <div class="pair">
+    <div class="device"><div class="device-bar"><i></i><i></i><i></i><span>Desktop · drawer 440 px</span></div>
+      <div class="scrollx"><div class="dwin" id="pay-desk-win">
+        <div class="ghostpage" aria-hidden="true"><span style="width:40%"></span><span style="width:70%"></span><span style="width:62%"></span><span style="width:66%"></span><span style="width:58%"></span></div>
+        <div class="scrim"></div>
+        <aside class="drawer" aria-label="Receive payment, desktop" id="pay-d"></aside>
+        <div class="toast" id="toast-d" hidden></div>
+      </div></div>
+    </div>
+    <div class="phone"><div class="pscreen solo" id="pay-phone-win">
+      <div class="ghostpage" aria-hidden="true"><span style="width:60%"></span><span style="width:80%"></span><span style="width:70%"></span></div>
+      <div class="scrim"></div>
+      <aside class="sheet tall" aria-label="Receive payment, phone" id="pay-p"></aside>
+      <div class="toast" id="toast-p" hidden></div>
+    </div></div>
+  </div>
+
+  <h3 class="kh">With the keyboard open</h3>
+  <p class="ksub">On a phone, the amount is focused with the number keypad up. The sheet's footer sits on top of the keypad, so "Receive ₹200" and the amount still due are always visible. The fields scroll between the header and the footer. This relies on the browser's visual-viewport size, which needs checking on real Android and iPhone devices.</p>
+  <div class="phones" style="margin-top:14px">
+    <div class="phone"><div class="pscreen solo kbwin">
+      <aside class="sheet kbsheet" aria-label="Receive payment with keyboard open">
+        <div class="grab" aria-hidden="true"></div>
+        <div class="shead"><div><b>Receive payment</b><span class="psub">Anita Verma · owes ₹445</span></div><button class="btn icon sm2" type="button" aria-label="Close"><svg class="ico"><use href="#i-close"/></svg></button></div>
+        <div class="sbody"><div class="field"><span class="flabel">Amount</span><span class="money focus"><span class="rs">₹</span><span class="mv num">200</span><span class="caretline"></span></span><span class="fmsg">₹245 will still be due after this.</span></div><div class="field"><span class="flabel">Paid by</span><span class="fakeinput sel">Cash <span class="caret">▾</span></span></div></div>
+        <div class="sfoot"><span class="left"><small>Still due after this</small><b class="num">₹245</b></span><button class="btn cta" type="button">Receive ₹200</button></div>
+      </aside>
+      <div class="keypad" aria-hidden="true"><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span><span>8</span><span>9</span><span>.</span><span>0</span><span>⌫</span></div>
+    </div></div>
+  </div>
+</section>
+
+<!-- ============ CUSTOMERS ============ -->
+<section id="customers">
+  <span class="eyebrow">Step 6 · Table, list and filters</span>
+  <h2>Customers</h2>
+  <p class="lede">The summary line says exactly what it counts: every customer matching the filters, not just the rows on screen. "Late by" is days past the due date of the oldest unpaid bill. Archived customers aren't mixed into an Active list. Ramesh Traders' customer balance is shown here, and his supplier balance only appears under Suppliers.</p>
+  <div class="device"><div class="device-bar"><i></i><i></i><i></i><span>Desktop 1280 · Customers</span></div>
+  <div class="scrollx"><div class="tablewin">
+    <div class="thead-row"><div><b class="ptl">Customers</b><span class="psub">Shop book · 48 active customers</span></div><div class="row-actions"><button class="btn" type="button">Import</button><button class="btn cta" type="button">+ Add customer</button></div></div>
+    <div class="toolbar wide"><span class="fakeinput" style="max-width:300px"><svg class="ico" aria-hidden="true"><use href="#i-search"/></svg> Search name or mobile</span>
+      <span class="fchip">All · 48</span><span class="fchip on">Owe you · 12</span><span class="fchip">Late · 6</span><span class="fchip">Paid you in advance · 1</span>
+      <span class="spacer"></span><button class="btn" type="button"><svg class="ico" aria-hidden="true"><use href="#i-sort"/></svg>Most late first</button><button class="btn" type="button"><svg class="ico" aria-hidden="true"><use href="#i-filter"/></svg>Filters</button></div>
+    <div class="applied"><span>Showing customers who owe you</span><span class="tsum">12 match · they owe <b class="num">₹18,450</b> in total · rows 1–8</span></div>
+    <table class="grid">
+      <thead><tr><th style="width:38%">Customer</th><th class="r">Owes you</th><th>Late by</th><th>Last Shop activity</th><th class="r" style="width:160px"><span class="sr">Actions</span></th></tr></thead>
+      <tbody>
+        <tr><td><b>Sharma General Store</b><small>+91 98123 45678 · promised ₹1,500 today</small></td><td class="r num g">₹3,100</td><td><span class="age-pill bad">42 days</span></td><td>Today 4:31 pm · bill</td><td class="r"><button class="btn sm" type="button">Remind</button> <button class="btn sm icon" type="button" aria-label="More for Sharma General Store"><svg class="ico"><use href="#i-dots"/></svg></button></td></tr>
+        <tr><td><b>Lakshmi Provisions</b><small>+91 97400 22114</small></td><td class="r num g">₹1,155</td><td><span class="age-pill warn">17 days</span></td><td>30 Sep · bill</td><td class="r"><button class="btn sm" type="button">Remind</button> <button class="btn sm icon" type="button" aria-label="More"><svg class="ico"><use href="#i-dots"/></svg></button></td></tr>
+        <tr><td><b>Shri Balaji Hardware &amp; Electricals Private Limited</b><small>+91 99887 66554 · Route 2</small></td><td class="r num g">₹4,200</td><td><span class="age-pill warn">12 days</span></td><td>14 Oct · receipt</td><td class="r"><button class="btn sm" type="button">Remind</button> <button class="btn sm icon" type="button" aria-label="More"><svg class="ico"><use href="#i-dots"/></svg></button></td></tr>
+        <tr><td><b>Kavya Tiffin Centre</b><small>+91 90080 55123 · order to deliver today</small></td><td class="r num g">₹1,850</td><td><span class="age-pill warn">9 days</span></td><td>16 Oct · order</td><td class="r"><button class="btn sm" type="button">Remind</button> <button class="btn sm icon" type="button" aria-label="More"><svg class="ico"><use href="#i-dots"/></svg></button></td></tr>
+        <tr><td><b>Gupta Sweets</b><small>+91 98861 30200</small></td><td class="r num g">₹1,320</td><td><span class="age-pill warn">5 days</span></td><td>12 Oct · bill</td><td class="r"><button class="btn sm" type="button">Remind</button> <button class="btn sm icon" type="button" aria-label="More"><svg class="ico"><use href="#i-dots"/></svg></button></td></tr>
+        <tr><td><b>Suresh Auto Parts</b><small>+91 95388 01477</small></td><td class="r num g">₹520</td><td><span class="age-pill warn">3 days</span></td><td>11 Oct · receipt</td><td class="r"><button class="btn sm" type="button">Remind</button> <button class="btn sm icon" type="button" aria-label="More"><svg class="ico"><use href="#i-dots"/></svg></button></td></tr>
+        <tr><td><b>Mohan Dairy</b><small>+91 98450 11223</small></td><td class="r num g">₹2,860</td><td><span class="age-pill">Not due yet</span></td><td>Today 4:12 pm · receipt</td><td class="r"><button class="btn sm" type="button">Remind</button> <button class="btn sm icon" type="button" aria-label="More"><svg class="ico"><use href="#i-dots"/></svg></button></td></tr>
+        <tr><td><b>Ramesh Traders</b> <span class="both">Also a supplier</span><small>His supplier balance is under Suppliers</small></td><td class="r num g">₹1,000</td><td><span class="age-pill">Not due yet</span></td><td>16 Oct · bill</td><td class="r"><button class="btn sm" type="button">Settle…</button> <button class="btn sm icon" type="button" aria-label="More"><svg class="ico"><use href="#i-dots"/></svg></button></td></tr>
+      </tbody>
+    </table>
+    <div class="applied"><span class="tsum" style="margin-left:0">Rows 1–8 of 12</span><span class="spacer"></span><button class="btn sm" type="button">Show 4 more</button></div>
+  </div></div></div>
+  <p class="note">"Last Shop activity" reads the Shop book, so a customer with Shop bills never says "No entries yet" (TV-07). Archived customers appear only when the Status filter is set to Archived, and their rows say so.</p>
+
+  <div class="pair" style="margin-top:16px">
+    <div class="phone"><div class="pscreen">
+      <div class="ptop"><div class="row"><b>Customers</b><button class="btn icon sm2" type="button" aria-label="Add customer">+</button></div>
+        <div class="toolbar"><span class="fakeinput"><svg class="ico" aria-hidden="true"><use href="#i-search"/></svg> Name or mobile</span><button class="btn icon" type="button" aria-label="Filters, 1 applied"><svg class="ico"><use href="#i-filter"/></svg><span class="dot"></span></button></div>
+        <div class="chiprow"><span class="fchip on">Owe you · 12</span><span class="fchip">Late · 6</span><span class="fchip">Paid you in advance · 1</span></div>
+      </div>
+      <div class="pbody">
+        <div class="tsum" style="margin:0">12 owe you <b class="num">₹18,450</b> in total · most late first</div>
+        <ul class="plist">
+          <li><span class="nm"><b>Sharma General Store</b><small>42 days late · promised ₹1,500 today</small></span><span class="end"><b class="num g">₹3,100</b><button class="btn sm" type="button">Remind</button></span></li>
+          <li><span class="nm"><b>Lakshmi Provisions</b><small>17 days late</small></span><span class="end"><b class="num g">₹1,155</b><button class="btn sm" type="button">Remind</button></span></li>
+          <li><span class="nm"><b>Shri Balaji Hardware &amp; Electricals Private Limited</b><small>12 days late · Route 2</small></span><span class="end"><b class="num g">₹4,200</b><button class="btn sm" type="button">Remind</button></span></li>
+          <li><span class="nm"><b>Kavya Tiffin Centre</b><small>9 days late</small></span><span class="end"><b class="num g">₹1,850</b><button class="btn sm" type="button">Remind</button></span></li>
+          <li><span class="nm"><b>Ramesh Traders</b> <span class="both">Also a supplier</span><small>Not due yet</small></span><span class="end"><b class="num g">₹1,000</b><button class="btn sm" type="button">Settle…</button></span></li>
+        </ul>
+        <button class="btn" type="button" style="justify-content:center">Show more (7 left)</button>
+      </div>
+      <nav class="pnav2" aria-label="Main"><span><svg class="ico"><use href="#i-home"/></svg>Home</span><span><svg class="ico"><use href="#i-bill"/></svg>Bills</span><span class="on"><svg class="ico"><use href="#i-cust"/></svg>Customers</span><span><svg class="ico"><use href="#i-supp"/></svg>Suppliers</span><span><svg class="ico"><use href="#i-more"/></svg>More</span></nav>
+    </div></div>
+
+    <div class="phone"><div class="pscreen solo">
+      <div class="ghostpage" aria-hidden="true"><span style="width:50%"></span><span style="width:80%"></span><span style="width:72%"></span></div>
+      <div class="scrim"></div>
+      <aside class="sheet" aria-label="Filter customers">
+        <div class="grab" aria-hidden="true"></div>
+        <div class="shead"><b>Filter customers</b><button class="btn icon sm2" type="button" aria-label="Close without changing filters"><svg class="ico"><use href="#i-close"/></svg></button></div>
+        <div class="sbody" id="filters">
+          <div class="fgroup"><span class="flabel">Balance</span><div class="chiprow wrap" data-g="bal"><button type="button" class="fchip">Any</button><button type="button" class="fchip on">Owes you</button><button type="button" class="fchip">Paid you in advance</button><button type="button" class="fchip">Settled</button></div></div>
+          <div class="fgroup"><span class="flabel">Late by <span class="gap">needs a server filter</span></span><div class="chiprow wrap" data-g="late"><button type="button" class="fchip on">Any</button><button type="button" class="fchip">Not due yet</button><button type="button" class="fchip">1–30 days</button><button type="button" class="fchip">Over 30 days</button></div></div>
+          <div class="fgroup"><span class="flabel">Tags</span><span class="fakeinput sel">Any tag <span class="caret">▾</span></span><span class="fhint">Searchable list, more than one allowed</span></div>
+          <div class="fgroup"><span class="flabel">Status</span><div class="chiprow wrap" data-g="st"><button type="button" class="fchip on">Active</button><button type="button" class="fchip">Archived</button></div></div>
+          <p class="fhint" id="filters-draft">Changes apply when you press Show. Closing keeps your current filters.</p>
+        </div>
+        <div class="sfoot"><button class="btn ghost" type="button" id="filters-reset">Reset</button><button class="btn cta grow" type="button" id="filters-apply">Show 12 customers</button></div>
+      </aside>
+    </div></div>
+  </div>
+  <p class="note">Tap the chips in the filter sheet: the button's count updates as a draft, and nothing changes behind it until you press Show. On desktop the same groups open in a 360 px right drawer with the same footer. "Paid you in advance" is the list's existing <code>i_owe</code> balance filter, worded for customers.</p>
+
+  <h3 class="kh">Settling a customer who is also a supplier <span class="gap">proposed rule, needs your approval</span></h3>
+  <p class="ksub">You decided Customers and Suppliers stay separate until explicitly settled. This screen is how that explicit step could look. How it's recorded is your decision, so the screen states the proposal in plain words.</p>
+  <div class="pair">
+    <div class="device"><div class="device-bar"><i></i><i></i><i></i><span>Desktop · settle dialog</span></div>
+      <div class="scrollx"><div class="dwin short2">
+        <div class="ghostpage" aria-hidden="true"><span style="width:40%"></span><span style="width:70%"></span><span style="width:62%"></span></div>
+        <div class="scrim"></div>
+        <div class="dialog wide" role="dialog" aria-label="Settle Ramesh Traders">
+          <div class="shead"><div><b>Settle Ramesh Traders' two balances</b><span class="psub">No cash changes hands</span></div><button class="btn icon sm2" type="button" aria-label="Close"><svg class="ico"><use href="#i-close"/></svg></button></div>
+          <div class="sbody">
+            <div class="settle"><div><small>As a customer, he owes you</small><b class="num g">₹1,000</b></div><div><small>As a supplier, you owe him</small><b class="num r">₹600</b></div></div>
+            <div class="field"><span class="flabel">Amount to settle</span><span class="money"><span class="rs">₹</span><span class="mv num">600</span></span><span class="fmsg">Up to ₹600, the smaller of the two.</span></div>
+            <div class="after"><span>After this</span><span>He owes you <b class="num">₹400</b></span><span>You owe him <b class="num">₹0</b></span></div>
+            <p class="honest">Records ₹600 received from Ramesh in Customers and ₹600 paid to Ramesh in Suppliers, linked to each other, dated today. Both show in his history and can be reversed together.</p>
+          </div>
+          <div class="sfoot"><button class="btn" type="button">Keep separate</button><button class="btn cta" type="button">Settle ₹600</button></div>
+        </div>
+      </div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ BILL ACTIONS ============ -->
+<section id="billactions">
+  <span class="eyebrow">Step 7 · Destructive and money-moving actions</span>
+  <h2>Cancel, return, refund and settle are separate</h2>
+  <p class="lede">A bill's ⋯ menu first asks what happened, because each answer does something different to stock and money. The cancel dialog only lists consequences the server has checked for this bill, using the rules in <code>sales/services/void.py</code>.</p>
+  <div class="pair">
+    <div class="device"><div class="device-bar"><i></i><i></i><i></i><span>Desktop · INV-0418 › Something's wrong</span></div>
+      <div class="scrollx"><div class="dwin short3">
+        <div class="ghostpage" aria-hidden="true"><span style="width:40%"></span><span style="width:70%"></span><span style="width:62%"></span></div>
+        <div class="scrim"></div>
+        <div class="dialog wide" role="dialog" aria-label="What happened with this bill">
+          <div class="shead"><div><b>What happened with INV-0418?</b><span class="psub">Sharma General Store · ₹1,240 · not paid</span></div><button class="btn icon sm2" type="button" aria-label="Close"><svg class="ico"><use href="#i-close"/></svg></button></div>
+          <div class="sbody nopad">
+            <button class="choice" type="button"><b>The bill was a mistake</b><small>Cancel it. Stock comes back and it leaves Sharma's dues. The number stays, marked Cancelled.</small></button>
+            <button class="choice" type="button"><b>Goods came back</b><small>Take items back with a credit note. You pick which items and how many.</small></button>
+            <button class="choice" type="button" disabled><b>Give money back</b><small>Nothing was paid on this bill, so there's nothing to refund.</small></button>
+            <button class="choice" type="button" disabled><b>Settle with his supplier balance</b><small>Only for someone who is also your supplier.</small></button>
+          </div>
+        </div>
+      </div></div>
+    </div>
+    <div class="phone short"><div class="pscreen solo">
+      <div class="ghostpage" aria-hidden="true"><span style="width:60%"></span><span style="width:80%"></span></div>
+      <div class="scrim"></div>
+      <aside class="sheet" aria-label="Cancel bill INV-0418">
+        <div class="grab" aria-hidden="true"></div>
+        <div class="shead"><b>Cancel bill INV-0418?</b></div>
+        <div class="sbody">
+          <p class="checked">Checked just now: no payments, returns or credit notes on this bill.</p>
+          <ul class="conseq"><li>The 6 items go back into stock.</li><li>Sharma General Store will owe <b class="num">₹1,860</b> instead of <b class="num">₹3,100</b>.</li><li>The bill keeps its number and shows as Cancelled. This can't be undone.</li></ul>
+          <div class="field"><label class="flabel" for="vr">Why are you cancelling it?</label><textarea class="ta" id="vr" rows="2" placeholder="e.g. Made by mistake, customer didn't take the goods"></textarea><span class="fhint">3 to 160 characters. Saved with the bill.</span></div>
+        </div>
+        <div class="sfoot"><button class="btn" type="button">Keep bill</button><button class="btn danger" type="button">Cancel bill</button></div>
+      </aside>
+    </div></div>
+  </div>
+  <div class="pair" style="margin-top:16px">
+    <div class="stcard wide"><span class="sttag">If money was paid</span><p><b>Cancel bill INV-0412?</b> Anita paid ₹500 on this bill. Cancelling keeps that ₹500 with her as an advance in the Shop book; it is not given back. To give it back, use "Give money back" after cancelling.</p><p class="small">Matches BR-4: a party's payments are detached, never voided. A walk-in bill's counter payment is cancelled with it.</p></div>
+    <div class="stcard wide"><span class="sttag bad">Can't cancel</span><p><b>INV-0399 has a credit note, CN-012.</b> Goods were already taken back on it. Cancel the credit note first, or take more items back instead.</p><p class="small">Matches FR-3: refused while a credit note stands against the bill.</p></div>
+  </div>
+</section>
+
+<!-- ============ SHARE ============ -->
+<section id="share">
+  <span class="eyebrow">Step 8 · Editable message</span>
+  <h2>Receipt message</h2>
+  <p class="lede">Opened from "Share receipt" after a payment saves. It says what will be sent (this text, with a link to the receipt page), lets you change the words first, and is honest that YourKhata can't see delivery. Your private note from the payment form is never copied in.</p>
+  <div class="pair">
+    <div class="device"><div class="device-bar"><i></i><i></i><i></i><span>Desktop · share dialog</span></div>
+      <div class="scrollx"><div class="dwin">
+        <div class="ghostpage" aria-hidden="true"><span style="width:40%"></span><span style="width:70%"></span><span style="width:62%"></span><span style="width:66%"></span></div>
+        <div class="scrim"></div>
+        <div class="dialog wide" role="dialog" aria-label="Share receipt, desktop" data-slot="share" data-sfx="d"></div>
+      </div></div>
+    </div>
+    <div class="phone"><div class="pscreen solo">
+      <div class="ghostpage" aria-hidden="true"><span style="width:60%"></span><span style="width:80%"></span></div>
+      <div class="scrim"></div>
+      <aside class="sheet" aria-label="Share receipt, phone" data-slot="share" data-sfx="p"></aside>
+    </div></div>
+  </div>
+</section>
+
+<!-- ============ PICKERS ============ -->
+<section id="pickers">
+  <span class="eyebrow">Step 9 · Pickers</span>
+  <h2>Date picker and item search</h2>
+
+  <h3 class="kh">Date picker</h3>
+  <p class="ksub">The existing <code>UbDateInput</code>, with the quick choices the payment form already passes (Today, Yesterday). Today has an outline, the chosen date is filled, keyboard focus has a ring, and days the field doesn't allow are faded. In this example the field doesn't allow future dates.</p>
+  <div class="pair">
+    <div class="device"><div class="device-bar"><i></i><i></i><i></i><span>Desktop · popover under the field</span></div>
+      <div class="pop-stage">
+        <div class="field" style="width:280px"><span class="flabel">Payment date</span><span class="fakeinput focus sel"><span><svg class="ico" aria-hidden="true"><use href="#i-cal"/></svg> 16 Oct 2026</span></span></div>
+        <div class="popover cal" data-slot="cal"></div>
+      </div>
+    </div>
+    <div class="phone short"><div class="pscreen solo">
+      <div class="ghostpage" aria-hidden="true"><span style="width:60%"></span><span style="width:80%"></span></div>
+      <div class="scrim"></div>
+      <aside class="sheet" aria-label="Pick payment date"><div class="grab" aria-hidden="true"></div><div class="shead"><b>Payment date</b><button class="btn icon sm2" type="button" aria-label="Close and keep 16 Oct 2026"><svg class="ico"><use href="#i-close"/></svg></button></div><div class="sbody cal" data-slot="cal"></div></aside>
+    </div></div>
+  </div>
+  <div class="legend"><span><i class="lg-today"></i>Today, Sat 17 Oct</span><span><i class="lg-sel"></i>Chosen, Fri 16 Oct</span><span><i class="lg-focus"></i>Keyboard focus</span><span><i class="lg-off"></i>Not allowed by this field</span></div>
+  <p class="note">Picking a day sets it and closes the picker; closing without picking keeps the old date. There's no separate Apply step, which is how the component works today. Keyboard movement inside the calendar (arrows by day, Page Up and Page Down by month) is what this design asks for; it needs checking in <code>UbDateInput</code> before being promised.</p>
+
+  <h3 class="kh">Item search on a bill</h3>
+  <p class="ksub">The existing <code>UbAsyncCombobox</code> with <code>useItemSearch</code>, at the real width of the bill's item cell. Each option says its usual price, the unit and whether GST is included, and its stock in words. Cost and margin show only to people allowed to see them, with a lock, and never reach a printed or shared bill.</p>
+  <div class="pair">
+    <div class="device"><div class="device-bar"><i></i><i></i><i></i><span>Desktop · bill item cell 360 px, list 480 px · owner</span></div>
+      <div class="pop-stage">
+        <div class="field" style="width:360px"><span class="flabel">Item</span><span class="fakeinput focus">rice<span class="caretline"></span></span></div>
+        <div class="popover list" style="width:480px;max-width:100%">
+          <div class="opt hl"><span class="nm"><b>Basmati rice 5 kg</b><small>24 bags in stock · <span class="lockt"><svg class="ico" aria-hidden="true"><use href="#i-lock"/></svg>cost ₹390, margin 9.0% after GST</span></small></span><span class="pr"><b class="num">₹450</b><small>per bag · GST 5% incl.</small></span></div>
+          <div class="opt"><span class="nm"><b>Rice 25 kg</b><small><span class="warnword">Low: 3 left</span> · <span class="lockt"><svg class="ico" aria-hidden="true"><use href="#i-lock"/></svg>cost ₹1,080, margin 9.3%</span></small></span><span class="pr"><b class="num">₹1,250</b><small>per bag · GST 5% incl.</small></span></div>
+          <div class="opt off" aria-disabled="true"><span class="nm"><b>Sona masoori rice 10 kg</b><small><span class="badword">Out of stock</span> · can't be billed while selling below zero is off in Settings</small></span><span class="pr"><b class="num">₹780</b><small>per bag</small></span></div>
+          <div class="ofoot">3 matches · ↑↓ to move, Enter to pick</div>
+        </div>
+      </div>
+    </div>
+    <div class="phone"><div class="pscreen solo">
+      <aside class="sheet full" aria-label="Pick an item, phone, no match"><div class="shead"><button class="btn icon sm2" type="button" aria-label="Back"><svg class="ico"><use href="#i-back"/></svg></button><span class="fakeinput focus grow">ragi<span class="caretline"></span></span></div>
+        <div class="sbody nopad">
+          <div class="nomatch"><b>No item called "ragi"</b><small>Similar item: Ragi flour 1 kg, archived on 2 Aug.</small><button class="btn" type="button">Restore Ragi flour 1 kg</button><button class="btn cta" type="button">+ Create "ragi" as a new item</button><small>Only shown to people allowed to add items. Others see "Ask the owner to add it."</small></div>
+        </div><div class="kbd" aria-hidden="true">Keyboard</div></aside>
+    </div></div>
+  </div>
+  <p class="note">"Create" appears only when nothing matches, and the archived look-alike is offered first to avoid duplicates. Selling below zero follows the existing <code>inventory.allow_negative_stock</code> setting (FR-8). After an item is picked, the row shows "₹450 usual price"; changing the rate on the bill says "For this bill only. The usual price stays ₹450," because item defaults and bill prices are separate.</p>
+</section>
+
+<!-- ============ FOOTER ============ -->
+<section id="footer">
+  <span class="eyebrow">Step 10 · Footer</span>
+  <h2>The bill's total bar</h2>
+  <p class="ksub"><code>UbTotalDock</code> on a full-page bill. On a narrow phone the buttons move under the total so the amount is never cut (TV-03). <span class="gap">proposed UbTotalDock change</span></p>
+  <div class="device"><div class="device-bar"><i></i><i></i><i></i><span>Desktop · bottom of the bill page</span></div>
+    <div class="scrollx"><div class="dockwin"><div class="dock"><span class="dsum"><small>Total · 1 item · includes GST ₹18.00</small><b class="num">₹378.00</b></span><span class="dmeta">Draft saved 4:39 pm</span><button class="btn" type="button">Save draft</button><button class="btn cta" type="button">Save bill <kbd class="k3">Ctrl ↵</kbd></button></div></div></div>
+  </div>
+  <div class="phones" style="margin-top:16px">
+    <div class="phone w320 short"><div class="pscreen solo"><div class="ghostpage" aria-hidden="true"><span style="width:60%"></span><span style="width:80%"></span></div>
+      <div class="dock stack"><span class="dsum"><small>Total · 1 item</small><b class="num">₹378.00</b></span><div class="dbtns"><button class="btn" type="button">Save draft</button><button class="btn cta" type="button">Save bill</button></div></div></div></div>
+    <div class="phone w320 short hi" lang="hi"><div class="pscreen solo"><div class="ghostpage" aria-hidden="true"><span style="width:60%"></span><span style="width:80%"></span></div>
+      <div class="dock stack"><span class="dsum"><small>कुल · 1 सामान</small><b class="num">₹378.00</b></span><div class="dbtns"><button class="btn" type="button">ड्राफ़्ट रखें</button><button class="btn cta" type="button">बिल सेव करें</button></div></div></div></div>
+    <div class="phone w320 short hi" lang="hi"><div class="pscreen solo"><div class="ghostpage" aria-hidden="true"><span style="width:60%"></span><span style="width:80%"></span></div>
+      <span class="stress">Stress test, not part of the example shop</span>
+      <div class="dock stack"><span class="dsum"><small>कुल · 48 सामान</small><b class="num">₹12,40,378.00</b></span><div class="dbtns"><button class="btn" type="button">ड्राफ़्ट रखें</button><button class="btn cta" type="button">बिल सेव करें</button></div></div></div></div>
+  </div>
+</section>
+
+<!-- ============ SETTINGS ============ -->
+<section id="settings">
+  <span class="eyebrow">Step 11 · Settings</span>
+  <h2>Settings</h2>
+  <p class="ksub">The phone has every row the desktop has. Each row shows its current value. A bill-number change is checked before saving and only affects new bills. Leaving with unsaved changes asks first, and a failed save keeps your changes on screen.</p>
+  <div class="device"><div class="device-bar"><i></i><i></i><i></i><span>Desktop · Settings › Bills and printing · owner</span></div>
+    <div class="scrollx"><div class="setwin">
+      <nav class="setnav" aria-label="Settings sections"><b class="ptl">Settings</b>
+        <span>Business details</span><span class="on">Bills and printing</span><span>Reminders and messages</span><span>Items and stock</span><span>Team and roles</span><span>Apps</span><span>Backup and export</span></nav>
+      <div class="setbody">
+        <div class="sethead"><b>Bills and printing</b><span class="psub">How new bills are numbered, printed and shared</span></div>
+        <div class="setcols">
+        <div class="setgroup">
+          <div class="srow col"><span class="sl"><b>Next bill number</b><small>Applies to new bills only. Old bills keep their numbers.</small></span><span class="sc"><span class="fakeinput mini">INV-</span><span class="fakeinput mini num err">0400</span></span><span class="fmsg err">INV-0400 is already used. The next free number is INV-0419.</span></div>
+          <div class="srow"><span class="sl"><b>Payment due after</b><small>For credit bills, unless changed on the bill</small></span><span class="sc"><span class="fakeinput sel mini2">15 days <span class="caret">▾</span></span></span></div>
+          <div class="srow"><span class="sl"><b>Paper</b><small>Used when you print or save a PDF</small></span><span class="sc"><span class="seg2"><span>A4</span><span class="on">80 mm</span><span>58 mm</span></span></span></div>
+          <div class="srow"><span class="sl"><b>Show GST breakup on bills</b><small>CGST and SGST under the total</small></span><span class="sc"><span class="sw on" aria-hidden="true"></span></span></div>
+          <div class="srow"><span class="sl"><b>Note at the bottom</b><small>"Goods once sold can be exchanged within 7 days."</small></span><span class="sc"><button class="btn sm" type="button">Edit</button></span></div>
+        </div>
+        <div class="preview80" aria-label="80 mm bill preview"><b>Shree Ganesh Kirana</b><small>INV-0419 · 17 Oct 2026</small><span class="pl"><span>Basmati rice 5 kg × 1</span><span>450.00</span></span><span class="pl"><span>incl. CGST 2.5%</span><span>10.71</span></span><span class="pl"><span>incl. SGST 2.5%</span><span>10.71</span></span><span class="pl tot"><span>Total</span><span>₹450.00</span></span><small>Goods once sold can be exchanged within 7 days.</small><em>Preview · 80 mm</em></div>
+        </div>
+        <div class="savebar"><span>2 changes not saved · fix the bill number to save</span><button class="btn ghost" type="button">Discard</button><button class="btn cta" type="button" disabled>Save changes</button></div>
+      </div>
+    </div></div>
+  </div>
+  <div class="pair" style="margin-top:16px">
+    <div class="phone"><div class="pscreen">
+      <div class="ptop"><div class="row"><span class="backrow"><button class="btn icon sm2" type="button" aria-label="Back to Settings"><svg class="ico"><use href="#i-back"/></svg></button><b>Bills and printing</b></span></div></div>
+      <div class="pbody">
+        <div class="setgroup">
+          <div class="srow col"><span class="sl"><b>Next bill number</b><small>New bills only</small></span><span class="sc"><span class="fakeinput mini">INV-</span><span class="fakeinput mini num grow">0419</span></span></div>
+          <div class="srow"><span class="sl"><b>Payment due after</b></span><span class="sc"><span class="fakeinput sel mini2">15 days <span class="caret">▾</span></span></span></div>
+          <div class="srow col"><span class="sl"><b>Paper</b></span><span class="sc"><span class="seg2 grow"><span>A4</span><span class="on">80 mm</span><span>58 mm</span></span></span></div>
+          <div class="srow"><span class="sl"><b>Show GST breakup</b><small>Under the total</small></span><span class="sc"><span class="sw on" aria-hidden="true"></span></span></div>
+          <div class="srow"><span class="sl"><b>Note at the bottom</b><small>"Goods once sold can be…"</small></span><span class="sc"><button class="btn sm" type="button">Edit</button></span></div>
+          <div class="srow"><span class="sl"><b>See a preview</b><small>80 mm bill</small></span><span class="sc"><button class="btn sm" type="button">Preview</button></span></div>
+        </div>
+      </div>
+      <div class="dock stack"><span class="dsum"><small>1 change not saved</small></span><div class="dbtns"><button class="btn" type="button">Discard</button><button class="btn cta" type="button">Save changes</button></div></div>
+    </div></div>
+    <div class="dstack" style="flex:1 1 300px">
+      <div class="stcard wide"><span class="sttag">Leaving with changes</span><p><b>Leave without saving?</b> Your 1 change to Bills and printing will be lost.</p><div class="row-actions"><button class="btn" type="button">Stay</button><button class="btn danger" type="button">Leave</button></div></div>
+      <div class="stcard wide"><span class="sttag bad">Save failed</span><p><b>Couldn't save. Your changes are still here.</b> Check your connection and press Save again.</p></div>
+      <div class="stcard wide"><span class="sttag">Staff</span><p class="lockline"><svg class="ico" aria-hidden="true"><use href="#i-lock"/></svg>Only the owner can change bill settings. You can see them.</p><p class="small">Rows show their values with no edit controls; which roles can edit follows existing permissions.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ MAP ============ -->
+<section id="map">
+  <span class="eyebrow">Step 12 · Feasibility</span>
+  <h2>What's built from existing parts, and the real gaps</h2>
+  <div class="when"><table>
+    <thead><tr><th>Screen part</th><th>Existing components and owners</th><th>Change needed</th></tr></thead>
+    <tbody>
+      <tr><td>Day figures line</td><td><code>UbStatSummary</code> (already "figures as one line"), <code>UbAmount</code></td><td><span class="gap">small</span> a one-line basis under each figure ("23 bills · with GST")</td></tr>
+      <tr><td>Billed per hour, per day, top items</td><td><code>UbGroupedBars</code>, <code>UbRankedBars</code>, <code>UbChartTable</code> for the table view</td><td><span class="gap">server</span> billed-per-hour series for today</td></tr>
+      <tr><td>Register</td><td><code>PartyLedgerTimeline</code>'s day-banded list, <code>UbStatusBadge</code></td><td><span class="gap">planned</span> lift it into <code>UbTimeline</code>, as DESIGN-SYSTEM.md says to when a second list appears</td></tr>
+      <tr><td>Two lanes</td><td><code>UbPanel</code>, <code>UbAgingBars</code>, <code>UbPanel as="ul"</code>, <code>UbButton size="sm"</code></td><td><span class="gap">blocked</span> separate role balances on the server (TV-01) and Shop reminders (TV-02)</td></tr>
+      <tr><td>Find-or-start box</td><td><code>UbAsyncCombobox</code>, <code>usePartySearch</code>, <code>useItemSearch</code></td><td><span class="gap">new composition</span> one shared box plus number and amount parsing; adds no new search source</td></tr>
+      <tr><td>Repeat suggestions</td><td><code>UbFilterChip</code>, existing form drawers with prefill</td><td><span class="gap">server</span> "most repeated in 14 days" read</td></tr>
+      <tr><td>Receive payment</td><td><code>PaymentFormDrawer</code>, <code>PaymentAllocationPicker</code>, <code>PaymentModeEditor</code>, <code>UbDisclosure</code>, idempotency key already sent</td><td><span class="gap">small</span> "More details" fold; "changed elsewhere" message needs a server check</td></tr>
+      <tr><td>Footer above the keyboard</td><td><code>UbDrawer</code>, <code>UbTotalDock</code>, safe-area padding</td><td><span class="gap">new</span> no visual-viewport handling exists in the design system today</td></tr>
+      <tr><td>Customers table and list</td><td><code>UbDataGrid</code> (table and card modes), <code>UbFilterChip</code>, <code>UbFilterSheet</code></td><td><span class="gap">server</span> Shop "last activity" (TV-07), a "late by" filter</td></tr>
+      <tr><td>Settle dual-role balances</td><td><code>CompactDialog</code>, <code>UbMoneyInput</code></td><td><span class="gap">your decision</span> how settlement is recorded</td></tr>
+      <tr><td>Cancel, return, refund</td><td><code>ReasonConfirmDialog</code>, <code>UbActionSheet</code>, server void rules</td><td><span class="gap">small</span> the "What happened?" chooser and a pre-check of consequences</td></tr>
+      <tr><td>Receipt message</td><td><code>UbShareSheet</code>, <code>UbMessageBox</code>, server receipt text with link</td><td><span class="gap">later</span> recording the words that left (M-03, with WP-08)</td></tr>
+      <tr><td>Date picker</td><td><code>UbDateInput</code> with quick choices and bounds</td><td><span class="gap">verify</span> keyboard movement in the calendar</td></tr>
+      <tr><td>Item search</td><td><code>UbAsyncCombobox</code>, <code>useItemSearch</code>, <code>itemPriceNote</code>, <code>allow_negative_stock</code></td><td><span class="gap">small</span> archived look-alike before Create</td></tr>
+      <tr><td>Total bar</td><td><code>UbTotalDock</code></td><td><span class="gap">change</span> stack buttons under the total below <code>sm</code> (TV-03)</td></tr>
+      <tr><td>Settings</td><td><code>UbPanel</code> rows, <code>UbSwitch</code>, <code>UbChoiceChips</code>, <code>UbBottomBar</code></td><td><span class="gap">small</span> bill-number conflict check before save; 80 mm preview from the print sheet</td></tr>
+    </tbody></table></div>
+</section>
+
+<!-- ============ RATINGS ============ -->
+<section id="ratings">
+  <span class="eyebrow">Step 13 · Honest ratings</span>
+  <h2>About 8.3 out of 10: better, not yet 9</h2>
+  <p class="lede">These are my expert judgements from static, partly interactive previews. No shopkeeper has used them, and nothing here proves faster work, fewer mistakes or more return visits. The earlier version was rated about 7.4 by the outside review.</p>
+  <div class="when"><table class="rate">
+    <thead><tr><th>Point of view</th><th class="r">Score</th><th>Evidence</th><th>Still weak</th><th>Confidence</th></tr></thead>
+    <tbody>
+      <tr><td><b>Product designer</b></td><td class="r num"><b>8.5</b></td><td>One dataset that adds up; every form shows its states; flows separated by what happened; consistent sizes from source.</td><td>Desktop Home still has five areas competing; Insights is thin; dark theme not tuned per screen; motion not shown.</td><td>Medium</td></tr>
+      <tr><td><b>Everyday user</b></td><td class="r num"><b>8.0</b></td><td>Plain words; labelled bottom bar; general actions; nothing saves without a button press.</td><td>Typing "mohan 2000" into one box is unfamiliar and needs discovering; "late by" vs "due" may confuse.</td><td>Low to medium</td></tr>
+      <tr><td><b>Indian shopkeeper</b></td><td class="r num"><b>7.8</b></td><td>To collect and To pay match how dues are thought about; Remind and Pay sit on the row; Hindi has the same screens.</td><td>Hindi wording is a draft; "cash by your records" is a new idea; the settle rule isn't decided; untested at a real counter.</td><td>Low</td></tr>
+      <tr><td><b>Product manager</b></td><td class="r num"><b>8.4</b></td><td>Traceable to D-03 and DEC-019; addresses TV-01, 02, 03 and 07 in design; gaps and decisions are listed.</td><td>Ships only after the server fixes; success measures (task time, error rate) aren't set up yet.</td><td>Medium</td></tr>
+      <tr><td><b>Product engineer</b></td><td class="r num"><b>8.0</b></td><td>Mostly existing components and owners; changes named and small; no new libraries.</td><td>Keyboard-safe footer, find-or-start parsing, four new server reads and the settle recording are real work.</td><td>Medium</td></tr>
+    </tbody></table></div>
+  <div class="scoregrid">
+    <span>Information hierarchy <b>8.4</b></span><span>Visual consistency <b>8.6</b></span><span>Content density <b>8.2</b></span><span>Navigation <b>8.3</b></span><span>Forms and validation <b>8.7</b></span><span>Tables and phone lists <b>8.3</b></span><span>Filters and search <b>8.2</b></span><span>Phone use <b>8.0</b></span><span>Accessibility <b>7.8</b></span><span>Financial clarity <b>8.6</b></span><span>Error prevention and recovery <b>8.5</b></span><span>Can be built <b>8.0</b></span>
+  </div>
+  <p class="note">Accessibility is lowest because nothing here has been through the axe sweep, a screen reader or large system text yet. Financial clarity is high in the design, but it is a hard failure in the product until TV-01 and TV-02 are fixed on the server.</p>
+
+  <h3 class="kh">What would move it to 9</h3>
+  <ul class="plain">
+    <li>Fix TV-01 (no netting) and TV-02 (Shop reminders) on the server, so the lanes show real separate figures.</li>
+    <li>Decide how a dual-role settlement is recorded.</li>
+    <li>Run 5 to 8 shopkeepers through timed tasks: take ₹2,000 from Mohan across three bills, find who is most late, cancel a wrong bill, share a receipt in Hindi.</li>
+    <li>Check on real Android and iPhone devices: keyboard-open footers, large system text at 320 px, slow 3G.</li>
+    <li>Run the existing axe sweep and a screen-reader pass on the built screens.</li>
+  </ul>
+
+  <h3 class="kh">Still needs interactive or real-world testing</h3>
+  <ul class="plain">
+    <li>Whether the find-or-start box is discovered and trusted, or ignored.</li>
+    <li>Whether "Repeat" suggestions are useful or noise for shops with irregular customers.</li>
+    <li>Double taps on Receive on a slow network, and recovery after closing the app mid-save.</li>
+    <li>A payment recorded on another device while the form is open.</li>
+    <li>Hindi readability of the day line and lane labels at 320 px with large text.</li>
+    <li>Staff roles: which figures each role should see, checked against existing permissions.</li>
+    <li>Busy shops with 200+ bills a day: register paging and the per-hour chart.</li>
+  </ul>
+</section>
+
+<template id="tpl-share">
+  <div class="grabslot"></div>
+  <div class="shead"><div><b>Share receipt</b><span class="psub">RCT-0233 · ₹200 from Anita Verma</span></div><button class="btn icon sm2" type="button" aria-label="Close without sharing"><svg class="ico"><use href="#i-close"/></svg></button></div>
+  <div class="sbody">
+    <div class="field"><span class="flabel">To</span><span class="fakeinput">Anita Verma · +91 98765 43210</span></div>
+    <div class="field"><label class="flabel" for="msg-X">Message <button class="linkbtn" type="button" data-reset="msg-X">Use the default text</button></label>
+      <textarea id="msg-X" class="ta msg" rows="6">Namaste Anita Verma,
+Received ₹200 in cash on 17 Oct 2026 for bill INV-0412.
+Receipt RCT-0233. Still due: ₹245.
+Receipt: https://…/d/7Hq2xK
+Shree Ganesh Kirana</textarea>
+      <span class="fhint"><span id="cnt-X">0</span> of 900 characters</span></div>
+    <p class="honest">Sends this text with the link to the receipt page. The app you choose opens with it, and you press Send there, so YourKhata can't tell whether it was delivered. Closing this sends nothing. Your private note ("Paid by her son at the counter") is not included.</p>
+  </div>
+  <div class="sfoot"><button class="btn ghost" type="button" title="Copies the text and link">Copy text</button><button class="btn" type="button" title="Opens your SMS app with this text">SMS</button><button class="btn cta" type="button">Open WhatsApp</button></div>
+</template>
+<template id="tpl-cal">
+  <div class="quick" role="group" aria-label="Quick dates"><span class="fchip">Today</span><span class="fchip on">Yesterday</span></div>
+  <div class="calhead"><span class="fakeinput sel mini2">October <span class="caret">▾</span></span><span class="fakeinput sel mini2">2026 <span class="caret">▾</span></span><span class="spacer"></span><button class="btn icon sm2" type="button" aria-label="Previous month">‹</button><button class="btn icon sm2" type="button" aria-label="Next month" disabled>›</button></div>
+  <div class="calgrid"></div>
+</template>
+<section id="research">
+  <span class="eyebrow">Appendix · Research</span>
+  <h2>What we borrow, and what we leave behind</h2>
+  <p class="lede">You asked for something that doesn't look like these apps. So we take a few working patterns from each and none of their look. Everything below comes from official help pages or published write-ups. I have not used these apps hands-on, and where a source is a third-party case study it says so.</p>
+
+  <div class="refs">
+    <div class="ref"><div class="who"><b>myBillBook POS</b><span>Official help article, accessed 17 Oct 2026</span><a href="https://knowledge.mybillbook.in/articles/8679710-how-to-use-pos-billing-in-mybillbook-web-app">Source</a></div>
+      <dl><dt>Pattern</dt><dd>"+ Hold &amp; Create Another" parks a bill and opens a new one. Out-of-stock items are flagged in red as they are added.</dd>
+      <dt>Problem it solves</dt><dd>A second customer arrives while the first is still choosing.</dd>
+      <dt>We take</dt><dd>Parked bills appear in the register as a quiet "On hold · 2" row you can tap back into. This builds on the existing durable sales drafts.</dd>
+      <dt>We leave</dt><dd>The dense POS grid and a separate POS mode. A busy counter needs one billing screen, not two.</dd>
+      <dt>Maps to</dt><dd>Drafts (ADR-063), <code>useDraftSaveQueue</code>, register row.</dd>
+      <dt>Limits</dt><dd>The article does not show the screen layout or shortcuts.</dd></dl></div>
+
+    <div class="ref"><div class="who"><b>Vyapar</b><span>Official product pages and TaxOne shortcut help, accessed 17 Oct 2026</span><a href="https://vyaparapp.in/free/billing-system-software">Billing</a><a href="https://taxone.vyapar.com/help/articles/shortcut-keys">Shortcuts</a></div>
+      <dl><dt>Pattern</dt><dd>Barcode adds items to a bill. Ctrl+S saves and Ctrl+M opens a transaction drawer. Bills and reminders go out on WhatsApp.</dd>
+      <dt>Problem it solves</dt><dd>Desktop counters run on the keyboard. Taking a hand to the mouse costs seconds on every bill.</dd>
+      <dt>We take</dt><dd>One shortcut opens the Counter Bar (Ctrl+K or /), and Ctrl+Enter saves, which the bill editor already supports.</dd>
+      <dt>We leave</dt><dd>"10-second invoicing" marketing claims and accounting vocabulary. Our users get plain words.</dd>
+      <dt>Maps to</dt><dd><code>UbLineItemsEditor</code> keys, <code>useScannerListener</code>.</dd>
+      <dt>Limits</dt><dd>The shortcut list is for Vyapar TaxOne, not the billing app.</dd></dl></div>
+
+    <div class="ref"><div class="who"><b>Khatabook</b><span>App Store listing and a published product history, accessed 17 Oct 2026</span><a href="https://apps.apple.com/us/app/id6633420817">App Store</a><a href="https://ameya.substack.com/p/how-khatabook-became-the-premier">Write-up</a></div>
+      <dl><dt>Pattern</dt><dd>Each person's balance and a one-tap reminder are the whole home.</dd>
+      <dt>Problem it solves</dt><dd>Collecting dues is the most valuable daily task for a credit-heavy shop.</dd>
+      <dt>We take</dt><dd>Each person row in a lane has its next action inline: Remind for a customer, Pay for a supplier.</dd>
+      <dt>We leave</dt><dd>One combined balance per person. That is the netting your D-03 decision rules out.</dd>
+      <dt>Maps to</dt><dd><code>UbPanel as="ul"</code>, <code>UbShareSheet</code>, <code>UbMessageBox</code>.</dd>
+      <dt>Limits</dt><dd>The App Store page found is a small listing, possibly not the main app. Treat it as weak evidence.</dd></dl></div>
+
+    <div class="ref"><div class="who"><b>Zoho Inventory</b><span>Official dashboard help, accessed 17 Oct 2026</span><a href="https://www.zoho.com/inventory/help/reports/dashboard.html">Source</a></div>
+      <dl><dt>Pattern</dt><dd>"Pending Actions" counts work by stage (to be packed, shipped, invoiced, received). "Recent Activities" lists the last 100 events.</dd>
+      <dt>Problem it solves</dt><dd>It shows what is stuck, not just what was sold.</dd>
+      <dt>We take</dt><dd>The Follow-ups tab: open orders, challans not billed, purchase orders not received, promises due today. Each row says its next step.</dd>
+      <dt>We leave</dt><dd>Warehouse stages (pick, pack, ship) most kirana and hardware shops don't have, and a six-widget grid.</dd>
+      <dt>Maps to</dt><dd>The existing <code>open_orders</code> and Needs attention data.</dd>
+      <dt>Limits</dt><dd>Help pages describe widgets, not how people use them.</dd></dl></div>
+
+    <div class="ref"><div class="who"><b>Zomato merchant app</b><span>Pranu Sarna, UX Planet, 28 Jan 2018 (third-party design write-up)</span><a href="https://uxplanet.org/building-the-zomato-app-for-merchants-to-receive-online-orders-20efc6039c7">Source</a></div>
+      <dl><dt>Pattern</dt><dd>Orders are sorted by urgency, not recency. They use high-contrast type and no heavy shadows or animation on cheap Android phones, and tap response went from about 280 ms to 170 ms.</dd>
+      <dt>Problem it solves</dt><dd>A busy person glancing at a screen from a distance must see what is due now.</dd>
+      <dt>We take</dt><dd>Follow-ups sorted by urgency, large tabular numbers, and a tap-response budget of 100 ms on a mid-range Android phone.</dd>
+      <dt>We leave</dt><dd>Countdown tickers. The same article reports they caused anxiety in testing.</dd>
+      <dt>Maps to</dt><dd>Sorting on the server, the existing motion tokens.</dd>
+      <dt>Limits</dt><dd>It is from 2018 and written by the designer, not an independent study.</dd></dl></div>
+
+    <div class="ref"><div class="who"><b>Swiggy</b><span>Android Developers case study (updated 1 Jun 2022) and a UX Collective heuristic review (24 Jun 2018)</span><a href="https://developer.android.com/stories/apps/swiggy?hl=en">Android case</a><a href="https://uxdesign.cc/swiggy-food-order-delivery-app-a-heuristic-evaluation-case-study-435b3aa8022d">Heuristic review</a></div>
+      <dl><dt>Pattern</dt><dd>Reorder from past orders without remembering names. Cutting slow frames by 59% coincided with about 28% lower bounce. Blank screens with no loader were the worst-rated issue.</dd>
+      <dt>Problem it solves</dt><dd>Smoothness is engineering, not decoration. A blank pause feels broken.</dd>
+      <dt>We take</dt><dd>"Again" chips for the last repeated actions. Every wait shows a skeleton the shape of what's coming, and heavy parts load only when opened.</dd>
+      <dt>We leave</dt><dd>Food-app colour, offer banners and anything that stretches a session.</dd>
+      <dt>Maps to</dt><dd><code>UbSkeleton</code>, <code>dynamic()</code> drawers (already the house rule).</dd>
+      <dt>Limits</dt><dd>The Android figures are Swiggy's own and come from a different platform.</dd></dl></div>
+
+    <div class="ref"><div class="who"><b>Linear, Stripe, Shopify POS</b><span>Official docs, accessed 17 Oct 2026</span><a href="https://linear.app/enablement/guide/navigating-linear">Linear</a><a href="https://docs.stripe.com/dashboard/basics">Stripe</a><a href="https://help.shopify.com/en/manual/sell-in-person/getting-started/smart-grid">Shopify</a></div>
+      <dl><dt>Pattern</dt><dd>Linear has a command menu (Cmd+K) and "?" for shortcuts. Stripe's home shows pinned and recent pages as Shortcuts. Shopify POS has a configurable grid with suggested tiles from your own sales.</dd>
+      <dt>Problem it solves</dt><dd>Experienced users jump straight to a task. New users still see the buttons.</dd>
+      <dt>We take</dt><dd>The Counter Bar takes actions as well as searches. "Again" chips are learned from what this shop does, not set up by hand.</dd>
+      <dt>We leave</dt><dd>Hand-customised grids, a setup job a shopkeeper won't do.</dd>
+      <dt>Maps to</dt><dd><code>UbAsyncCombobox</code> with existing search hooks.</dd>
+      <dt>Limits</dt><dd>These are tools for office users, so the patterns need testing at a counter.</dd></dl></div>
+  </div>
+
+  <div class="matrix"><table>
+    <thead><tr><th>Reference</th><th>Workflow speed</th><th>Information clarity</th><th>Mobile</th><th>Financial trust</th><th>Error recovery</th><th>Accessibility</th><th>Learning effort</th></tr></thead>
+    <tbody>
+      <tr><th>myBillBook</th><td>Hold and new bill</td><td>Red out-of-stock flag</td><td>Not documented here</td><td>Payment mode on save</td><td>Reprint from reports</td><td>Not documented</td><td>Separate POS mode to learn</td></tr>
+      <tr><th>Vyapar</th><td>Barcode, Ctrl+S</td><td>Not documented</td><td>App exists</td><td>Auto tax</td><td>Not documented</td><td>Not documented</td><td>Shortcuts need learning</td></tr>
+      <tr><th>Khatabook</th><td>One-tap remind</td><td>Balance per person</td><td>Phone-first</td><td>Nets roles together</td><td>Not documented</td><td>Not documented</td><td>Very low</td></tr>
+      <tr><th>Zoho Inventory</th><td>Pending counts</td><td>Stages by count</td><td>Not documented</td><td>Period compare</td><td>Activity log</td><td>Not documented</td><td>High, warehouse terms</td></tr>
+      <tr><th>Zomato merchant</th><td>Urgency sort</td><td>Two-tab states</td><td>Built for cheap Android</td><td>n/a</td><td>Reason on reject</td><td>High-contrast type</td><td>Low, WhatsApp-like tabs</td></tr>
+      <tr><th>Swiggy</th><td>Reorder</td><td>Labelled icons</td><td>Jank work measured</td><td>n/a</td><td>Confirm on delete</td><td>Plain copy</td><td>Low</td></tr>
+    </tbody></table></div>
+  <p class="note">Cells name a documented pattern, not a score. "Not documented" means the sources reviewed don't say. It does not mean the product lacks it.</p>
+</section></div><script>
+(function(){
+  var root=document.documentElement;
+  function $(id){return document.getElementById(id);}
+  function fmt(n){return '₹'+Number(n).toLocaleString('en-IN');}
+  function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+
+  // theme: light unless the viewer picked dark here before
+  function setTheme(t){root.setAttribute('data-theme',t);document.querySelectorAll('.themesw button').forEach(function(b){b.setAttribute('aria-pressed',b.dataset.t===t?'true':'false');});try{localStorage.setItem('cm-theme',t);}catch(e){}}
+  var saved=null;try{saved=localStorage.getItem('cm-theme');}catch(e){}
+  setTheme(saved==='dark'?'dark':'light');
+  document.querySelectorAll('.themesw button').forEach(function(b){b.addEventListener('click',function(){setTheme(b.dataset.t);});});
+
+  // billed per hour, 9 am to the 4 pm hour (still going); sums to 14,280
+  var hours=[1120,1860,2540,1900,720,2180,2460,1500], labels=['9 am','10 am','11 am','12 pm','1 pm','2 pm','3 pm','4 pm'];
+  var g=$('bars');
+  if(g){var w=236/hours.length, max=2540;
+    hours.forEach(function(v,i){
+      var h=Math.round(v/max*44), last=i===hours.length-1;
+      var r=document.createElementNS('http://www.w3.org/2000/svg','rect');
+      r.setAttribute('x',(i*w+3).toFixed(1));r.setAttribute('width',(w-6).toFixed(1));
+      r.setAttribute('y',52-h);r.setAttribute('height',h);r.setAttribute('rx',2);
+      r.setAttribute('fill',last?'var(--cta)':'var(--teal)');r.setAttribute('opacity',last?'1':'.8');
+      var t=document.createElementNS('http://www.w3.org/2000/svg','title');t.textContent=labels[i]+(last?' (so far)':'')+': '+fmt(v);r.appendChild(t);
+      g.appendChild(r);
+    });
+    var tb=$('hours-table').querySelector('tbody');
+    tb.innerHTML=hours.map(function(v,i){return '<tr><td>'+labels[i]+(i===hours.length-1?' (so far)':'')+'</td><td class="num">'+fmt(v)+'</td></tr>';}).join('')+'<tr><td><b>Total</b></td><td class="num"><b>'+fmt(14280)+'</b></td></tr>';
+    $('toggle-hours').addEventListener('click',function(){
+      var showT=$('hours-table').hidden; $('hours-table').hidden=!showT; $('hours-chart').hidden=showT;
+      this.textContent=showT?'Show as chart':'Show as table';
+    });
+  }
+
+  // tabs inside a panel
+  document.querySelectorAll('[data-tab]').forEach(function(b){
+    b.addEventListener('click',function(){
+      var p=b.closest('.panel');
+      p.querySelectorAll('[data-tab]').forEach(function(x){var on=x===b;x.classList.toggle('on',on);x.setAttribute('aria-selected',on?'true':'false');});
+      p.querySelectorAll('[data-pane]').forEach(function(x){x.hidden=x.dataset.pane!==b.dataset.tab;});
+    });
+  });
+
+  // ---------- Receive payment, every state ----------
+  var NOTES={
+    ready:'Anita Verma owes ₹445 on INV-0412. ₹200 in cash is matched to that bill, so ₹245 will still be due. The button names the exact amount.',
+    multi:'Mohan Dairy owes ₹2,860 across three bills. ₹2,000 by UPI is matched oldest first: two bills are cleared and ₹440 goes to the third, leaving ₹860. Untick "Auto" to choose bills yourself.',
+    empty:'Shown only after Receive is pressed with no amount. The form opens clean, with the number keypad up; it never opens in red.',
+    over:'₹600 is more than the ₹445 she owes. The extra ₹155 is kept as her advance in the Shop book and shown before saving. It is not a refund and not a Udhaar entry.',
+    stale:'Someone recorded a payment from Anita on another device while this form was open. The form shows the new figure and asks before saving, so the same money isn\'t taken twice. Needs a server check.',
+    saving:'The button locks after one tap and the form can\'t be changed. The request carries an idempotency key, so a double tap or a retry can\'t save the payment twice.',
+    failed:'Nothing was saved and everything typed is still there. "Try again" reuses the same key, so if the first attempt did reach the server it won\'t be recorded twice.',
+    saved:'The form closes and a short message confirms what was saved, with the receipt number and Share receipt. Nothing is sent to Anita unless you share it.'
+  };
+  function head(s){
+    var who=s==='multi'?'Mohan Dairy · owes ₹2,860':(s==='stale'?'Anita Verma · now owes ₹245':'Anita Verma · owes ₹445');
+    return '<div class="shead"><div><b>Receive payment</b><span class="psub">'+who+'</span></div><button class="btn icon sm2" type="button" aria-label="Close without saving"><svg class="ico"><use href="#i-close"/></svg></button></div>';
+  }
+  function alloc(rows){
+    return '<div class="allocs">'+rows.map(function(r){
+      return '<div class="alloc'+(r.adv?' adv':'')+'"><span class="cb'+(r.adv?'':' on')+'">'+(r.adv?'':'✓')+'</span><span class="nm"><b>'+r.n+'</b><small>'+r.d+'</small></span><span class="amt num">'+r.a+'<small>'+r.l+'</small></span></div>';
+    }).join('')+'</div>';
+  }
+  function body(s,sfx){
+    var multi=s==='multi', amt={ready:'200',multi:'2000',empty:'',over:'600',stale:'200',saving:'200',failed:'200',saved:'200'}[s];
+    var mode=multi?'UPI':'Cash', h='';
+    if(s==='stale') h+='<div class="banner warn"><b>Anita\'s dues changed on another device.</b><span>₹200 was received from her at 4:38 pm. She now owes ₹245, not ₹445. Check the amount before you save.</span><span class="row-actions"><button class="btn sm" type="button">Use the new figures</button></span></div>';
+    if(s==='failed') h+='<div class="banner err" role="alert"><b>Didn\'t go through. Nothing was saved.</b><span>Your entries are still here. Check your connection and try again.</span></div>';
+    h+='<div class="pfield"><span class="flabel">Customer</span><span class="picked2"><b>'+(multi?'Mohan Dairy':'Anita Verma')+'</b><small>'+(multi?'3 unpaid bills':'1 unpaid bill')+'</small></span></div>';
+    var cls='money'+(s==='empty'?' err':(s==='ready'?' focus':''));
+    h+='<div class="field"><label class="flabel" for="amt-'+sfx+'">Amount</label><span class="'+cls+'"><span class="rs">₹</span><input id="amt-'+sfx+'" class="num" inputmode="decimal" value="'+amt+'" aria-invalid="'+(s==='empty')+'"'+(s==='saving'?' disabled':'')+'></span>';
+    var msg={ready:['','₹245 will still be due after this.'],multi:['','₹860 will still be due after this.'],empty:['err','Enter an amount.'],over:['warn','₹155 more than she owes. It stays with her as an advance, not a refund.'],stale:['warn','She now owes ₹245. ₹200 would leave ₹45.'],saving:['','₹245 will still be due after this.'],failed:['','₹245 will still be due after this.']}[s]||['',''];
+    h+='<span class="fmsg '+msg[0]+'">'+msg[1]+'</span></div>';
+    h+='<div class="field"><span class="flabel">Paid by</span><span class="fakeinput sel">'+mode+' <span class="caret">▾</span></span></div>';
+    h+='<div class="switchrow"><span class="sw on" aria-hidden="true"></span><span><b>Auto, oldest first</b><br><small class="small">Matches the amount to unpaid bills, oldest first</small></span></div>';
+    if(multi) h+=alloc([{n:'INV-0385',d:'5 Oct · due 20 Oct',a:'₹1,100',l:'clears it'},{n:'INV-0391',d:'9 Oct · ₹460 left',a:'₹460',l:'clears it'},{n:'INV-0402',d:'13 Oct · ₹1,300',a:'₹440',l:'₹860 left'}]);
+    else if(s==='over') h+=alloc([{n:'INV-0412',d:'8 Oct · ₹445 left',a:'₹445',l:'clears it'},{adv:1,n:'Advance',d:'Kept for her next bill',a:'₹155',l:'Shop book'}]);
+    else if(s==='empty') h+=alloc([{n:'INV-0412',d:'8 Oct · ₹445 left',a:'₹0',l:'₹445 left'}]);
+    else if(s==='stale') h+=alloc([{n:'INV-0412',d:'8 Oct · ₹245 left now',a:'₹200',l:'₹45 left'}]);
+    else h+=alloc([{n:'INV-0412',d:'8 Oct · ₹445 left',a:'₹200',l:'₹245 left'}]);
+    h+='<button class="disc" type="button" aria-expanded="false" data-disc><span>More details</span><small>Today · no note ▾</small></button><div class="discbody" hidden><div class="field"><span class="flabel">Date</span><span class="fakeinput sel"><svg class="ico" aria-hidden="true"><use href="#i-cal"/></svg> Today, 17 Oct 2026</span></div><div class="field"><span class="flabel">Private note</span><span class="fakeinput">Paid by her son at the counter</span><span class="fhint">Only you and your staff see this. It is never put in a receipt or message.</span></div></div>';
+    return '<div class="sbody'+(s==='saving'?' dis':'')+'">'+h+'</div>';
+  }
+  function foot(s){
+    var left={ready:'₹245',multi:'₹860',empty:'₹445',over:'₹0',stale:'₹45',saving:'₹245',failed:'₹245'}[s];
+    var btn;
+    if(s==='saving') btn='<button class="btn cta" type="button" disabled aria-busy="true"><span class="spin" aria-hidden="true"></span>Saving…</button>';
+    else if(s==='failed') btn='<button class="btn cta" type="button">Try again</button>';
+    else if(s==='empty') btn='<button class="btn cta" type="button">Receive</button>';
+    else btn='<button class="btn cta" type="button">Receive '+(s==='multi'?'₹2,000':(s==='over'?'₹600':'₹200'))+'</button>';
+    return '<div class="sfoot"><span class="left"><small>Still due after this</small><b class="num">'+left+'</b></span><span class="spacer"></span><button class="btn" type="button"'+(s==='saving'?' disabled':'')+'>Cancel</button>'+btn+'</div>';
+  }
+  var payState='ready';
+  function renderPay(s){
+    payState=s;
+    document.querySelectorAll('.statebar button').forEach(function(b){var on=b.dataset.ps===s;b.classList.toggle('on',on);b.setAttribute('aria-selected',on?'true':'false');});
+    $('ps-note').textContent=NOTES[s];
+    [['d','pay-d','toast-d','pay-desk-win'],['p','pay-p','toast-p','pay-phone-win']].forEach(function(x){
+      var el=$(x[1]), toast=$(x[2]), win=$(x[3]), scrim=win.querySelector('.scrim');
+      if(s==='saved'){
+        el.hidden=true; scrim.hidden=true; toast.hidden=false;
+        toast.innerHTML='<span><b>Received ₹200 from Anita Verma.</b> ₹245 still due · RCT-0233</span><span class="spacer"></span><button class="linkbtn" type="button" data-goto="share">Share receipt</button>';
+      } else {
+        el.hidden=false; scrim.hidden=false; toast.hidden=true;
+        el.innerHTML=(x[0]==='p'?'<div class="grab" aria-hidden="true"></div>':'')+head(s)+body(s,x[0])+foot(s);
+      }
+    });
+  }
+  document.querySelectorAll('.statebar button').forEach(function(b){b.addEventListener('click',function(){renderPay(b.dataset.ps);});});
+  document.addEventListener('click',function(e){
+    var d=e.target.closest('[data-disc]');
+    if(d){var open=d.getAttribute('aria-expanded')!=='true';d.setAttribute('aria-expanded',open?'true':'false');d.nextElementSibling.hidden=!open;d.querySelector('small').textContent=open?'Hide ▴':'Today · no note ▾';}
+    var gt=e.target.closest('[data-goto]');
+    if(gt){var t=$(gt.dataset.goto);if(t)t.scrollIntoView({behavior:'smooth',block:'start'});}
+  });
+  if($('pay-d')) renderPay('ready');
+  function goPay(s){renderPay(s);$('pay').scrollIntoView({behavior:'smooth',block:'start'});}
+
+  // ---------- find-or-start box ----------
+  var people=[
+    {n:'Anita Verma',c:1,due:'Owes ₹445'},
+    {n:'Sharma General Store',c:1,due:'Owes ₹3,100 · 42 days late'},
+    {n:'Mohan Dairy',c:1,due:'Owes ₹2,860 on 3 bills'},
+    {n:'Gupta Sweets',c:1,due:'Owes ₹1,320'},
+    {n:'Ramesh Traders',c:1,s:1,due:'Customer: owes you ₹1,000 · Supplier: you owe ₹600'},
+    {n:'Mahalaxmi Wholesale',s:1,due:'You owe ₹5,000'},
+    {n:'Gupta Oil Mills',s:1,due:'You owe ₹4,200'}];
+  var items=[{n:'Basmati rice 5 kg',p:'₹450 a bag, GST incl.'},{n:'Rice 25 kg',p:'₹1,250 a bag · 3 left'},{n:'Toor dal 1 kg',p:'₹160 a pack'},{n:'Sugar 5 kg',p:'₹220 a bag'}];
+  function build(q){
+    q=q.trim().toLowerCase(); if(!q) return [];
+    var m=q.match(/^(.*?)\s*₹?(\d[\d,]*)$/), amt=null, word=q;
+    if(m){amt=m[2].replace(/,/g,'');word=m[1].trim();}
+    var out=[];
+    if(/^(inv|pb|rct)-?\d+/.test(q)) out.push({v:'Open '+q.toUpperCase(),m:'Bill or receipt'});
+    people.forEach(function(p){
+      if(!word||p.n.toLowerCase().indexOf(word)<0) return;
+      if(amt&&p.c) out.push({v:'Receive '+fmt(amt)+' from '+p.n,m:p.due,go:p.n==='Anita Verma'?(amt==='600'?'over':(amt==='200'?'ready':null)):(p.n==='Mohan Dairy'&&amt==='2000'?'multi':null)});
+      if(amt&&p.s) out.push({v:'Pay '+fmt(amt)+' to '+p.n,m:p.due});
+      if(!amt&&p.c) out.push({v:'New bill for '+p.n,m:p.due});
+      if(!amt) out.push({v:'Open '+p.n,m:p.c&&p.s?'Customer and supplier, kept separate':(p.c?'Customer':'Supplier')});
+    });
+    items.forEach(function(it){if(word&&it.n.toLowerCase().indexOf(word)>-1) out.push({v:'New bill with '+it.n,m:it.p});});
+    if(amt&&!word){out.push({v:'Cash bill for '+fmt(amt),m:'Walk-in customer'});out.push({v:'Expense of '+fmt(amt),m:'Money book'});}
+    if(!out.length) out.push({v:'Add "'+q+'" as a new customer',m:'Nothing matched'});
+    return out.slice(0,6);
+  }
+  function wire(inputId,listId,ph){
+    var inp=$(inputId), list=$(listId); if(!inp) return;
+    var hl=0, cur=[];
+    function render(){
+      cur=build(inp.value); list.innerHTML='';
+      if(!cur.length){list.hidden=true;return;}
+      cur.forEach(function(s,i){
+        var b=document.createElement('button');b.type='button';b.className='sg'+(i===hl?' hl':'');b.setAttribute('role','option');b.setAttribute('aria-selected',i===hl?'true':'false');
+        b.innerHTML='<span class="v">'+esc(s.v)+'</span><span class="m">'+esc(s.m)+'</span>';
+        b.addEventListener('mousedown',function(e){e.preventDefault();pick(s);});
+        list.appendChild(b);
+      });
+      list.hidden=false;
+    }
+    function pick(s){
+      list.hidden=true; inp.value='';
+      if(s.go){goPay(s.go);return;}
+      inp.placeholder=s.v+': opens its form, filled in. Nothing is saved yet.';
+      setTimeout(function(){inp.placeholder=ph;},3000);
+    }
+    inp.addEventListener('input',function(){hl=0;render();});
+    inp.addEventListener('keydown',function(e){
+      if(list.hidden) return;
+      if(e.key==='ArrowDown'){hl=Math.min(hl+1,cur.length-1);render();e.preventDefault();}
+      if(e.key==='ArrowUp'){hl=Math.max(hl-1,0);render();e.preventDefault();}
+      if(e.key==='Enter'&&cur[hl]){pick(cur[hl]);e.preventDefault();}
+      if(e.key==='Escape'){list.hidden=true;}
+    });
+    inp.addEventListener('blur',function(){setTimeout(function(){list.hidden=true;},120);});
+  }
+  wire('cbar-desk','sugg-desk','Find or start: a name, item, bill number or amount');
+  wire('cbar-phone','sugg-phone','Find or start');
+  document.addEventListener('keydown',function(e){if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){var i=$('cbar-desk');if(i){i.focus();e.preventDefault();}}});
+  var dr=$('demo-receive'); if(dr) dr.addEventListener('click',function(){goPay('ready');});
+
+  // ---------- template slots ----------
+  document.querySelectorAll('[data-slot]').forEach(function(slot,n){
+    var tpl=$('tpl-'+slot.dataset.slot); if(!tpl) return;
+    var sfx=slot.dataset.sfx||('c'+n);
+    var html=tpl.innerHTML.replace(/-X\b/g,'-'+sfx);
+    var isSheet=slot.classList.contains('sheet');
+    html=html.replace('<div class="grabslot"></div>',isSheet?'<div class="grab" aria-hidden="true"></div>':'');
+    slot.innerHTML=html;
+  });
+  // October 2026 starts on a Thursday. Today 17 (outlined), chosen 16 (filled), focus 15, future days not allowed.
+  document.querySelectorAll('.calgrid').forEach(function(gr){
+    var h='';['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].forEach(function(d){h+='<span class="dw" aria-hidden="true">'+d.charAt(0)+'</span>';});
+    [28,29,30].forEach(function(d){h+='<span class="mute">'+d+'</span>';});
+    for(var d=1;d<=31;d++){
+      var c=d===17?'td':(d===16?'sel':(d===15?'focus':(d>17?'off':'')));
+      var a=d===17?' aria-current="date"':(d===16?' aria-selected="true"':(d>17?' aria-disabled="true"':''));
+      h+='<span class="'+c+'"'+a+'>'+d+'</span>';
+    }
+    h+='<span class="mute">1</span>';
+    gr.innerHTML=h;
+  });
+  // message counters and reset
+  ['d','p'].forEach(function(s){
+    var ta=$('msg-'+s), c=$('cnt-'+s); if(!ta) return;
+    var def=ta.value; function cnt(){c.textContent=ta.value.length;} ta.addEventListener('input',cnt); cnt();
+    var r=document.querySelector('[data-reset="msg-'+s+'"]'); if(r) r.addEventListener('click',function(){ta.value=def;cnt();});
+  });
+
+  // ---------- filter sheet: a draft until Show ----------
+  var F=$('filters');
+  if(F){
+    var applied={bal:'Owes you',late:'Any',st:'Active'};
+    function pickOf(gname){var on=F.querySelector('[data-g="'+gname+'"] .fchip.on');return on?on.textContent:'Any';}
+    function count(d){
+      if(d.st==='Archived') return (d.bal==='Any'||d.bal==='Settled')&&d.late==='Any'?4:0;
+      var owe={'Any':12,'Not due yet':6,'1–30 days':5,'Over 30 days':1}[d.late];
+      if(d.bal==='Owes you') return owe;
+      if(d.late!=='Any') return d.bal==='Any'?owe:0;
+      return {'Any':48,'Paid you in advance':1,'Settled':35}[d.bal];
+    }
+    function upd(){
+      var d={bal:pickOf('bal'),late:pickOf('late'),st:pickOf('st')}, n=count(d), btn=$('filters-apply');
+      var changed=d.bal!==applied.bal||d.late!==applied.late||d.st!==applied.st;
+      btn.textContent=n?('Show '+n+' customer'+(n===1?'':'s')):'No customers match';
+      btn.disabled=!n;
+      $('filters-draft').textContent=!n?'Nothing matches these choices. Change one to see customers.':(changed?'Not applied yet. The list behind keeps its current filters until you press Show.':'These are the filters on the list now.');
+    }
+    F.querySelectorAll('[data-g] .fchip').forEach(function(c){
+      c.setAttribute('aria-pressed',c.classList.contains('on')?'true':'false');
+      c.addEventListener('click',function(){
+        c.parentNode.querySelectorAll('.fchip').forEach(function(x){x.classList.toggle('on',x===c);x.setAttribute('aria-pressed',x===c?'true':'false');});
+        upd();
+      });
+    });
+    $('filters-reset').addEventListener('click',function(){
+      [['bal','Any'],['late','Any'],['st','Active']].forEach(function(p){F.querySelectorAll('[data-g="'+p[0]+'"] .fchip').forEach(function(x){var on=x.textContent===p[1];x.classList.toggle('on',on);x.setAttribute('aria-pressed',on?'true':'false');});});
+      upd();
+    });
+    $('filters-apply').addEventListener('click',function(){applied={bal:pickOf('bal'),late:pickOf('late'),st:pickOf('st')};upd();$('filters-draft').textContent='Applied. In the product the sheet closes and the list updates.';});
+    upd();
+  }
+})();
+</script>

@@ -1,6 +1,6 @@
 # 04 · App-wide navigation strategy
 
-Status: **proposed, needs owner approval on N-1 (the phone switcher)**, 17 Oct 2026.
+Status: **proposed; N-1 (the phone App button) approved by the owner 17 Oct 2026**, 17 Oct 2026.
 Builds on `docs/mobile-redesign/03` and `docs/platform/14`; replaces neither, changes the parts named here.
 
 ## 1. The model in one picture
@@ -21,7 +21,7 @@ Each level gets one control, and the controls don't move between screens.
 | Section | bottom-bar tabs (existing, 4 per app) | sidebar rows of the active app (existing) |
 | Screen | header title + Back | page header + breadcrumbs on detail pages |
 
-## 2. Phone: the App button (N-1, needs approval)
+## 2. Phone: the App button (N-1, approved)
 
 **Today**: 4 app tabs + More. Switching app is inside the header's business menu.
 
