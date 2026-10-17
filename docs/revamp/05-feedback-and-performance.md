@@ -26,6 +26,10 @@ Silence is the one people complain about. It can be fixed almost entirely withou
 | H7 | **Service worker off or cold** in production, so every start downloads the shell. | `NEXT_PUBLIC_SW_ENABLED=false` in `.env.example` | Check the production env and `navigator.serviceWorker.controller` on a real install |
 | H8 | **Large lists render all rows** on Library members, Lending loans, reports. | to verify | React profiler with 2k rows |
 
+**Phase 1 results (17 Oct 2026, [docs/performance/2026-10-17-app-baseline.md](../performance/2026-10-17-app-baseline.md), harness `e2e/perf-app.mjs`, seed_scale book, 4× CPU + 1.6 Mbps / 150 ms):** tap to first visible change p50 363 ms / p95 819 ms (target ≤ 100 ms p95); cold LCP 3.4–4.0 s (target 2.5 s); CLS up to 0.16 on desktop lists (target 0.05); scripted INP p75 56 ms.
+H1 proven (the loading screen never appeared before the new page in 57 navigations) · H2 proven but small (prefetched taps are still 250–530 ms) · H3 proven for /dashboard, /sales/invoices, /items · H4 proven (291–457 ms longest block on first load) · H5 not measured (needs an owner decision on analytics in the lab) · H6 proven for tabs, desktop rows and secondary buttons · H7 not proven; the root Dockerfile used by Railway defaults the service worker ON · H8 proven for Lending Today only (1,576 rows, 6.7 s server time, 1,584 queries), disproven for paged lists.
+Container numbers are a floor, not a phone; device runs (11) still have to confirm them.
+
 ## 3. Feedback rules (apply to every screen)
 
 | Moment | What the person sees | Built with |

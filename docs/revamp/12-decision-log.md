@@ -32,12 +32,13 @@ Newest first. Each decision says who made it and when. "Open" means it waits for
 | 17 Oct 2026 | Owner: keep the existing logo (R-DEC-06) | 03, AGENT_START_PROMPT.md |
 | 17 Oct 2026 | Owner: screenshots on phone and desktop after every built UI piece (R-DEC-07) | 11, AGENT_START_PROMPT.md |
 | 17 Oct 2026 | Wave 2 and 3 screen specs for Shop (two files), Udhaar, Library, Lending and shared overlays; each failed round 1 and passes round 2 provisionally; module scores in 09 §5a | 07-screens/08–13, 09 |
+| 17 Oct 2026 | Phase 1 baseline measured on the scale book; H1–H4, H6 proven, H8 Lending Today only, H5 and H7 open | docs/performance/2026-10-17-app-baseline.md, e2e/perf-app.mjs, 05 |
 | 17 Oct 2026 | Tool-neutral start prompt for any coding agent; root AGENTS.md; design page copied into the repo | AGENT_START_PROMPT.md, design/ |
 
 ## Next
 
 1. Owner answers the open questions gathered on 17 Oct (the list is in the thread and in each 07-screens file's review): R-DEC-03, R-DEC-04, dual-role settle, the Shop person page main action, Udhaar undo and reminder tabs, the Library expired word, the Lending FP questions, and which BP items to consider.
-2. Phase 1 measurements (05 §6) finish, turning H1–H8 into facts (docs/performance/2026-10-17-app-baseline.md).
+2. Phase 1 follow-ups: write a BP for Lending Today returning every loan (6.7 s, 1,584 queries) and the loans / members N+1s; owner decides whether H5 may be measured; check Railway's live service-worker variable (H7); look into 432 loan creations that timed out at 6 concurrent requests.
 3. Write the new proposals the specs raised into 08 (BP-08 dual-role settle; Library P-01…06; Lending FP-1…9; Shop P-08-01…06), each with the full proposal fields.
 4. List the six new overlay pieces from 12-shared-overlays in 06.
 5. Then ask the owner to approve Phase 2 (build) under R-DEC-01; nothing is built before that.
