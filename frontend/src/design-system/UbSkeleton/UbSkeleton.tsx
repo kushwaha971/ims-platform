@@ -17,7 +17,7 @@ import { cn } from 'src/utils/cn';
  * fixed width is kept only for the avatar disc, and capped at `max-w-full`.
  * `UbSkeleton.test.tsx` holds every variant to this.
  */
-export type UbSkeletonVariant = 'list' | 'card' | 'form' | 'app' | 'text';
+export type UbSkeletonVariant = 'list' | 'card' | 'form' | 'app' | 'text' | 'heading';
 
 export interface UbSkeletonProps {
   readonly variant?: UbSkeletonVariant;
@@ -78,6 +78,15 @@ function UbSkeletonBase({
           <MLSkeleton className="h-8 w-3/4 max-w-48" />
           <MLSkeleton className="h-24 w-full rounded-card" />
           <MLSkeleton className="h-64 w-full rounded-card" />
+        </div>
+      )}
+      {/* A page title and its one-line description, at UbPageHeader's sizes,
+          so a route's loading view keeps the screen's top edge where the
+          real title will land. */}
+      {variant === 'heading' && (
+        <div className="flex flex-col gap-2 py-1">
+          <MLSkeleton className="h-7 w-1/2 max-w-48" />
+          <MLSkeleton className="h-4 w-3/4 max-w-72" />
         </div>
       )}
       {variant === 'text' && (

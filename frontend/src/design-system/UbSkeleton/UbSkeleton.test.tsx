@@ -12,7 +12,7 @@ import { UbSkeleton, type UbSkeletonVariant } from './UbSkeleton';
  * the point (the avatar disc), it is capped with `max-w-full`. A fixed length
  * belongs in `max-w-*`, where it only ever makes a bar SHORTER.
  */
-const VARIANTS: readonly UbSkeletonVariant[] = ['list', 'card', 'form', 'app', 'text'];
+const VARIANTS: readonly UbSkeletonVariant[] = ['list', 'card', 'form', 'app', 'text', 'heading'];
 
 const FIXED_WIDTH = /^w-(\d+(\.\d+)?|px|\[[\d.]+(px|rem|em)\])$/;
 const RELATIVE_WIDTH = /^w-(full|\d+\/\d+|\[\d+%\])$/;
