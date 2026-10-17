@@ -13,11 +13,12 @@ Every screen gets one section in the file for its area, written with the templat
 | [05-library-home.md](05-library-home.md) | Library Home (UI only) | specified |
 | [06-lending-today.md](06-lending-today.md) | Lending Today (UI only) | specified |
 | [07-notifications.md](07-notifications.md) | desktop popover, phone page | specified |
-| 08-shop-*.md | customers, suppliers, person page, bills, bill editor, purchases, items, stock, payments, cashbook, reports, settings | **to do — Phase 2, wave 2** |
-| 09-udhaar-*.md | person khata, entry sheet, statement, aging, reminders | to do — wave 2 |
-| 10-library-*.md | counter, members, member detail, seats, fees, attendance, messages, money, catalogue, copies, settings | to do — wave 3 |
-| 11-lending-*.md | loans, new loan, loan detail, borrowers, routes, messages, collect | to do — wave 3 |
-| 12-shared-overlays.md | every drawer, dialog, sheet and popover pattern | to do — wave 2 |
+| [08-shop-people-and-money.md](08-shop-people-and-money.md) | customers, suppliers, Shop person page, payments, receipts, cash book, expenses | specified, 8.74 (round 2, provisional) |
+| [09-shop-bills-items-reports.md](09-shop-bills-items-reports.md) | sales, bill editor, purchases, items, stock, import, reports, settings | specified, 8.75 (round 2, provisional) |
+| [10-udhaar-book.md](10-udhaar-book.md) | person khata, entry sheet, corrections, opening balance, statement, old dues, reminders, archive, tags | specified, 8.76 (round 2, provisional) |
+| [11-library.md](11-library.md) | counter, students, student page, seats, fees, attendance, messages, money, books, copies, settings, public page | specified, 8.77 (round 2, provisional), look only |
+| [12-shared-overlays.md](12-shared-overlays.md) | every drawer, dialog, sheet and popover pattern, phone vs desktop | specified (scored inside each module) |
+| [13-lending.md](13-lending.md) | loans, new loan, loan page, collect, not paid, borrowers, routes, messages | specified, 8.77 (round 2, provisional), look only |
 
 The Counter Mode design page (`/mnt/project-files/shop-design-direction/counter-mode.html`, published artifact) is the visual reference for Shop Home, Receive payment, Customers, bill actions, receipt message, date picker, item search, total bar and Settings. Those wave-2 specs copy their decisions from it rather than redesigning.
 

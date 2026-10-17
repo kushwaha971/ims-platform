@@ -19,7 +19,7 @@ Pass mark: **strictly above 8.6**, for every module and overall.
 
 ## 2. What was scored
 
-Only what is specified: the global shell and navigation, sign-in and onboarding, notifications, and the four module entry points (Shop Home, Udhaar People, Library Home, Lending Today). **Whole-module scores for Shop, Udhaar, Library and Lending are not given yet**, because their other screens (07-screens wave 2 and 3) are not specified. Scoring a module from its home screen alone would inflate it. The gate is re-run per module as each wave is written.
+Only what is specified: the global shell and navigation, sign-in and onboarding, notifications, and the four module entry points (Shop Home, Udhaar People, Library Home, Lending Today). Whole-module scores were deferred until each module's screens were specified (wave 2 and 3, now done); they are in §5a.
 
 ## 3. Round 1 (first draft) — failed
 
@@ -71,6 +71,23 @@ Shop Home passes by the smallest margin. It is held down by safety (8.4): the de
 | Ease scores | the 9-task script with 5–8 shopkeepers (G5) |
 | Safety scores for Library and Lending | contract snapshot diff empty and figure parity on a seeded book (02 §6) |
 | Shop Home safety | TV-01 and TV-02 fixed on the server |
+
+## 5a. Whole-module scores (17 Oct 2026)
+
+Each module file has its own two rounds with the arithmetic under "## Review". Shop is the mean of its two files.
+
+| Module | Round 1 | Round 2 | Lowest screen in round 2 |
+|---|---|---|---|
+| Foundation (shell, sign-in, notifications, homes) | 8.52 | 8.74 | Shop Home 8.66 |
+| Shop: people and money (08) | 8.42 | 8.74 | Payments list 8.69 |
+| Shop: bills, items, reports (09) | 8.48 | 8.75 | Settings 8.71 |
+| **Shop** | 8.45 | **8.745** | |
+| **Udhaar book** (10) | 8.45 | **8.76** | Reminders 8.66; falls to 8.60 (fail) if the Library and Lending tabs stay (owner question) |
+| **Library** (11, look only) | 8.43 | **8.77** | |
+| **Lending** (13, look only) | 8.42 | **8.77** | Routes 8.68 |
+| **Overall** (mean of foundation and four modules) | 8.45 | **8.76** | |
+
+Every module passes the gate (strictly above 8.6) provisionally. None counts until the checks in §5 and 11 are done: contract snapshot and figure parity for Library and Lending, device timing, the accessibility sweep, the screenshot sweeps (R-DEC-07) and shopkeeper tests. Margins are thin (0.06–0.17), so a single failed check can drop a module below the gate; that is a reason to test, not to round up.
 
 ## 6. Strongest criticisms still standing
 

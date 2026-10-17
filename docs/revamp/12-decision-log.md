@@ -30,10 +30,14 @@ Newest first. Each decision says who made it and when. "Open" means it waits for
 | 17 Oct 2026 | Roadmap and QA plan | 10, 11 |
 | 17 Oct 2026 | Owner chose the App button (N-1) | 04, 07-screens/02 |
 | 17 Oct 2026 | Owner: keep the existing logo (R-DEC-06) | 03, AGENT_START_PROMPT.md |
+| 17 Oct 2026 | Owner: screenshots on phone and desktop after every built UI piece (R-DEC-07) | 11, AGENT_START_PROMPT.md |
+| 17 Oct 2026 | Wave 2 and 3 screen specs for Shop (two files), Udhaar, Library, Lending and shared overlays; each failed round 1 and passes round 2 provisionally; module scores in 09 §5a | 07-screens/08–13, 09 |
 | 17 Oct 2026 | Tool-neutral start prompt for any coding agent; root AGENTS.md; design page copied into the repo | AGENT_START_PROMPT.md, design/ |
 
 ## Next
 
-1. Owner answers R-DEC-03, R-DEC-04 and which BP items to consider.
-2. Phase 1 measurements (05 §6), which turn H1–H8 into facts.
-3. Wave 2 screen specs: Shop and Udhaar screens, shared overlays.
+1. Owner answers the open questions gathered on 17 Oct (the list is in the thread and in each 07-screens file's review): R-DEC-03, R-DEC-04, dual-role settle, the Shop person page main action, Udhaar undo and reminder tabs, the Library expired word, the Lending FP questions, and which BP items to consider.
+2. Phase 1 measurements (05 §6) finish, turning H1–H8 into facts (docs/performance/2026-10-17-app-baseline.md).
+3. Write the new proposals the specs raised into 08 (BP-08 dual-role settle; Library P-01…06; Lending FP-1…9; Shop P-08-01…06), each with the full proposal fields.
+4. List the six new overlay pieces from 12-shared-overlays in 06.
+5. Then ask the owner to approve Phase 2 (build) under R-DEC-01; nothing is built before that.
