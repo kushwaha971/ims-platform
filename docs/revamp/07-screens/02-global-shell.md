@@ -29,7 +29,7 @@ Strategy and reasons are in [04-navigation-strategy.md](../04-navigation-strateg
 
 | Field | |
 |---|---|
-| Layout | 232 px dark teal rail (Counter Mode v5): business name and menu at top; **Apps** group with the active app expanded to its sections and the others collapsed; Settings and Team at the bottom. Collapses to a 64 px icon rail at 1024–1279 px with tooltips. |
+| Layout | 232 px dark teal rail (Counter Mode v5): the existing logo on a white 36 px rounded tile (R-DEC-06), business name and menu at top; **Apps** group with the active app expanded to its sections and the others collapsed; Settings and Team at the bottom. Collapses to a 64 px icon rail at 1024–1279 px with tooltips. |
 | Active | lighter band with a marigold left edge; `aria-current="page"`. |
 | Feedback | pressed row darkens; pending navigation shows a small spinner at the row's right after 120 ms and the top progress line. |
 | Keyboard | Tab order top to bottom; `Ctrl K` focuses search. |

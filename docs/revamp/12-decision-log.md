@@ -14,7 +14,7 @@ Newest first. Each decision says who made it and when. "Open" means it waits for
 | N-1 | Phone module switching: the 5th bottom-bar slot becomes the App button with one App sheet (apps, more, you). Alternative B (3 tabs + App + More) rejected. | decided | owner, 17 Oct 2026 |
 | N-2 | Notifications: popover on desktop, page on phones; same backend. | proposed | — |
 | BP-01…07 | Backend proposals in 08. None approved. | **open** | — |
-| R-DEC-06 | Keep the existing YourKhata logo and mark (`UbLogo`, `frontend/public/brand/yourkhata-*.svg`, rules in DESIGN-SYSTEM.md §7). The "K" squares on the Counter Mode design page are placeholders, not a new logo. | decided | owner, 17 Oct 2026 |
+| R-DEC-06 | Keep the existing YourKhata logo and mark (`UbLogo`, `frontend/public/brand/yourkhata-*.svg`, rules in DESIGN-SYSTEM.md §7). On the dark sidebar it sits on a white rounded tile so it stays visible; the mark is never recoloured. | decided | owner, 17 Oct 2026 |
 | L-01 | Library and Lending: UI only; contracts in 02 are fixed. | decided | owner, 17 Oct 2026 |
 
 ## Progress

@@ -35,6 +35,6 @@ These keep the direction already agreed (Counter Mode design page, `docs/DESIGN-
 
 - Peacock teal `#0E7C86` for navigation and selection; marigold `#F59E1B` with dark ink for the one main action per screen; semantic green and red only for money in and out.
 - White page background with a dark teal sidebar (owner, 17 Oct 2026, Counter Mode page v5). This changes the warm `#FBF8F4` ground in `tokens/light.css`; recorded as R-DEC-02 in 12.
-- **The existing logo stays** (R-DEC-06): `UbLogo` and `frontend/public/brand/yourkhata-*.svg`, used by DESIGN-SYSTEM.md §7. Design previews that show a letter in a square are placeholders for it.
+- **The existing logo stays** (R-DEC-06): `UbLogo` and `frontend/public/brand/yourkhata-*.svg`, used by DESIGN-SYSTEM.md §7. On the dark teal sidebar the teal mark sits on a white rounded tile (36 px tile, 28 px mark), because teal on dark teal disappears; the mark itself is never recoloured or redrawn (owner, 17 Oct 2026).
 - Plus Jakarta Sans and Mukta; 40 px inputs, 44 px touch areas on phones, 12 px between neighbouring phone targets.
 - Motion: 90–360 ms with the existing easing tokens; nothing moves for decoration; `prefers-reduced-motion` turns movement off.
