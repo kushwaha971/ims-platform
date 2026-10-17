@@ -48,6 +48,9 @@ out of date; the code is the truth. If they disagree, say so in the decision log
   component. No new dependency without an ADR. Redux Toolkit, no TanStack Query.
 - Backend changes only when proven necessary, written in 08 with: why, endpoint,
   before/after, risk, compatibility, data impact, tests, rollback.
+- After building any UI piece (form, card, drawer, sheet, dialog, list, screen),
+  take phone and desktop screenshots of it in its states and send them with the
+  report before starting the next piece (R-DEC-07; method in 11).
 - Never claim a speed improvement without before/after numbers, never claim
   safety without the regression and contract checks in 11, never inflate a score.
 

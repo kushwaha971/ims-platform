@@ -25,6 +25,16 @@ Status: **plan**, 17 Oct 2026. Uses the existing gates in CLAUDE.md; adds only w
 | Devices | one low-end Android (D-06), one iPhone, installed PWA, weak signal; 9-task script timed | 1, 8 |
 | Data volume | 2k parties / 100k entries (existing scale seed); Library 2k members; Lending 3k loans | 1, 7 |
 
+## Screenshots after each piece (R-DEC-07, owner, 17 Oct 2026)
+
+Every UI piece that is built, whether a form, card, drawer, sheet, dialog, list or a whole screen, is photographed on the running app before the next piece starts, and the pictures go to the owner with the report for that piece.
+
+- **Sizes:** phone 390 × 844 (plus 320 × 640 when the piece holds text that can wrap) and desktop 1280 × 800.
+- **States:** each state the spec lists for that piece that can be reached on a seeded stack: empty, filled, loading, error, refused by validation, success, and long name / large amount (₹12,40,378.00). Light theme always; dark theme and Hindi for any piece with text.
+- **How:** Playwright against the live stack served by `e2e/serve-api.sh` and `e2e/serve.sh` (never `next start`), the same way the existing `--shots` sweeps work, saved under `/tmp/e2e-shots/revamp/<piece>/` and copied to `/mnt/project-files/revamp/shots/<piece>/` so the owner can open them.
+- **Read them before sending:** look at each picture against the spec, and run the measuring checks on the same pages. A screenshot nobody looked at proves nothing.
+- Library and Lending pieces are photographed beside the current screen with the same data, so the figures can be compared (figure parity).
+
 ## Exit criteria for rollout (Phase 8)
 1. Every existing gate green.
 2. Every added check green, or a written exception the owner accepted.
