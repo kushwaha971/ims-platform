@@ -16,6 +16,7 @@ Newest first. Each decision says who made it and when. "Open" means it waits for
 | BP-01…07 | Backend proposals in 08. None approved. | **open** | — |
 | R-DEC-06 | Keep the existing YourKhata logo and mark (`UbLogo`, `frontend/public/brand/yourkhata-*.svg`, rules in DESIGN-SYSTEM.md §7). On the dark sidebar it sits on a white rounded tile so it stays visible; the mark is never recoloured. | decided | owner, 17 Oct 2026 |
 | L-01 | Library and Lending: UI only; contracts in 02 are fixed. | decided | owner, 17 Oct 2026 |
+| R-DEC-08 | Build approved for the shared speed and tap fixes (roadmap Phase 4: route loading views, pressed and pending states, double-tap lock, phone App button and desktop sidebar app list), with screenshots and before/after numbers after each piece. Library and Lending screens are not changed in this phase beyond the shared shell. The owner then asked this session not to build and to hand the work to a new session with the start prompt. | decided | owner, decision card, 17 Oct 2026 17:27 UTC; hand-over 17:28 UTC |
 | R-DEC-07 | Every UI piece built (form, card, drawer, sheet, dialog, list, any screen) is delivered with screenshots of it on a phone and on desktop, in each of its states, before the next piece starts. See 11 "Screenshots after each piece". | decided | owner, 17 Oct 2026 |
 
 ## Progress
@@ -33,12 +34,17 @@ Newest first. Each decision says who made it and when. "Open" means it waits for
 | 17 Oct 2026 | Owner: screenshots on phone and desktop after every built UI piece (R-DEC-07) | 11, AGENT_START_PROMPT.md |
 | 17 Oct 2026 | Wave 2 and 3 screen specs for Shop (two files), Udhaar, Library, Lending and shared overlays; each failed round 1 and passes round 2 provisionally; module scores in 09 §5a | 07-screens/08–13, 09 |
 | 17 Oct 2026 | Phase 1 baseline measured on the scale book; H1–H4, H6 proven, H8 Lending Today only, H5 and H7 open | docs/performance/2026-10-17-app-baseline.md, e2e/perf-app.mjs, 05 |
+| 17 Oct 2026 | Owner approved building Phase 4 (R-DEC-08) and handed it to a new session; no app code changed in this session | 12 |
 | 17 Oct 2026 | Tool-neutral start prompt for any coding agent; root AGENTS.md; design page copied into the repo | AGENT_START_PROMPT.md, design/ |
 
 ## Next
 
-1. Owner answers the open questions gathered on 17 Oct (the list is in the thread and in each 07-screens file's review): R-DEC-03, R-DEC-04, dual-role settle, the Shop person page main action, Udhaar undo and reminder tabs, the Library expired word, the Lending FP questions, and which BP items to consider.
-2. Phase 1 follow-ups: write a BP for Lending Today returning every loan (6.7 s, 1,584 queries) and the loans / members N+1s; owner decides whether H5 may be measured; check Railway's live service-worker variable (H7); look into 432 loan creations that timed out at 6 concurrent requests.
-3. Write the new proposals the specs raised into 08 (BP-08 dual-role settle; Library P-01…06; Lending FP-1…9; Shop P-08-01…06), each with the full proposal fields.
+1. **Build Phase 4, approved (R-DEC-08)**, one piece at a time, in this order. After each piece, run the gates in CLAUDE.md, take phone and desktop screenshots in every state (R-DEC-07, method in 11), measure before and after with `e2e/perf-app.mjs` against the baseline in docs/performance/2026-10-17-app-baseline.md, then commit and report before starting the next.
+   1. F1 route loading views: a `loading.tsx` for each route group that renders the same `UbPageSkeleton` variant its `page.tsx` Suspense fallback already uses (07-screens/02 "Route loading"), plus `RouteProgress`. Check first whether the root layout's `cookies()` (`app/layout.tsx`) stops the fallback from showing (node_modules/next/dist/docs/01-app/03-api-reference/03-file-conventions/loading.md); prove it with the perf harness, not by reading.
+   2. F2 pressed and pending states: `useNavigate` with `useTransition`; pressed tint on `UbButton` primary, bottom tabs, desktop rows (H6 findings in the baseline).
+   3. Double-tap lock: in-flight guard in `UbForm` / `useAsyncAction`, and request-key reuse on retry (05 §4; Lending finding in 07-screens/13 is client-only).
+   4. Phone App button and App sheet; desktop sidebar app tree (04, 07-screens/02, 06).
+   Library and Lending: shared shell only; their screens, endpoints and calculations stay as 02 freezes them.
+2. Owner answers the five open questions (Udhaar undo, reminder tabs, Close khata, Shop person bottom bar, "Plan ended"), plus R-DEC-03, R-DEC-04 and the BP items. These do not block step 1.
+3. Write the proposals the specs raised into 08 (BP-08 dual-role settle; Lending Today returning every loan and the loans / members N+1s; Library P-01…06; Lending FP-1…9; Shop P-08-01…06).
 4. List the six new overlay pieces from 12-shared-overlays in 06.
-5. Then ask the owner to approve Phase 2 (build) under R-DEC-01; nothing is built before that.
