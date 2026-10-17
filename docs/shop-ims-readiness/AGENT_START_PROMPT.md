@@ -205,9 +205,13 @@ the server-prepared reference.
    absent where the browser has no picker. Library, Lending and the party
    form share src/components/contacts/PhoneContactButton.tsx.
    `e2e/party-contact-review.mjs` is the look and uses a fake picker; never
-   access real phone contacts in QA. Next in WP-07: the rest of its row
-   (consistent drawers, role-specific copy, mobile price visibility, safe
-   archived/duplicate handling), each checked against the code first.
+   access real phone contacts in QA. Role-specific drawer and select-all
+   copy, the archived-number banner and the phone Items price per unit
+   (SH-012) are in 265041c; `e2e/records-copy-review.mjs` is the look.
+   Next in WP-07: make the add/edit drawers consistent across apps, and fix
+   the duplicate check missing a bare ten-digit mobile stored by the API
+   against the form's +91… (normalise on the server, test first, and check
+   existing rows before touching data). Then the owner's acceptance review.
 4. Still owed to WP-02, needing the owner or a device: a physical
    network-interruption check on a phone, and the owner's SH-011 release
    review in the tracker. Do not wait on these.

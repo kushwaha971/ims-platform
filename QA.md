@@ -632,3 +632,13 @@ Read this file, `git status`, current diff, root/frontend AGENTS, and the releva
 - Looked: `e2e/party-contact-review.mjs` at 360/768/1280/1920 on /customers, /suppliers and /khata. No real contacts were read: desktop Chromium has no picker (the button is absent), and the phone pass uses a fake picker with one made-up contact. Name "Asha Devi" and mobile 9876543210 are filled, nothing is cut, the page fits, and no party was created (0 → 0).
 - Gates: Jest 4268/4268; `tsc` clean; ESLint clean (the full run took 22 minutes in this sandbox); i18n in step; build and bundle gate passed (sixteen routes raised by measured + 0.5 for the parties catalogue's two strings, noted). Railway deployment and 9/10 readiness are NOT claimed.
 
+### 17 October 2026 — WP-07: role-specific copy, archived numbers and phone prices (cloud session)
+
+- Fixed (265041c): the add drawer said "Add party" / "Save party" when opened from Customers or Suppliers (SH-014). It now says "Add customer" / "Save customer" and "Add supplier" / "Save supplier"; the Udhaar book keeps "party". Fail-before: drawer test.
+- Fixed (265041c): Suppliers' select-all box was announced as "Select every customer on this page". Each list now names its own people. Fail-before: list test.
+- Fixed (265041c): a number held by an ARCHIVED party was refused with "That number is already in your book". The banner now reads "You archived the party with this number" with "Open it to restore", and that page offers Restore. Fail-before: drawer test.
+- Fixed (265041c, SH-012): the phone Items card showed no price. It now shows "₹1,059.00 per NOS" under the name; cost stays off the card. Fail-before: item list test.
+- Looked: `e2e/records-copy-review.mjs` at 360/768/1280/1920, 47 checks pass, nothing cut in the drawer or the list, page fits.
+- Found and NOT fixed (pending): the party API stores a bare ten-digit mobile as sent, while the form sends +91…, so the duplicate check misses a party created one way against one created the other (seen with a fixture-created party). Needs a server-side normalisation with a test, and a check of existing rows before any data change.
+- Gates: Jest 4272/4272; `tsc` clean; ESLint clean; i18n in step; build and bundle gate passed (/design-system raised by measured + 0.5, noted). Railway deployment and 9/10 readiness are NOT claimed.
+

@@ -30,7 +30,7 @@ Shared message editing and code-reuse requirements extend to Shop, Library, Lend
 
 Source: [Shop audit](../review/06-shop-user-audit.md), [QA handoff](../../QA.md), and [existing decisions](../DECISIONS.md). Last recorded baseline: 1,542 Shop backend tests, 4,096 frontend tests, build/types/locale/contrast/bundle checks passed. This baseline precedes the future work here and is not evidence that these requirements are implemented.
 
-SH-009 is resolved by the explicit owner choice on16 October2026: keep weighted-average stock costing and correct conflicting return documentation. Known open work: desktop billing density SH-010; SH-011 release proof (sales and purchase recovery are implemented, documented and checked in a browser with simulated lost replies; physical device/network evidence pending); mobile price visibility SH-012; supplier-return proof SH-013; terminology/paging SH-014. Local audit fixes require release verification; a journal entry saying “fixed locally” is not proof of deployment.
+SH-009 is resolved by the explicit owner choice on16 October2026: keep weighted-average stock costing and correct conflicting return documentation. Known open work: desktop billing density SH-010; SH-011 release proof (sales and purchase recovery are implemented, documented and checked in a browser with simulated lost replies; physical device/network evidence pending); supplier-return proof SH-013; terminology/paging SH-014 (the supplier "Add party"/select-all wording is fixed in 265041c; paging and accounting words remain). Mobile price visibility SH-012 is fixed in 265041c, pending release verification. Local audit fixes require release verification; a journal entry saying “fixed locally” is not proof of deployment.
 
 ## Agent entry point
 
