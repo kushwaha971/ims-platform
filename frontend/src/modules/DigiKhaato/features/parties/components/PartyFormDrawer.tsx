@@ -26,6 +26,7 @@ import {
   isoToday,
 } from 'src/design-system';
 import { useTranslation } from 'src/hooks/useTranslation';
+import { partyPath } from 'src/routes';
 import { compareMoney, formatAmount, parseAmountInput } from 'src/utils/money';
 
 import { MAX_TAGS_PER_PARTY } from '../constants/partyTags';
@@ -92,6 +93,7 @@ export function PartyFormDrawer({
     canEdit,
     formErrors,
     duplicateOf,
+    duplicateArchived,
     close,
     submit,
   } = partyForm;
@@ -99,6 +101,10 @@ export function PartyFormDrawer({
      one stays with the write right. The page hides Edit already — this keeps
      the drawer read-only if it is ever opened on a party some other way. */
   const canWrite = isEdit ? canEdit : canCreate;
+  /* Opened from Customers or Suppliers, the drawer says the word the button
+     said ("Add customer" answered by "Add customer"); from the Udhaar book or
+     the all-parties list it stays "party" (WP-07). */
+  const byKind = kind === 'customer' ? '.customer' : kind === 'supplier' ? '.supplier' : '';
 
   const defaults = useMemo<PartyFormValues>(
     () => ({
@@ -241,7 +247,7 @@ export function PartyFormDrawer({
     <UbDrawer
       open={open}
       onOpenChange={handleOpenChange}
-      title={isEdit ? t('parties.form.title.edit') : t('parties.form.title.create')}
+      title={isEdit ? t('parties.form.title.edit') : t(`parties.form.title.create${byKind}`)}
       description={isEdit ? undefined : t('parties.form.subtitle')}
       closeLabel={t('common.action.close')}
       // A stray tap on the backdrop must not take a half-filled form with it.
@@ -259,7 +265,7 @@ export function PartyFormDrawer({
             busyLabel={t('parties.form.submitting')}
             disabled={!canWrite}
           >
-            {isEdit ? t('parties.form.submit.edit') : t('parties.form.submit.create')}
+            {isEdit ? t('parties.form.submit.edit') : t(`parties.form.submit.create${byKind}`)}
           </UbButton>
         </>
       }
@@ -272,13 +278,28 @@ export function PartyFormDrawer({
              deliberately not its name — that is another record's data. So this
              offers to open it rather than naming it, and the ordinary detail
              read decides whether the name may be shown. */
+          /* An ARCHIVED holder is off the list, so "already in your book"
+             names somebody the merchant cannot see; its page is where Restore
+             is, which is the way back rather than a second record. */
           <UbStatusBanner
             tone="warning"
-            title={t('parties.form.duplicate.title')}
-            description={t('parties.form.duplicate.body')}
+            title={t(
+              duplicateArchived
+                ? 'parties.form.duplicate.archived.title'
+                : 'parties.form.duplicate.title'
+            )}
+            description={t(
+              duplicateArchived
+                ? 'parties.form.duplicate.archived.body'
+                : 'parties.form.duplicate.body'
+            )}
             action={
-              <UbLink href={`/parties/${duplicateOf}`} variant="body-sm">
-                {t('parties.form.duplicate.open')}
+              <UbLink href={partyPath(duplicateOf)} variant="body-sm">
+                {t(
+                  duplicateArchived
+                    ? 'parties.form.duplicate.archived.open'
+                    : 'parties.form.duplicate.open'
+                )}
               </UbLink>
             }
           />

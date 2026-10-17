@@ -111,6 +111,7 @@
   "items.list.add": "Add item",
   "items.list.adjust": "Adjust stock",
   "items.list.caption": "Items with price, tax and stock on hand",
+  "items.list.card.price": "{price} per {unit}",
   "items.list.col.category": "Category",
   "items.list.col.gst": "GST",
   "items.list.col.item": "Item",

@@ -58,6 +58,11 @@ export interface UsePartyFormResult {
   readonly formErrors: readonly string[];
   /** The id of the party already holding the mobile that was just refused. */
   readonly duplicateOf: string | null;
+  /**
+   * That party is archived: off the list, still holding its number. The banner
+   * says so and offers Restore's page, not "already in your book" (WP-07).
+   */
+  readonly duplicateArchived: boolean;
   readonly warnings: readonly PartyWarning[];
   readonly lastSaved: PartyDetail | null;
   /** `name` starts the form with that name filled in — see `partyCreateOpened`. */
@@ -85,7 +90,7 @@ export const usePartyForm = (): UsePartyFormResult => {
 
   const { key, rotate } = useIdempotencyKey();
   const [formErrors, setFormErrors] = useState<readonly string[]>([]);
-  const [duplicateOf, setDuplicateOf] = useState<string | null>(null);
+  const [duplicate, setDuplicate] = useState<{ id: string; archived: boolean } | null>(null);
 
   /**
    * Class **B, deferred** (§19.10.4), not class A.
@@ -108,7 +113,7 @@ export const usePartyForm = (): UsePartyFormResult => {
   const openCreate = useCallback(
     (name?: string) => {
       setFormErrors([]);
-      setDuplicateOf(null);
+      setDuplicate(null);
       dispatch(partyCreateOpened(name));
     },
     [dispatch]
@@ -117,7 +122,7 @@ export const usePartyForm = (): UsePartyFormResult => {
   const openEdit = useCallback(
     (party: PartyDetail) => {
       setFormErrors([]);
-      setDuplicateOf(null);
+      setDuplicate(null);
       dispatch(partyEditOpened(party));
     },
     [dispatch]
@@ -125,7 +130,7 @@ export const usePartyForm = (): UsePartyFormResult => {
 
   const close = useCallback(() => {
     setFormErrors([]);
-    setDuplicateOf(null);
+    setDuplicate(null);
     dispatch(partyFormClosed());
   }, [dispatch]);
 
@@ -136,7 +141,7 @@ export const usePartyForm = (): UsePartyFormResult => {
   const submit = useCallback(
     async (values: PartyFormValues, setError: UseFormSetError<PartyFormValues>) => {
       setFormErrors([]);
-      setDuplicateOf(null);
+      setDuplicate(null);
       try {
         const saved = await dispatch(
           saveParty({
@@ -186,7 +191,9 @@ export const usePartyForm = (): UsePartyFormResult => {
 
           const details = apiError.details as Record<string, unknown> | undefined;
           const existing = details?.existing_party_id;
-          if (typeof existing === 'string') setDuplicateOf(existing);
+          if (typeof existing === 'string') {
+            setDuplicate({ id: existing, archived: details?.existing_status === 'archived' });
+          }
 
           /**
            * `details` carries two kinds of thing and only one of them is a
@@ -238,7 +245,8 @@ export const usePartyForm = (): UsePartyFormResult => {
       canWrite,
       canEdit,
       formErrors,
-      duplicateOf,
+      duplicateOf: duplicate?.id ?? null,
+      duplicateArchived: duplicate?.archived ?? false,
       warnings,
       lastSaved,
       openCreate,
@@ -255,7 +263,7 @@ export const usePartyForm = (): UsePartyFormResult => {
       canWrite,
       canEdit,
       formErrors,
-      duplicateOf,
+      duplicate,
       warnings,
       lastSaved,
       openCreate,

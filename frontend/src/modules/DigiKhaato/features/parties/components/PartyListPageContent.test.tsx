@@ -2032,6 +2032,21 @@ describe('one book: Suppliers', () => {
     expect(summary.querySelector('dd')).toHaveTextContent('₹2,688.00');
   });
 
+  it('names suppliers, not customers, in the select-all box (SH-014)', async () => {
+    // The final supplier check found Suppliers' bulk box still announced as
+    // "Select every customer on this page".
+    setTier('full');
+    partyService.listParties.mockResolvedValue(
+      loaded([{ ...RAMESH, isCustomer: false, isSupplier: true }])
+    );
+    renderWithProviders(<PartyListPageContent kind="supplier" />);
+    await screen.findByRole('table');
+    expect(
+      screen.getByRole('checkbox', { name: 'Select every supplier on this page' })
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('checkbox', { name: /every customer/ })).not.toBeInTheDocument();
+  });
+
   it('asks only for suppliers, names the page, and offers no type chip', async () => {
     partyService.listParties.mockResolvedValue(EMPTY);
     renderWithProviders(<PartyListPageContent kind="supplier" />);

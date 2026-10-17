@@ -99,3 +99,46 @@ it('on a phone, Low stock is chosen in the one Filters sheet', async () => {
     })
   );
 });
+
+it('on a phone, each item card says its selling price per unit (SH-012)', async () => {
+  /**
+   * The phone card showed the name, SKU and stock and nothing about price, so
+   * a shopkeeper checking what to charge had to open every item. The price
+   * per unit is the line under the name; the cost stays off the card.
+   */
+  jest.mocked(service.listItems).mockResolvedValue({
+    ...PAGE,
+    hasAny: true,
+    total: 1,
+    totalPages: 1,
+    counts: { all: 1, in: 1, low: 0, out: 0 },
+    rows: [
+      {
+        id: 'i1',
+        name: 'Lifebuoy Soap 100g',
+        sku: 'LIFEBUOY-001',
+        barcode: null,
+        itemType: 'goods',
+        category: null,
+        unit: { id: 'u-nos', code: 'NOS', allowDecimal: false },
+        sellingPrice: '1059.00',
+        purchasePrice: '40.00',
+        taxCode: 'GST18',
+        trackStock: true,
+        onHand: '12',
+        avgCost: '40.00',
+        reorderPoint: null,
+        stockStatus: 'ok',
+        stockValue: '480.00',
+        status: 'active',
+        matchField: null,
+        updatedAt: '2026-10-17T05:00:00Z',
+      },
+    ],
+  });
+  signIn(['inventory.item.read', 'reports.financial.read']);
+  renderWithProviders(<ItemListPageContent />);
+  const card = (await screen.findByText('Lifebuoy Soap 100g')).closest('li') as HTMLElement;
+  expect(within(card).getByText('₹1,059.00 per NOS')).toBeInTheDocument();
+  expect(within(card).queryByText(/₹40\.00/)).not.toBeInTheDocument();
+});

@@ -272,7 +272,14 @@ export function PartyListPageContent({
       // the plural and the grid paints what it is given.
       selectedCount: t('common.grid.selectedCount', { count: selectedIds.length }),
 
-      selectAll: t('parties.list.select.all'),
+      // Suppliers' box said "every customer" (SH-014); each list says its own.
+      selectAll: t(
+        kind === 'supplier'
+          ? 'parties.list.select.all.supplier'
+          : kind === 'customer'
+            ? 'parties.list.select.all'
+            : 'parties.list.select.all.everyone'
+      ),
       selectRow: t('parties.list.select.row', { name: '{name}' }),
       showing: t('common.grid.showing'),
       columns: t('common.grid.columns'),
@@ -286,7 +293,7 @@ export function PartyListPageContent({
     // here. It rebuilds this object while the merchant is ticking rows, which
     // is a handful of renders of a toolbar that is re-rendering anyway — the
     // alternative was a label that said NaN.
-    [t, selectedIds.length]
+    [t, selectedIds.length, kind]
   );
 
   /* NOT `onClick={partyForm.openCreate}`. The moment `openCreate` took an

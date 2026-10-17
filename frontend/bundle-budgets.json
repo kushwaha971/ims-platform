@@ -1,5 +1,6 @@
 {
   "//": [
+    "17 Oct 2026, WP-07 records copy: the parties catalogue gained the role-specific drawer titles, the archived-number banner and the per-list select-all labels, and the items catalogue the phone card's price per unit. /design-system, which renders the shared gallery and sat on its ceiling, rounded over by 0.1 KB: firstLoad 349.8 -> 350.4 (measured + 0.5).",
     "17 Oct 2026, WP-07 phone contacts: the party form gained \"Choose from phone contacts\" for a new Customer, Supplier or Udhaar party, and Library and Lending moved onto the same shared PhoneContactButton. The parties catalogue, which every screen with a party picker or inline add loads, gained two strings. Raised by the measured + 0.5 rule: /sales/challans/[id]/edit firstLoad 392.3→393.0; /sales/orders/[id]/edit firstLoad 392.3→393.0; /sales/invoices/[id]/edit firstLoad 392.3→392.9; /sales/challans/new firstLoad 392.3→392.9; /sales/orders/new firstLoad 392.3→392.9; /sales/invoices/new firstLoad 392.3→392.9; /purchases/orders/[id]/edit firstLoad 391.7→392.3; /purchases/bills/[id]/edit firstLoad 391.6→392.3; /purchases/orders/new firstLoad 391.6→392.2; /purchases/bills/new firstLoad 391.6→392.2; /lending/loans/new firstLoad 374.3→374.9; /design-system route 110.7→111.2; /parties/[id] firstLoad 344.2→344.8; /items/price-lists/[id] firstLoad 322.7→323.5; /purchases/debit-notes firstLoad 315.9→316.5; /purchases/orders firstLoad 315.9→316.5.",
     "17 Oct 2026, WP-07 item pricing: the item picker's options now read the usual price, and for a member who may see costs the cost and the margin (itemPriceNote, with the margin arithmetic and three picker strings). Every bill and order editor that carries the picker, and the price list editor, grew by about 0.5 KB route and 0.3-0.8 KB first load; each raised by the measured + 0.5 rule. The form's own margin fields live in ItemFormDrawer, which is dynamic() and costs no route.",
     "17 Oct 2026, WP-06 period chips (owner chose four presets): the reports catalogue gained the chips' thirteen strings and lost three, and /reports/profit, which loads that catalogue and sat on its ceiling, rounded over by 0.0 KB: route 103.8 -> 104.3 (measured + 0.5).",
@@ -1502,7 +1503,7 @@
     },
     "/design-system": {
       "route": 111.2,
-      "firstLoad": 349.8
+      "firstLoad": 350.4
     },
     "/settings/team": {
       "route": 85.9,

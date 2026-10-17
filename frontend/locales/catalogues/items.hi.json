@@ -111,6 +111,7 @@
   "items.list.add": "आइटम जोड़ें",
   "items.list.adjust": "स्टॉक ठीक करें",
   "items.list.caption": "कीमत, टैक्स और स्टॉक के साथ आइटम",
+  "items.list.card.price": "{price} प्रति {unit}",
   "items.list.col.category": "श्रेणी",
   "items.list.col.gst": "GST",
   "items.list.col.item": "आइटम",

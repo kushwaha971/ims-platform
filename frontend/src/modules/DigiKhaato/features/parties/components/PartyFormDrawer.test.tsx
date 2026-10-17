@@ -559,3 +559,65 @@ describe('a phone contact fills a new party (WP-07, PTY-07 FR-10)', () => {
     ).not.toBeInTheDocument();
   });
 });
+
+describe('the form speaks for the list that opened it (WP-07)', () => {
+  /**
+   * Customers' "Add customer" opened a drawer titled "Add party" with "Save
+   * party": the merchant tapped one word and was answered with another, which
+   * on the Suppliers list also hid that the new person would be a supplier.
+   * The drawer now takes its title and its Save from the kind it was opened for.
+   */
+  it('says customer on Customers and supplier on Suppliers', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<PartyListPageContent kind="customer" />);
+    await screen.findByTestId('ub-grid');
+    const [addCustomer] = screen.getAllByRole('button', { name: 'Add customer' });
+    if (!addCustomer) throw new Error('Customers offered no way to add one');
+    await user.click(addCustomer);
+    const drawer = await screen.findByRole('dialog', { name: 'Add customer' });
+    expect(within(drawer).getByRole('button', { name: 'Save customer' })).toBeInTheDocument();
+    await user.click(within(drawer).getByRole('button', { name: 'Cancel' }));
+
+    store.dispatch(resetPartyForm());
+    renderWithProviders(<PartyListPageContent kind="supplier" />);
+    const [addSupplier] = await screen.findAllByRole('button', { name: 'Add supplier' });
+    if (!addSupplier) throw new Error('Suppliers offered no way to add one');
+    await user.click(addSupplier);
+    const supplier = await screen.findByRole('dialog', { name: 'Add supplier' });
+    expect(within(supplier).getByRole('button', { name: 'Save supplier' })).toBeInTheDocument();
+  });
+});
+
+describe('a number held by an archived party (WP-07)', () => {
+  /**
+   * An archived party still holds its number, so a merchant re-adding someone
+   * they filed away last year was told "That number is already in your book"
+   * about a person their list does not show. The server says the holder is
+   * archived; the banner now says so too and offers the way back, which is
+   * Restore on that party's page, rather than a second record.
+   */
+  it('says the party was archived and that opening it brings them back', async () => {
+    const user = userEvent.setup();
+    partyService.createParty.mockRejectedValue({
+      code: 'validation_error',
+      message: 'Please check the highlighted fields.',
+      details: {
+        mobile: ['This mobile number is already used by another party.'],
+        existing_party_id: 'p-old',
+        existing_status: 'archived',
+      },
+      requestId: 'req_9',
+    });
+    const drawer = await openForm(user);
+    await user.type(within(drawer).getByLabelText('Name'), 'Old Friend');
+    await user.type(within(drawer).getByLabelText('Mobile number'), '9812345678');
+    await user.click(within(drawer).getByRole('button', { name: 'Save party' }));
+
+    expect(await screen.findByText('You archived the party with this number')).toBeInTheDocument();
+    expect(screen.queryByText('That number is already in your book')).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Open it to restore' })).toHaveAttribute(
+      'href',
+      '/parties/p-old'
+    );
+  });
+});

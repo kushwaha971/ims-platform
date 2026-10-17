@@ -13,8 +13,8 @@ import type { ItemListRow } from '../types/item.types';
 
 /**
  * INV-02 §7 — Item (name + SKU) · Category · Unit · Selling · Purchase · GST ·
- * On hand (badge + quantity). On a phone card: name, SKU and category as meta,
- * the badge and quantity trailing (FR-11).
+ * On hand (badge + quantity). On a phone card: the price per unit, then SKU and
+ * category, as meta, the badge and quantity trailing (FR-11, SH-012).
  */
 export const createItemColumns = ({
   t,
@@ -75,14 +75,20 @@ export const createItemColumns = ({
       header: t('items.list.col.selling'),
       priority: 2,
       align: 'end',
-      cardSlot: 'none',
+      /* SH-012 — on a phone the price per unit is the line under the name: a
+         shopkeeper checking what to charge should not open the item for it.
+         The cost never goes on the card. */
+      cardSlot: 'meta',
       sortField: 'selling_price',
       widthShare: 12,
-      cell: (row) => (
-        <UbText as="span" variant="body-sm" className="ds-num">
-          {formatInr(row.sellingPrice)}
-        </UbText>
-      ),
+      cell: (row) =>
+        isCards ? (
+          t('items.list.card.price', { price: formatInr(row.sellingPrice), unit: row.unit.code })
+        ) : (
+          <UbText as="span" variant="body-sm" className="ds-num">
+            {formatInr(row.sellingPrice)}
+          </UbText>
+        ),
     },
     {
       id: 'purchasePrice',
@@ -133,5 +139,13 @@ export const createItemColumns = ({
       ),
     },
   ];
-  return valuation ? columns : columns.filter((column) => column.id !== 'purchasePrice');
+  /* A card's meta lines follow column order, and the price is the one the
+     shopkeeper is looking for, so on a phone it comes first. */
+  const ordered = isCards
+    ? [
+        ...columns.filter((column) => column.id === 'item' || column.id === 'sellingPrice'),
+        ...columns.filter((column) => column.id !== 'item' && column.id !== 'sellingPrice'),
+      ]
+    : columns;
+  return valuation ? ordered : ordered.filter((column) => column.id !== 'purchasePrice');
 };
