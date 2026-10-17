@@ -40,6 +40,8 @@ out of date; the code is the truth. If they disagree, say so in the decision log
 - Nothing a merchant's customer receives names the product or its domain.
 - Keep the agreed look: teal #0E7C86, marigold #F59E1B with dark ink for the one
   main action, white page, dark teal sidebar, Plus Jakarta Sans + Mukta.
+  Keep the existing logo (UbLogo, frontend/public/brand/yourkhata-*.svg,
+  DESIGN-SYSTEM.md §7); never draw a new one (R-DEC-06).
 - Phones: bottom bar with 4 app tabs + the App button (N-1, approved). Desktop:
   app tree in the sidebar. Never copy the phone bar to desktop.
 - Reuse first: check src/design-system (92 parts) and 06 before proposing a new
