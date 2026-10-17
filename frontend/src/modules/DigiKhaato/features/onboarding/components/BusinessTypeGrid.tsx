@@ -107,7 +107,7 @@ function BusinessTypeGridBase({
             className={cn(
               'flex min-h-[88px] flex-col items-start gap-1 rounded-card border p-3',
               selected
-                ? 'border-accent bg-accent-quiet'
+                ? 'border-action bg-accent-quiet'
                 : 'border-border-subtle bg-surface-card hover:bg-surface-hover'
             )}
           >

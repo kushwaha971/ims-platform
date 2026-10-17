@@ -35,7 +35,7 @@ WP-03 starts early and accompanies every package. Do not postpone duplication re
 |---|---|---|
 | D-01 | RESOLVED 16 Oct 2026: retain normative weighted-average stock costing; supplier credit retains original bill price/tax; correct conflicting documentation | Explicit owner response; mixed-cost, depleted, price-only and void/replay regression12/12 passed |
 | D-02 | Supported businesses and capability limits for the release; phased batch/expiry/variants/serial/unit/location support | Product owner with representative merchants; publish capability matrix |
-| D-03 | Explicit dual-role customer/supplier settlement/net-position behavior and dashboard cohort definitions | Product/domain owner; no silent change to existing balance rules |
+| D-03 | Owner chose separate customer receivable and supplier payable balances; settle only explicitly (16 Oct conversation) | Decision approved; implementation is NOT complete. 17 Oct verification still nets ₹1,000/₹600 to ₹400. See 15-theme-and-verification-review.md; preserve historical postings during implementation. |
 | D-04 | Personal user-owned Udhaar and login landing/migration | Separate ownership project; preserve current business entries and member privacy |
 | D-05 | Communication modes: manual handoff, configured providers and schedules; retention, consent, limits and truthful statuses | Product/engineering owner; editable text mandatory regardless of supported mode |
 | D-06 | Physical-device/browser/printer support and production performance envelope | Engineering/QA; freeze devices, workloads and budgets before sign-off |

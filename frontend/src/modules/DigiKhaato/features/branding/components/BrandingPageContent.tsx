@@ -60,7 +60,7 @@ const FIELD_KEY: Readonly<Record<keyof BrandingFormValues, BrandingTextKey>> = {
 };
 
 const toForm = (branding: Branding | null): BrandingFormValues => ({
-  primaryHex: branding?.primaryHex ?? '#4A47D6',
+  primaryHex: branding?.primaryHex ?? '#0E7C86',
   appName: branding?.appName ?? '',
   docHeader: branding?.docHeader ?? '',
   docFooter: branding?.docFooter ?? '',

@@ -122,7 +122,7 @@ function UbStepperBase({
                   aria-hidden
                   className={cn(
                     'ds-label flex h-7 w-7 shrink-0 items-center justify-center rounded-pill border',
-                    isCurrent && 'border-accent bg-accent text-text-inverse',
+                    isCurrent && 'border-action bg-action text-text-inverse',
                     isDone && !onNav && 'border-success bg-success-dim text-success',
                     // Not the -bright step: #2FAE72 is 2.83:1 on the white rail, under the
                     // 3:1 a state glyph needs (WCAG 1.4.11, Sprint 12 contrast scan).

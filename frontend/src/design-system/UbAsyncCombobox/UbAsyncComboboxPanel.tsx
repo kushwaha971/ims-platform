@@ -100,7 +100,7 @@ export function UbAsyncComboboxPanel({
             <MLCommandItem
               value={`__create__${trimmed}`}
               onSelect={onCreate}
-              className="ds-body gap-2 text-accent"
+              className="ds-body gap-2 text-text-accent"
             >
               <Plus aria-hidden className="h-4 w-4 shrink-0" />
               <span className="truncate">{createLabel?.(trimmed)}</span>

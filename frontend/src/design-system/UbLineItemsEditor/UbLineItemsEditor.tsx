@@ -539,7 +539,7 @@ export function UbLineItemsEditor<TForm extends FieldValues, TName extends Array
           type="button"
           onClick={addLine}
           disabled={atMax || disabled}
-          className="ub-hit ds-body-sm-medium inline-flex h-10 items-center gap-2 rounded-control border border-border-hairline px-3 text-accent hover:bg-surface-sunken disabled:cursor-not-allowed disabled:opacity-50"
+          className="ub-hit ds-body-sm-medium inline-flex h-10 items-center gap-2 rounded-control border border-border-hairline px-3 text-text-accent hover:bg-surface-sunken disabled:cursor-not-allowed disabled:opacity-50"
         >
           <Plus aria-hidden className="h-4 w-4" />
           {labels.addLine}

@@ -113,7 +113,7 @@ export function UbChoiceChips<T extends string>({
               'outline-none transition-colors duration-fast ease-standard focus-visible:shadow-focus',
               'disabled:cursor-not-allowed disabled:opacity-60',
               checked
-                ? 'border-accent bg-accent-quiet text-text-accent'
+                ? 'border-action bg-accent-quiet text-text-accent'
                 : invalid
                   ? 'border-formError text-text-secondary hover:bg-surface-hover'
                   : 'border-border-subtle text-text-secondary hover:bg-surface-hover hover:text-text-primary'

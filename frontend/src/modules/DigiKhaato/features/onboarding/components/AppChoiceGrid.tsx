@@ -72,7 +72,7 @@ function AppChoiceGridBase({
             className={cn(
               'relative flex min-h-[104px] flex-col items-start gap-1 rounded-card border p-3 pr-9 text-left',
               selected
-                ? 'border-accent bg-accent-quiet'
+                ? 'border-action bg-accent-quiet'
                 : 'border-border-subtle bg-surface-card hover:bg-surface-hover'
             )}
           >
@@ -83,7 +83,7 @@ function AppChoiceGridBase({
               className={cn(
                 'absolute right-3 top-3 flex h-5 w-5 items-center justify-center rounded border',
                 selected
-                  ? 'border-accent bg-accent text-text-inverse'
+                  ? 'border-action bg-action text-text-inverse'
                   : 'border-border-strong bg-surface-card'
               )}
             >

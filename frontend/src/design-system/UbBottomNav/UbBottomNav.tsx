@@ -93,12 +93,12 @@ function UbBottomNavBase({ label, items, className }: Readonly<UbBottomNavProps>
                   shopkeeper reads at a glance, so the word stays and the box fits it. */}
               <span
                 data-testid="bottom-nav-label"
-                className="line-clamp-2 w-full break-normal px-0.5 text-center text-[11px] font-medium leading-[13px] tracking-tight"
+                className="line-clamp-2 w-full break-normal px-0.5 text-center text-[0.6875rem] font-medium leading-[13px] tracking-tight"
               >
                 {item.label}
               </span>
               {item.badge ? (
-                <span className="absolute left-1/2 top-1.5 ml-2 min-w-[18px] rounded-pill bg-error px-1 text-center text-[11px] font-semibold leading-[18px] text-text-inverse">
+                <span className="absolute left-1/2 top-1.5 ml-2 min-w-[18px] rounded-pill bg-error px-1 text-center text-[0.6875rem] font-semibold leading-[18px] text-text-inverse">
                   {item.badge > 99 ? '99+' : item.badge}
                   {item.badgeLabel ? <span className="sr-only"> {item.badgeLabel}</span> : null}
                 </span>

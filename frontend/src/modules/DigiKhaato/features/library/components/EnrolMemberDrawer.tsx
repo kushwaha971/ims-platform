@@ -366,7 +366,7 @@ export function EnrolMemberDrawer({
                         }}
                         className={
                           String(field.value ?? '') === shift.id
-                            ? 'min-h-16 rounded-control border border-accent bg-primary-50 p-3'
+                            ? 'min-h-16 rounded-control border border-action bg-primary-50 p-3'
                             : 'border-border-default min-h-16 rounded-control border bg-surface-card p-3'
                         }
                       >
@@ -413,7 +413,7 @@ export function EnrolMemberDrawer({
                               onClick={() => field.onChange(selected ? '' : seat.id)}
                               className={
                                 selected
-                                  ? 'min-h-14 rounded-control border border-accent bg-primary-50 p-2 text-center'
+                                  ? 'min-h-14 rounded-control border border-action bg-primary-50 p-2 text-center'
                                   : available
                                     ? 'min-h-14 rounded-control border border-success/30 bg-transparent p-2 text-center'
                                     : 'min-h-14 rounded-control border border-border-hairline bg-surface-sunken p-2 text-center opacity-50'

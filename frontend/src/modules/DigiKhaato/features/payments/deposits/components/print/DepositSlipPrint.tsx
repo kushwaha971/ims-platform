@@ -43,7 +43,7 @@ export function DepositSlipPrint({
 
   return (
     <article
-      className="ub-print-sheet ub-print-a5 mx-auto w-full max-w-[148mm] bg-white p-6 text-[11pt] text-black"
+      className="ub-print-sheet ub-print-a5 mx-auto w-full max-w-[148mm] bg-white p-6 text-[11pt] text-printInk"
       data-testid="deposit-slip-print"
     >
       <header className="flex items-start justify-between gap-4 border-b border-black pb-3">

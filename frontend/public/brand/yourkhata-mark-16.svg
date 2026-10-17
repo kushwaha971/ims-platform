@@ -2,7 +2,7 @@
   <title>YourKhata</title>
   <!-- CR-2026-09-29-BRAND-C: K-c "Bandhan", the tied bahi cover. Source: concepts3/k-c-*.svg. -->
   <!-- 16 px cut: whole-pixel stem (x 3-5) and band (y 9-11), no hem, no strings; the knot is one 4 px dot on the pixel grid. -->
-  <rect width="16" height="16" rx="3.5" fill="#3A36B8"/>
+  <rect width="16" height="16" rx="3.5" fill="#0E7C86"/>
   <path fill="#FFFFFF" d="M3 2H5V6L8.6 2H11L7.4 5.9L9.6 9H16V11H0V9H9.3L6.1 7.2L5 8.3V9H3Z"/>
   <rect x="11" y="8" width="4" height="4" rx="1.6" fill="#C8322B"/>
 </svg>

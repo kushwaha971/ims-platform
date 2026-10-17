@@ -22,8 +22,8 @@ const renderChart = () =>
 describe('UbTrendArea', () => {
   it('is one area series — one fill, one line, no second series', () => {
     const { container } = renderChart();
-    expect(container.querySelectorAll('path.fill-accent\\/10')).toHaveLength(1);
-    expect(container.querySelectorAll('path.stroke-accent')).toHaveLength(1);
+    expect(container.querySelectorAll('path.fill-action\\/10')).toHaveLength(1);
+    expect(container.querySelectorAll('path.stroke-action')).toHaveLength(1);
   });
 
   it('carries an accessible name and description', () => {

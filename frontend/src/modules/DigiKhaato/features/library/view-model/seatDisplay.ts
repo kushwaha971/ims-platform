@@ -47,7 +47,7 @@ export const SEAT_FILL: Readonly<Record<SeatState, string>> = {
 export const DAY_FILL: Readonly<Record<SeatDayState, string>> = {
   free: 'bg-surface-card border-border-default text-text-secondary',
   partial: 'bg-info-dim border-info text-text-primary',
-  full: 'bg-accent-quiet border-accent text-text-primary',
+  full: 'bg-accent-quiet border-action text-text-primary',
 };
 
 /** In one shift, a seat held only by an overlapping OTHER shift: neither free nor

@@ -52,7 +52,7 @@ export function InvoicePrintLines({
               <p className="break-words font-semibold">
                 {line.lineNo}. {line.description}
               </p>
-              {line.hsnSac && <p className="text-[10px]">HSN/SAC {line.hsnSac}</p>}
+              {line.hsnSac && <p className="text-[0.625rem]">HSN/SAC {line.hsnSac}</p>}
               <p>
                 {`${trimQty(line.qty)} ${line.unitCode} × ${formatAmount(line.unitPrice)}`}
                 {line.discountAmount !== '0.00' &&

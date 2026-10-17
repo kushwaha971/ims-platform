@@ -46,7 +46,7 @@ function UbTotalDockBase({
     >
       <div className="flex min-w-0 flex-1 flex-col">
         <span className="ds-caption text-text-tertiary">{totalLabel}</span>
-        <span className="ds-num truncate text-[20px] font-semibold leading-7 text-text-primary">
+        <span className="ds-num truncate text-[1.25rem] font-semibold leading-7 text-text-primary">
           {total}
         </span>
       </div>

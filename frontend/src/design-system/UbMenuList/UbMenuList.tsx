@@ -74,14 +74,14 @@ function RowBody({ row, showChevron }: Readonly<{ row: UbMenuListRow; showChevro
         <span
           lang={row.lang}
           className={cn(
-            'text-[16px] font-medium leading-[22px]',
+            'text-[1rem] font-medium leading-[22px]',
             danger ? 'text-error' : 'text-text-primary'
           )}
         >
           {row.label}
         </span>
         {row.caption ? (
-          <span className="text-[13px] leading-[18px] text-text-tertiary">{row.caption}</span>
+          <span className="text-[0.8125rem] leading-[18px] text-text-tertiary">{row.caption}</span>
         ) : null}
       </span>
       {row.selected ? <Check aria-hidden className="h-5 w-5 shrink-0 text-text-accent" /> : null}
@@ -99,7 +99,7 @@ function UbMenuListBase({ title, rows, selectable = false, className }: Readonly
       {title ? (
         <h2
           id={headingId}
-          className="px-4 pb-1 pt-5 text-[13px] font-semibold uppercase leading-[18px] tracking-[0.04em] text-text-tertiary"
+          className="px-4 pb-1 pt-5 text-[0.8125rem] font-semibold uppercase leading-[18px] tracking-[0.04em] text-text-tertiary"
         >
           {title}
         </h2>

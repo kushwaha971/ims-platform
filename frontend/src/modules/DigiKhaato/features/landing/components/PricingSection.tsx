@@ -67,7 +67,7 @@ function PlanCard({
         'relative h-full rounded-[24px] border bg-surface-card p-6 xl:p-7',
         'transition-[border-color,box-shadow] duration-base ease-standard',
         plan.highlight
-          ? 'border-accent shadow-[0_24px_60px_-28px_var(--device-glow)] ring-1 ring-inset ring-accent'
+          ? 'border-action shadow-[0_24px_60px_-28px_var(--device-glow)] ring-1 ring-inset ring-action'
           : 'border-border-hairline hover:border-accent-line'
       )}
     >

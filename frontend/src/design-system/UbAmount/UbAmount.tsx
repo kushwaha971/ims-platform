@@ -44,16 +44,15 @@ export type UbAmountProps =
 
 const TONE: Record<UbAmountTone, string> = {
   neutral: 'text-text-primary',
-  receivable: 'text-error', // ledger debit only — never --form-error (§23.2.4)
-  payable: 'text-success',
+  receivable: 'text-get', // Money owed to the user, independent of brand colours.
+  payable: 'text-give',
 };
 
 const SIZE: Record<NonNullable<UbAmountBaseProps['size']>, string> = {
-  /* BrandHub sets every figure in Inter (`ds-num-*`): 12/16 medium in a row,
-     16/24 medium in a total cell, 20/32 semibold as a headline balance. */
-  sm: 'ds-num-s-medium',
-  md: 'ds-num-l-medium',
-  lg: 'ds-num-xl-semibold',
+  /* Shared money type scale, with tabular figures in both languages. */
+  sm: 'ds-num text-body-sm font-bold',
+  md: 'ds-num text-amount',
+  lg: 'ds-num text-amount-lg',
 };
 
 /** U+2212 MINUS SIGN, not a hyphen, so it aligns with `ds-num`'s figures. */

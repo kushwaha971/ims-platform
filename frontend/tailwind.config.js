@@ -86,6 +86,30 @@ module.exports = {
 
     extend: {
       colors: {
+        social: {
+          linkedin: hsl('--social-linkedin'),
+          facebook: hsl('--social-facebook'),
+          instagram: hsl('--social-instagram'),
+        },
+        action: hsl('--action-fill'),
+        printInk: hsl('--print-ink'),
+        printPaper: hsl('--print-paper'),
+        printMuted: hsl('--print-muted'),
+        cta: {
+          DEFAULT: hsl('--cta'),
+          hover: hsl('--cta-hover'),
+          press: hsl('--cta-press'),
+          foreground: hsl('--cta-foreground'),
+        },
+        get: hsl('--amount-get'),
+        give: hsl('--amount-give'),
+        divider: hsl('--divider'),
+        ink: {
+          DEFAULT: hsl('--text-primary'),
+          secondary: hsl('--text-secondary'),
+          tertiary: hsl('--text-tertiary'),
+          disabled: hsl('--text-disabled'),
+        },
         /* ────────────────────────────────────────────────────────────────────
          * The ml-uikit bridge.
          *
@@ -129,8 +153,8 @@ module.exports = {
         primary: {
           /* ml-uikit's `bg-primary` / `text-primary-foreground`. The numeric
              ramp is this product's own and is untouched. */
-          DEFAULT: hsl('--accent'),
-          foreground: hsl('--text-inverse'),
+          DEFAULT: hsl('--primary-solid'),
+          foreground: hsl('--primary-on-solid'),
           50: hsl('--primary-50'),
           100: hsl('--primary-100'),
           200: hsl('--primary-200'),
@@ -155,6 +179,10 @@ module.exports = {
           800: hsl('--secondary-800'),
         },
         accent: {
+          foreground: hsl('--text-primary'),
+          50: hsl('--accent-50'),
+          500: hsl('--accent-500'),
+          600: hsl('--accent-600'),
           DEFAULT: hsl('--accent'),
           hover: hsl('--accent-hover'),
           press: hsl('--accent-press'),
@@ -308,8 +336,7 @@ module.exports = {
         popover: '0 8px 24px 0 rgb(10 9 11 / 0.12)',
         inner: 'inset 0 2px 4px 0 rgb(10 9 11 / 0.06)',
         none: '0 0 #0000',
-        'auth-card':
-          '0px 4px 6px -4px rgba(19,25,39,0.12), 0px 8px 8px -4px rgba(19,25,39,0.08)',
+        'auth-card': '0px 4px 6px -4px rgba(19,25,39,0.12), 0px 8px 8px -4px rgba(19,25,39,0.08)',
         'ub-popover':
           '0 4px 8px -2px rgba(16, 24, 40, 0.10), 0 2px 4px -2px rgba(16, 24, 40, 0.06)',
         'ub-modal': '0px 4px 6px -1px rgba(0, 0, 0, 0.10), 0px 2px 4px -2px rgba(0, 0, 0, 0.05)',
@@ -333,17 +360,36 @@ module.exports = {
         entrance: 'cubic-bezier(.16,1,.3,1)',
         exit: 'cubic-bezier(.4,0,1,1)',
       },
+      fontSize: {
+        display: [
+          'var(--size-display)',
+          { lineHeight: '1.2', fontWeight: '800', letterSpacing: '-0.01em' },
+        ],
+        h1: ['var(--size-h1)', { lineHeight: '1.27', fontWeight: '700', letterSpacing: '-0.01em' }],
+        h2: ['var(--size-h2)', { lineHeight: '1.3', fontWeight: '700', letterSpacing: '-0.01em' }],
+        title: ['var(--size-h3)', { lineHeight: '1.3', fontWeight: '600' }],
+        'amount-lg': ['var(--size-h2)', { lineHeight: '1.3', fontWeight: '800' }],
+        amount: ['1rem', { lineHeight: '1.25', fontWeight: '700' }],
+        body: ['var(--size-body)', { lineHeight: '1.4', fontWeight: '400' }],
+        option: [
+          'clamp(1rem, 0.95rem + 0.25vw, 1.0625rem)',
+          { lineHeight: '1.4', fontWeight: '400' },
+        ],
+        'body-sm': ['0.875rem', { lineHeight: '1.43', fontWeight: '400' }],
+        caption: ['0.75rem', { lineHeight: '1.33', fontWeight: '500' }],
+        button: [
+          'clamp(1rem, 0.97rem + 0.15vw, 1.0625rem)',
+          { lineHeight: '1.3', fontWeight: '700' },
+        ],
+        'button-sm': ['0.9375rem', { lineHeight: '1.33', fontWeight: '600' }],
+      },
       fontFamily: {
+        sans: ['var(--font-sans)'],
         display: ['var(--font-display)'],
         ui: ['var(--font-ui)'],
         mono: ['var(--font-mono)'],
-        fraunces: ['var(--font-fraunces)', 'Georgia', 'serif'],
-        epilogue: ['var(--font-epilogue)', 'var(--font-ui)'],
-        /* The landing page's italic lead lines — Fraunces italic, a separate
-           face loaded (and preloaded) by `/` alone (src/fonts/landing.ts). The
-           upright Fraunces is the fallback, so a missing file degrades to the
-           browser's oblique rather than to Georgia. */
-        'serif-display': ['var(--font-fraunces-italic)', 'var(--font-fraunces)', 'Georgia', 'serif'],
+        /* All public and app text uses the shared font stack. */
+        'serif-display': ['var(--font-sans)'],
       },
       maxWidth: {
         content: 'var(--content-max)',

@@ -79,7 +79,7 @@ function LandingHeroBase() {
             data-module-summary
             className="ds-body-s-medium inline-flex items-center gap-2 rounded-pill border border-border-hairline bg-surface-card/80 px-3 py-1.5 text-text-secondary shadow-sm backdrop-blur"
           >
-            <UbBox as="span" aria-hidden className="h-2 w-2 rounded-full bg-accent" />
+            <UbBox as="span" aria-hidden className="h-2 w-2 rounded-full bg-action" />
             {t('landing.hero.badge')}
           </UbText>
 

@@ -90,7 +90,7 @@ function WhyCard({ id, t }: Readonly<{ id: WhyId; t: TranslateFn }>) {
       <UbStack gap={3} className="px-3 pb-3">
         <UbBox
           aria-hidden
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] bg-accent text-text-inverse shadow-[0_10px_24px_-12px_var(--device-glow)] transition-transform duration-base ease-standard group-hover:-translate-y-0.5"
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] bg-action text-text-inverse shadow-[0_10px_24px_-12px_var(--device-glow)] transition-transform duration-base ease-standard group-hover:-translate-y-0.5"
         >
           <Icon className="h-5 w-5" strokeWidth={1.75} />
         </UbBox>

@@ -267,7 +267,7 @@ export function LedgerEntryDrawer({
               inputMode="decimal"
               /* The number being typed is the point of this sheet: large on a
                  phone (audit A13). */
-              className="max-lg:[&_input]:!h-14 max-lg:[&_input]:!text-[26px] max-lg:[&_input]:!font-semibold"
+              className="max-lg:[&_input]:!h-14 max-lg:[&_input]:!text-[1.625rem] max-lg:[&_input]:!font-semibold"
             />
           )}
         </UbField>

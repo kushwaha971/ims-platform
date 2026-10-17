@@ -95,6 +95,8 @@ const TEXT_ON_SURFACES = [
   'text-tertiary',
   'text-muted',
   'text-accent',
+  'amount-get',
+  'amount-give',
   'success',
   'warning',
   'error',
@@ -104,12 +106,18 @@ const TEXT_ON_SURFACES = [
 
 /** Tinted blocks and fills: foreground on its own dim/fill. */
 const TINTED = [
+  ['text-primary', 'accent'],
+  ['text-secondary', 'accent'],
+  ['cta-foreground', 'cta'],
+  ['cta-foreground', 'cta-hover'],
+  ['cta-foreground', 'cta-press'],
+  ['primary-on-solid', 'primary-solid'],
   ['success', 'success-dim'],
   ['warning', 'warning-dim'],
   ['error', 'error-dim'],
   ['form-error', 'form-error-dim'],
   ['info', 'info-dim'],
-  ['text-inverse', 'accent'],
+  ['text-inverse', 'action-fill'],
   ['text-inverse', 'success'],
   ['text-inverse', 'error'],
   ['text-inverse', 'form-error'],
@@ -119,7 +127,7 @@ const TINTED = [
 /** Non-text (WCAG 1.4.11): a control boundary that identifies the control. */
 const NON_TEXT = [
   ['border-strong', 'canvas'],
-  ['accent', 'canvas'],
+  ['action-fill', 'canvas'],
 ];
 
 /**
@@ -204,7 +212,7 @@ TEXT_ON_SURFACES.forEach((fg) => {
 TINTED.forEach(([fg, bg]) => check(fg, bg, 4.5, 'dark', darkRaw));
 NON_TEXT.forEach(([fg, bg]) => check(fg, bg, 3.0, 'dark', darkRaw));
 check('border-strong', 'surface-card', 3.0, 'dark', darkRaw);
-check('accent', 'surface-card', 3.0, 'dark', darkRaw);
+check('action-fill', 'surface-card', 3.0, 'dark', darkRaw);
 DARK_SEPARATION.forEach(([fg, bg, floor]) => check(fg, bg, floor, 'dark', darkRaw));
 
 /**

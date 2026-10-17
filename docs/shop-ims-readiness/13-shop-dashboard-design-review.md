@@ -87,7 +87,7 @@ All three keep today's widths, tokens and components, and all three fix Findings
 
 ## Done whichever option is chosen
 
-- **To collect and To pay** come from the same query as the list they open: customers for one, suppliers for the other. Money held the other way round is named for what it is, for example "Advances from customers ₹700". It is never folded into the other tile. A person who is both a customer and a supplier appears in each list exactly as those lists already show them. Their net position waits on decision D-03, and nothing is invented for it.
+- **To collect and To pay** come from the same query as the list they open: customers for one, suppliers for the other. Money held the other way round is named for what it is, for example "Advances from customers ₹700". It is never folded into the other tile. A person who is both a customer and a supplier appears in each list exactly as those lists already show them. The owner subsequently chose separate balances until explicit settlement (D-03). The current net-position implementation does not satisfy that choice; see the 17 October verification review.
 - **Overdue** is decided when the figure is read (due date before today and money still due), so it is never a day late. The bill list opens with the same filter and no financial-year default.
 - **Shop-only links:** every dashboard link stays in the Shop book.
 - **Cash in hand** reads only the Shop book. Until an opening cash figure exists, it says "since <first entry date>" and does not show a negative figure as though it were the till.

@@ -27,3 +27,9 @@ describe('cn — custom border radii are one class group (D-1)', () => {
     expect(cn('rounded-sm', 'rounded-lg')).toBe('rounded-lg');
   });
 });
+
+it('keeps semantic typography separate from CTA foreground color', () => {
+  expect(cn('text-cta-foreground', 'text-button')).toBe('text-cta-foreground text-button');
+  expect(cn('text-text-secondary', 'text-body-sm')).toBe('text-text-secondary text-body-sm');
+  expect(cn('text-button', 'text-caption')).toBe('text-caption');
+});

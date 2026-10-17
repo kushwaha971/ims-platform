@@ -13,14 +13,17 @@
  */
 
 :root {
+  --surface: var(--surface-card);
+  --surface-muted: var(--surface-sunken);
+  --scrim: var(--overlay-scrim);
   --background: var(--canvas);
   --foreground: var(--text-primary);
   --card: var(--surface-card);
   --card-foreground: var(--text-primary);
   --popover: var(--surface-raised);
   --popover-foreground: var(--text-primary);
-  --primary: var(--primary-500);
-  --primary-foreground: var(--text-inverse);
+  --primary: var(--primary-solid);
+  --primary-foreground: var(--primary-on-solid);
   --secondary: var(--surface-sunken);
   --secondary-foreground: var(--text-primary);
   --muted: var(--surface-sunken);
@@ -31,15 +34,12 @@
   --input: var(--border-subtle);
   --ring: var(--primary-500);
   --radius: var(--radius-control);
-  /* §19.8.3's alias sheet lists `--accent: var(--accent-quiet)`. That name is
-     already taken by Koper's own `--accent` (= primary-500, §23.2.4), so
-     writing it here would clobber the action colour with a 10 % tint. The
-     shadcn "accent" role (a hover wash) is expressed by --surface-hover
-     instead, and the collision is recorded rather than silently resolved. */
+  /* Shadcn accent is a hover wash. Filled app actions use --action-fill;
+     primary buttons use the separate marigold --cta tokens. */
   --accent-foreground: var(--text-primary);
 }
 
 :root[data-theme='dark'] {
-  --primary: var(--primary-400);
+  --primary: var(--primary-solid);
   --ring: var(--primary-300);
 }

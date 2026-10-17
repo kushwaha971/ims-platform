@@ -329,7 +329,7 @@ export function MLTabs<T extends string>({
                   layout === 'fill' ? 'flex-1' : 'flex-none max-sm:px-3',
                   'transition-colors duration-fast ease-standard',
                   active
-                    ? 'border-accent text-text-accent'
+                    ? 'border-action text-text-accent'
                     : 'border-transparent text-text-tertiary hover:text-text-primary'
                 )}
               >
@@ -364,7 +364,7 @@ export interface MLProgressProps extends HTMLAttributes<HTMLDivElement> {
 }
 
 const PROGRESS_TONE: Record<NonNullable<MLProgressProps['tone']>, string> = {
-  accent: 'bg-accent',
+  accent: 'bg-action',
   success: 'bg-success',
   warning: 'bg-warning',
   // A meter that has run out is the validation/system family, not ledger red.

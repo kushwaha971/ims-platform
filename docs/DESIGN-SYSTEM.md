@@ -10,14 +10,19 @@ The reference designs are the BrandHub customer-portal Figma
 ("Brandhub-Wireframes-4"). BrandHub's own customer portal is the production
 reading of that Figma, so where the two differ by a pixel, BrandHub's code
 wins: its typography scale is fluid, and this product ports that scale
-verbatim.
+through the existing component roles. The owner's 17 October 2026
+colors/fonts-only brief supersedes older palette and font values below.
 
 Four owner decisions override the Figma and are not up for re-litigation in a
 PR:
 
-- **Colour** is this product's own primary (indigo `#4A47D6` ramp), not the
-  Figma's brand teal. Tenants may still white-label the primary ramp.
-- **Page ground** is white, not the Figma's `#FAF9F8`.
+- **Colour** uses peacock teal `#0E7C86`, marigold primary CTAs `#F59E1B`
+  with dark ink, and semantic green/red money. Tenants may still white-label
+  the primary ramp. Shadcn `accent` is a hover wash; app filled actions use
+  `action`, and primary buttons use `cta`.
+- **Page ground** is warm `#FBF8F4`, with white cards in light mode. Dark
+  surfaces retain distinct depth steps; contrast corrections take priority
+  over an exact supplied shade.
 - **Sidebar** is docked (full height, hairline on the right), not floating.
 - **Contrast floor** stays 4.5:1. Where a Figma grey or red is below it, the
   token is one step darker (see the comment beside each token in
@@ -30,29 +35,37 @@ Use the BrandHub class names directly in new code. They live in
 
 | Use                                   | Class                                                    |
 | ------------------------------------- | -------------------------------------------------------- |
-| Page title                            | `ds-body-xl-semibold` (via `UbPageHeader`)               |
+| Page title                            | `ds-h1` (via `UbPageHeader`)               |
 | Page description                      | `ds-body-base-regular`, tertiary                         |
 | Section heading ("Transactions")      | `ds-body-base-medium` (via `UbSectionHeading`)           |
 | Card or panel title                   | `ds-body-base-medium` (via `UbPanelSection`)             |
 | Body text, table cells, inputs        | `ds-body-base-regular`                                   |
 | Meta, captions, chips, labels in rows | `ds-body-s-regular` / `ds-body-s-medium`                 |
 | Sidebar rows / captions               | `ds-nav-label-*` / `ds-nav-caption-*` (fixed 12 / 10 px) |
-| Money and numbers                     | `ds-num-*` (Inter), or `UbAmount`                        |
+| Money and numbers                     | `ds-num-*` (tabular Jakarta), or `UbAmount`                        |
 
-Fonts are local files in `src/fonts` (SIL OFL): DM Sans for text, Inter for
-figures and for the rupee sign everywhere, Noto Sans Devanagari for Hindi,
-Fraunces and Epilogue for the sign-in hero only. There is no font CDN.
+Fonts are **Plus Jakarta Sans** (Latin, variable) and **Mukta** (Devanagari,
+400/500/600/700), declared once in `frontend/src/lib/fonts.ts` through
+`next/font/google`. Next self-hosts the built WOFF2 files; there is no runtime
+Google font request. Mukta loads on demand rather than preloading unused Hindi
+weights. The shared stack is Jakarta, Mukta, system sans. Technical monospace
+and the existing outlined logo geometry are intentional exceptions.
+
+Existing `ds-*` roles map to the rem/clamp scale in `tokens/primitives.css` and
+`typographyPlugin.js`; named Tailwind roles expose the same scale. Do not add
+pixel font sizes. Keep dimensions, padding and layout unchanged for a theme
+migration. Money is tabular; `UbAmount` receivable/payable uses `get`/`give`.
 
 ## 3. Measurements
 
 | Thing                                   | Value                                                                |
 | --------------------------------------- | -------------------------------------------------------------------- |
-| Every input, select, search, date field | 40 px (`h-10`), 8 px radius, `#E6E6E6` hairline, ink border on focus |
-| Buttons                                 | `md` 40 px, `sm` 28 px, `lg` 44 px, 14 px medium text                |
+| Every input, select, search, date field | 40 px (`h-10`), 8 px radius, token hairline, ink border on focus |
+| Buttons                                 | `md` 40 px, `sm` 28 px, `lg` 44 px, token-backed button typography                |
 | Filter chips                            | 32 px pills                                                          |
 | Cards and panels                        | 12 px radius, hairline border, 16 px padding                         |
 | Stat tiles                              | `UbStatCard` in `UbStatGrid`: up to five across, filling the row     |
-| Table header                            | 48 px, `#FAFAFA`, 12 px medium; rows 14 px regular                   |
+| Table header                            | 48 px; semantic surface and shared type roles                   |
 | Page insets                             | 24 px sides on desktop, 16 px on phone                               |
 | Field spacing                           | label 4 px above the control; 24 px between fields                   |
 
@@ -289,7 +302,7 @@ not renamed; only what a person sees is.
 
 ### The mark — K-c "Bandhan", the tied bahi cover
 
-The tile is the **cloth cover of a bahi-khata** in deep indigo, with a stitched
+The tile is the **cloth cover of a bahi-khata** in peacock teal, with a stitched
 **hem** inset along its edge. On it is a white **K** (the round-2 "signature K",
 DM Sans 600) whose leg does not stop at the baseline: it **sweeps on across the
 whole cover as the tie band**, the string a bahi is bound shut with. Where the
@@ -321,7 +334,7 @@ Previews: `node frontend/scripts/render-brand.mjs --preview` writes
 | Master SVG | `public/brand/yourkhata-mark.svg` | 64 × 64 grid |
 | 16 px cut | `public/brand/yourkhata-mark-16.svg` | hand-cut on the pixel grid; also the SVG favicon |
 | Maskable / Apple | `public/brand/yourkhata-maskable.svg` | full-bleed cover, figure at 72 % inside the 80 % safe zone, band edge to edge, no hem |
-| Lockup | `public/brand/yourkhata-lockup.svg` | mark + "YourKhata" in DM Sans 600, outlined; indigo K whose sweep ends in the knot |
+| Lockup | `public/brand/yourkhata-lockup.svg` | mark + "YourKhata" in DM Sans 600, outlined; teal K whose sweep ends in the knot |
 | Icons | `public/icons/{favicon-16,favicon-32,apple-touch-icon,icon-192,icon-512,maskable-512}.png` | rendered from the SVGs by `node frontend/scripts/render-brand.mjs` — never hand-exported |
 
 ### Small sizes
@@ -336,24 +349,21 @@ Previews: `node frontend/scripts/render-brand.mjs --preview` writes
 
 ### Colours and contrast
 
-| Part | Token | Default | Contrast |
-|---|---|---|---|
-| Cover | `--brand-cover` → `--primary-600` | `#3A36B8` | 8.75:1 on white; 2.02:1 on the dark rail (floor 2.0, see below) |
-| K and tie band | `--brand-figure` | `#FFFFFF` in every theme and brand | **8.75:1 on the cover, held to the 4.5 text floor in both themes** |
-| Hem | `--brand-hem` → `--primary-400` | `#716DE4` | 2.09:1 — decorative |
-| Knot | `--brand-knot` (fixed) | `#C8322B`; dark `#D9453D` | 5.32:1 / 4.31:1 on the band — decorative, never text |
-| Wordmark | `--text-primary` (or `tone="inherit"` on the rail) | `#0A090B` | 19.9:1 |
-| Wordmark's K and sweep | `--text-accent` | primary-600 light, primary-300 dark | ≥ 4.5 (text table) |
+| Part | Token | Current default |
+|---|---|---|
+| Cover | `--brand-cover` → `--primary-600` | `#0E7C86`, shared in both themes |
+| K and tie band | `--brand-figure` | White, checked at the 4.5:1 text floor |
+| Hem | `--brand-hem` → `--primary-400` | Teal ramp; decorative |
+| Knot | `--brand-knot` | Existing red knot, decorative |
+| Live wordmark | `--text-primary` | Theme ink |
+| Wordmark's K and sweep | `--text-accent` | Contrast-corrected teal |
 
-`--brand-knot` is **the one raw colour** the mark may carry (a test fails on any
-other hex, and on any other non-ramp `--brand-*` value). It is the one `--brand-*`
-value with a dark step, because it is also the full stop of the wordmark's sweep
-and sits on the theme's surface there. It sits close to the debit red `--error`,
-so it is decorative only — never a label, never a figure. The cover on the dark
-rail is below 3:1; a logo's own colours are outside WCAG 1.4.11 and the white K
-(17:1 on the rail) is what identifies the mark there, so the pairing is checked
-against an explicit 2.0 floor rather than none. `node scripts/check-contrast.mjs`
-and `src/tests/darkTheme.contrast.test.ts` check all of it from the token values.
+`check-contrast.mjs`, `UbLogo.test.tsx` and `darkTheme.contrast.test.ts` check
+these pairings from the actual token values. The supplied brighter dark teal
+cannot carry white normal-size text at 4.5:1, so the white-on-teal solid and
+logo cover keep the darker teal. Historical concept SVGs remain the design
+record; they are not active brand assets. The K and static lockup remain
+outlined artwork, not a runtime dependency on the old font.
 
 The mark is the same in light and dark themes; only the wordmark follows the
 theme. The static PNG/SVG files carry the default hex values — a white-label
@@ -363,13 +373,13 @@ tenant's ramp repaints the in-app mark, not the favicon.
 
 A tenant with its own logo replaces the mark wholesale
 (`branding.logo_attachment_id`); a tenant without one is, by definition, showing
-the product's default — YourKhata's K. The **signature wordmark** (indigo K with
+the product's default — YourKhata's K. The **signature wordmark** (teal K with
 the sweep and the knot) is applied only when the name is "YourKhata"; a tenant's
 name beside the mark is plain text.
 
 ### Wordmark, clear space, minimum size
 
-- The wordmark is "YourKhata" in **DM Sans 600** (`ds-wordmark-*`), never
+- The live wordmark is "YourKhata" in **Jakarta 600** (`ds-wordmark-*`), never
   letter-spaced wider, never all caps, never split into two words or two weights.
   The K is in the accent and its leg sweeps under "hata" into the knot dot. For a
   screen reader it is one word (an `sr-only` text node; the drawn copy is hidden).

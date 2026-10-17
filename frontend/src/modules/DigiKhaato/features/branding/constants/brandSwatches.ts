@@ -6,7 +6,7 @@
  * make every primary button look like a balance.
  */
 export const BRAND_SWATCHES: readonly string[] = [
-  '#4A47D6', // the product's own indigo
+  '#0E7C86', // the product's default peacock teal
   '#1D4ED8',
   '#0F766E',
   '#7C3AED',

@@ -153,7 +153,7 @@ function UbTrendAreaBase({
         onBlur={handleLeave}
         onKeyDown={handleKeyDown}
         /* `ds-caption` on the root sets the size every `<text>` inherits, so no
-           tick needs an arbitrary `text-[11px]` (R-S-4). */
+           tick needs an arbitrary `text-[0.6875rem]` (R-S-4). */
         className="ds-caption block w-full touch-none focus-visible:shadow-focus focus-visible:outline-none"
       >
         {/* Gridlines: solid hairlines, one step off the surface. Never dashed —

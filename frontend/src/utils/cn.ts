@@ -1,5 +1,11 @@
 import { clsx, type ClassValue } from 'clsx';
-import { createTailwindMerge, getDefaultConfig } from 'tailwind-merge';
+import {
+  createTailwindMerge,
+  getDefaultConfig,
+  type Config,
+  type DefaultClassGroupIds,
+  type DefaultThemeGroupIds,
+} from 'tailwind-merge';
 
 /**
  * The radius names `tailwind.config.js` adds under `theme.extend.borderRadius`
@@ -10,6 +16,9 @@ import { createTailwindMerge, getDefaultConfig } from 'tailwind-merge';
  * `rounded-t-*`, `rounded-tl-*`, … override resolve as one conflict group.
  * Add a name here in the same change that adds it to the tailwind config.
  */
+const semanticFontSize = (value: string): boolean =>
+  /^(?:display|h[12]|title|amount(?:-lg)?|body(?:-sm)?|option|caption|button(?:-sm)?)$/.test(value);
+
 const CUSTOM_RADII = ['xs', 'pill', 'card', 'control'] as const;
 
 /* The same config `extendTailwindMerge({ extend: { theme: { borderRadius } } })`
@@ -18,11 +27,15 @@ const CUSTOM_RADII = ['xs', 'pill', 'card', 'control'] as const;
    carries tailwind-merge's general `mergeConfigs` walker (~0.15 KB gz) to do
    one array concat. */
 const twMerge = createTailwindMerge(() => {
-  const config = getDefaultConfig();
-  return {
-    ...config,
-    theme: { ...config.theme, borderRadius: [...config.theme.borderRadius, ...CUSTOM_RADII] },
-  };
+  // getDefaultConfig creates a fresh config; extending it locally avoids
+  // shipping a general config merger for two styling-only class groups.
+  const config: Config<DefaultClassGroupIds, DefaultThemeGroupIds> = getDefaultConfig();
+  config.classGroups['font-size'] = [
+    ...config.classGroups['font-size'],
+    { text: [semanticFontSize] },
+  ];
+  config.theme.borderRadius = [...config.theme.borderRadius, ...CUSTOM_RADII];
+  return config;
 });
 
 /**

@@ -194,7 +194,7 @@ function UbOtpInputBase({
           onPaste={handlePaste}
           onFocus={(event) => event.target.select()}
           className={cn(
-            /* `text-[20px]` was a literal, which R-S-5 forbids for exactly this
+            /* `text-[1.25rem]` was a literal, which R-S-5 forbids for exactly this
                reason: nothing else in the product is 20px, so an OTP cell
                belonged to no tier. `ds-num-base` is the numeric body tier — the
                same face and size as a rupee amount — and it is what BrandHub

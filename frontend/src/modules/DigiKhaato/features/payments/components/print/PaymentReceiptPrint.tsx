@@ -100,7 +100,7 @@ export function PaymentReceiptPrint({
 
   return (
     <article
-      className="ub-print-sheet ub-print-a5 relative mx-auto w-full max-w-[148mm] bg-white p-6 text-[11pt] text-black"
+      className="ub-print-sheet ub-print-a5 relative mx-auto w-full max-w-[148mm] bg-white p-6 text-[11pt] text-printInk"
       data-testid="payment-receipt-print"
     >
       {isVoid && (

@@ -82,9 +82,9 @@ function UbSwitchBase({
           // `.ub-hit` covers a caller that tightens the row (a toolbar toggle).
           'ub-hit peer inline-flex h-[18px] w-[33px] shrink-0 items-center rounded-pill border-0',
           'transition-colors duration-fast ease-standard',
-          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2',
+          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2',
           'disabled:cursor-not-allowed',
-          'data-[state=checked]:bg-accent data-[state=unchecked]:bg-border-strong'
+          'data-[state=checked]:bg-action data-[state=unchecked]:bg-border-strong'
         )}
       >
         <SwitchPrimitive.Thumb

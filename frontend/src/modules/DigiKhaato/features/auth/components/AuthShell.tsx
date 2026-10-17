@@ -126,8 +126,8 @@ function AuthShellBase({ children, width }: Readonly<AuthShellProps>) {
   return (
     <UbBox className="grid min-h-dvh w-full bg-surface-card lg:grid-cols-2">
       {/* ── The hero half — Figma 13504:19278: a 5 % brand tint, 40 px between
-          the logo, the storefront and the headline, the headline in Fraunces
-          Bold 32/48 and the line under it in Epilogue 16/20. */}
+          the logo, the storefront and the headline. Typography comes from the
+          shared Jakarta/Mukta scale. */}
       <UbStack
         as="section"
         align="center"
@@ -149,14 +149,14 @@ function AuthShellBase({ children, width }: Readonly<AuthShellProps>) {
             as="h2"
             variant="inherit"
             align="center"
-            className="w-full font-fraunces text-[clamp(1.75rem,calc(1rem_+_1.2vw),2rem)] font-bold leading-[1.5] text-text-primary [font-variation-settings:'SOFT'_0,'WONK'_1]"
+            className="w-full font-sans text-display font-extrabold text-text-primary"
           >
             {t('auth.hero.title', { name: appName })}
           </UbText>
           <UbText
             variant="inherit"
             align="center"
-            className="w-full font-epilogue text-base leading-5 text-text-tertiary"
+            className="w-full font-sans text-base leading-5 text-text-tertiary"
           >
             {t('auth.hero.description')}
           </UbText>

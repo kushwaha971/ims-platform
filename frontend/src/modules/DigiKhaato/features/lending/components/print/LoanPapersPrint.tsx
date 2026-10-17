@@ -78,7 +78,7 @@ export function LoanPapersPrint({
     <UbBox className="ub-print-only ub-print-sheet hidden" data-testid={`loan-paper-${paper}`}>
       <div className="relative">
         {receipt?.voided && (
-          <p className="pointer-events-none absolute inset-0 flex items-center justify-center text-6xl font-bold text-black/15">
+          <p className="pointer-events-none absolute inset-0 flex items-center justify-center text-6xl font-bold text-printInk/15">
             {t('lending.papers.void')}
           </p>
         )}

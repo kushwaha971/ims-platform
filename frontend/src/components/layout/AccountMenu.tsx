@@ -92,7 +92,7 @@ export function AccountMenu({
           <UbText as="span" variant="inherit" lang={option.value} className="flex-1">
             {option.label}
           </UbText>
-          {option.value === locale && <Check aria-hidden className="h-4 w-4 text-accent" />}
+          {option.value === locale && <Check aria-hidden className="h-4 w-4 text-text-accent" />}
         </MLMenuItem>
       ))}
 
@@ -103,7 +103,7 @@ export function AccountMenu({
           <UbText as="span" variant="inherit" className="flex-1">
             {t(`theme.${mode}`)}
           </UbText>
-          {mode === theme && <Check aria-hidden className="h-4 w-4 text-accent" />}
+          {mode === theme && <Check aria-hidden className="h-4 w-4 text-text-accent" />}
         </MLMenuItem>
       ))}
 

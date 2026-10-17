@@ -211,7 +211,7 @@ export function SeatsPageContent(): React.JSX.Element {
               <UbPressable
                 aria-label={t('library.seats.filter.free')}
                 aria-pressed={filters.freeOnly}
-                className={cn('rounded-control', filters.freeOnly && 'ring-2 ring-accent')}
+                className={cn('rounded-control', filters.freeOnly && 'ring-2 ring-action')}
                 onClick={() =>
                   setFilters((current) => ({
                     ...current,
@@ -234,7 +234,7 @@ export function SeatsPageContent(): React.JSX.Element {
                   aria-pressed={filters.occupancy === occupancy}
                   className={cn(
                     'rounded-control',
-                    filters.occupancy === occupancy && 'ring-2 ring-accent'
+                    filters.occupancy === occupancy && 'ring-2 ring-action'
                   )}
                   onClick={() =>
                     setFilters((current) => ({

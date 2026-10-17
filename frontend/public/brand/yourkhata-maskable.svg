@@ -2,13 +2,13 @@
   <title>YourKhata</title>
   <!-- CR-2026-09-29-BRAND-C: K-c "Bandhan", the tied bahi cover. Source: concepts3/k-c-*.svg. -->
   <!-- Maskable: full-bleed cover, figure scaled to 72 % about the centre (inside the 80 % safe zone); the tie band runs edge to edge. -->
-  <rect width="64" height="64" fill="#3A36B8"/>
+  <rect width="64" height="64" fill="#0E7C86"/>
   <rect x="0" y="39.13" width="23.36" height="3.22" fill="#FFFFFF"/>
   <rect x="38.77" y="39.13" width="25.23" height="3.22" fill="#FFFFFF"/>
   <g transform="translate(8.96 8.96) scale(0.72)">
   <path fill="#FFFFFF" d="M13.43 38.5V10.5H18.23V22.05L28.82 10.5H34.77L24.43 21.61L34.52 37.7Q37.16 41.9 41.4 41.9H64V46.38H38.6Q34 46.38 30.6 40.9L21.01 25.32L18.23 28.29V38.5ZM0 41.9H20V46.38H0Z"/>
   <path d="M48 46L45 55M48 46L52 55" fill="none" stroke="#FFFFFF" stroke-width="2.4" stroke-linecap="round"/>
-  <circle cx="48" cy="44.1" r="4.6" fill="#3A36B8"/>
+  <circle cx="48" cy="44.1" r="4.6" fill="#0E7C86"/>
   <circle cx="48" cy="44.1" r="3.2" fill="#C8322B"/>
   </g>
 </svg>

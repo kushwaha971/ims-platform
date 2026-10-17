@@ -127,7 +127,7 @@ function UbDataGridColumnMenuBase<TRow>({
                     className={cn(
                       'flex h-4 w-4 shrink-0 items-center justify-center rounded-sm border',
                       visible
-                        ? 'border-accent bg-accent text-text-inverse'
+                        ? 'border-action bg-action text-text-inverse'
                         : 'border-border-strong bg-surface-card'
                     )}
                   >

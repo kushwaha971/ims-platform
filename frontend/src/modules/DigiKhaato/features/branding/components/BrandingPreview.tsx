@@ -41,7 +41,7 @@ function BrandingPreviewInner({
   logoSrc,
   labels,
 }: Readonly<BrandingPreviewProps>): React.JSX.Element {
-  const colour = HEX_COLOUR.test(primaryHex) ? primaryHex : '#4A47D6';
+  const colour = HEX_COLOUR.test(primaryHex) ? primaryHex : '#0E7C86';
   return (
     <UbCard title={labels.title}>
       <UbStack gap={4}>

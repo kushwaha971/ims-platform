@@ -75,18 +75,18 @@ export const CHART_AGING_RAMP: readonly ChartRampStep[] = [
   },
 ];
 
-/** The one bar the "who owes most" chart is about. `--accent` in both themes. */
-export const CHART_EMPHASIS_FILL = 'fill-accent';
-export const CHART_EMPHASIS_KEY = 'bg-accent';
+/** The one bar the "who owes most" chart is about. `--action-fill` in both themes. */
+export const CHART_EMPHASIS_FILL = 'fill-action';
+export const CHART_EMPHASIS_KEY = 'bg-action';
 
 /** Every other bar in an emphasis chart: present, readable, not competing. */
 export const CHART_RECESSIVE_FILL = 'fill-viz-8';
 export const CHART_RECESSIVE_KEY = 'bg-viz-8';
 
 /** The single trend series: 2 px line, ~10 % wash, endpoint dot. */
-export const CHART_SERIES_STROKE = 'stroke-accent';
-export const CHART_AREA_FILL = 'fill-accent/10';
-export const CHART_MARKER_FILL = 'fill-accent';
+export const CHART_SERIES_STROKE = 'stroke-action';
+export const CHART_AREA_FILL = 'fill-action/10';
+export const CHART_MARKER_FILL = 'fill-action';
 /** The 2 px ring that keeps an end-marker legible where it crosses the line. */
 export const CHART_MARKER_RING = 'stroke-surface-card';
 
@@ -124,9 +124,9 @@ export const CHART_RESERVED_SERIES_TOKENS: readonly string[] = [
  * colour is never the only carrier.
  */
 export const CHART_PAIR_FILLS: readonly string[] = [
-  'fill-accent',
+  'fill-action',
   'fill-viz-2',
   'fill-viz-3',
   'fill-viz-4',
 ];
-export const CHART_PAIR_KEYS: readonly string[] = ['bg-accent', 'bg-viz-2', 'bg-viz-3', 'bg-viz-4'];
+export const CHART_PAIR_KEYS: readonly string[] = ['bg-action', 'bg-viz-2', 'bg-viz-3', 'bg-viz-4'];

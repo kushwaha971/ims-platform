@@ -140,7 +140,7 @@ function UbPageHeaderBase({
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
         <div className="flex min-w-[8rem] flex-1 flex-col gap-0.5">
           <h1
-            className={`ds-body-xl-semibold ${wrapTitle ? 'break-words' : 'truncate'} leading-8 text-text-primary`}
+            className={`ds-h1 ${wrapTitle ? 'break-words' : 'truncate'} leading-8 text-text-primary`}
           >
             {title}
           </h1>

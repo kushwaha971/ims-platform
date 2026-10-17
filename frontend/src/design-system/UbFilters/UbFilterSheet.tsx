@@ -82,7 +82,7 @@ function UbFilterSheetBase({
         {count > 0 && (
           <span
             aria-hidden
-            className="ds-micro inline-flex h-5 min-w-5 items-center justify-center rounded-pill bg-accent px-1.5 font-semibold text-text-inverse"
+            className="ds-micro inline-flex h-5 min-w-5 items-center justify-center rounded-pill bg-action px-1.5 font-semibold text-text-inverse"
           >
             {count}
           </span>

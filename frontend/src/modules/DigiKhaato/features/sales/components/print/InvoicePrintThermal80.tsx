@@ -53,7 +53,7 @@ export function InvoicePrintThermal80({
 
   return (
     <article
-      className="ub-print-sheet ub-print-thermal w-[72mm] bg-white font-mono text-[11px] leading-tight text-black"
+      className="ub-print-sheet ub-print-thermal w-[72mm] bg-white font-mono text-[0.6875rem] leading-tight text-printInk"
       data-print-template="thermal80"
       data-testid="print-thermal"
     >

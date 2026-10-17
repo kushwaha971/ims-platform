@@ -74,7 +74,7 @@ export function UbComboboxPanel({
               <Check
                 aria-hidden
                 className={cn(
-                  'h-4 w-4 shrink-0 text-accent',
+                  'h-4 w-4 shrink-0 text-text-accent',
                   option.value === value ? 'opacity-100' : 'opacity-0'
                 )}
               />
@@ -85,7 +85,7 @@ export function UbComboboxPanel({
             <MLCommandItem
               value={`__create__ ${typed}`}
               onSelect={onCreate}
-              className="ds-body gap-2 text-accent"
+              className="ds-body gap-2 text-text-accent"
             >
               <Plus aria-hidden className="h-4 w-4 shrink-0" />
               <span className="truncate">{createLabel?.(typed)}</span>

@@ -1,7 +1,6 @@
 import { GooglePublicTracker } from 'src/analytics/GooglePublicTracker';
 import { SITE_URL } from 'src/constants';
 import { UbJsonLd } from 'src/design-system';
-import { frauncesItalic } from 'src/fonts/landing';
 import { absoluteUrl } from 'src/utils/seo';
 
 import en from 'locales/catalogues/landing.en.json';
@@ -48,8 +47,7 @@ import type { Metadata } from 'next';
  * (`customerDocumentsCarryNoProductName.test.tsx`); this page is the product
  * naming itself.
  *
- * `frauncesItalic.variable` is applied here so the italic face is preloaded on
- * this route alone (src/fonts/landing.ts).
+ * Public-page typography follows the shared Jakarta Sans/Mukta stack.
  *
  * CR-2026-09-29-PLATFORM-C — search. The words are in `config/seo.ts` (and the
  * rules they follow); the canonical and every absolute URL come from
@@ -137,7 +135,7 @@ export default function HomePage(): React.JSX.Element {
   return (
     <>
       <UbJsonLd data={JSON_LD} data-testid="landing-jsonld" />
-      <LandingPage className={frauncesItalic.variable} />
+      <LandingPage />
       <GooglePublicTracker />
     </>
   );

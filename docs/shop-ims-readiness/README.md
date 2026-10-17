@@ -38,7 +38,7 @@ Use the [portable coding-agent prompt](AGENT_START_PROMPT.md) with this reposito
 
 ## How to proceed
 
-1. Resolve the business-rule decisions in the roadmap, particularly valuation and dual-role settlement.
+1. Apply the already-approved valuation and separate-balance decisions; resolve only the remaining decisions in the roadmap.
 2. Review screen designs against real tasks and actual data contracts.
 3. Implement small vertical slices with shared owners, then test real mobile/desktop journeys.
 4. Attach evidence to requirement IDs and score the enabled release scope using the scorecard.
@@ -47,3 +47,9 @@ Use the [portable coding-agent prompt](AGENT_START_PROMPT.md) with this reposito
 Hard gates: no unresolved critical/high correctness or privacy defect in enabled scope; no missing editable outgoing-message path; no unreviewed high-risk duplicated business logic; both independent scores at least 9/10. A good average cannot compensate for wrong money, data leakage or unusable billing.
 
 Implementation detail: [Draft recovery contract (sales and purchases)](09-draft-recovery-contract.md), including API semantics, retention, rollback and evidence limits.
+
+
+Latest local verification: [Theme and readiness review, 17 October](15-theme-and-verification-review.md).
+This supersedes stale completion wording, records the approved D-03 policy and
+confirmed dashboard/reminder gaps, and separates theme verification from release
+readiness.

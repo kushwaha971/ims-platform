@@ -1,121 +1,96 @@
-/*
- * Part 23 §23.2.4 dark column — Koper's ink canvas, kept as the optional theme
- * (Part 19 §19.8.4: light is the default; dark is secondary).
- *
- * Two things deliberately do NOT follow the theme: the desktop navigation rail
- * (--surface-nav is dark in both) and print templates (always light).
- * Ledger semantics are theme-invariant: red is still "you gave".
- *
- * ── CR-2026-09-19-D, the dark re-tone ────────────────────────────────────────
- * The first ramp was authored as a set of ink values that looked right in
- * isolation and measured wrong together. Three defects, all of them arithmetic:
- *
- *   1. --border-strong (ink-500 #3A434F) was 1.93:1 on the canvas, below WCAG
- *      1.4.11's 3:1 floor for a boundary that identifies a control. A text
- *      input on a dark screen was a rectangle you had to already know was
- *      there. It is now #7A8390 — 5.14:1 on the canvas, 4.13:1 on a card.
- *   2. Every surface sat within one luminance step of the canvas: a card was
- *      1.12:1 against the page behind it, which is the "the card barely
- *      separates from the canvas" the owner saw. The ramp is re-spaced so the
- *      canvas drops (#0B0E11 → #080B0F) and each surface above it rises, giving
- *      1.25:1 card-on-canvas and 1.40:1 for a raised panel.
- *   3. The hairline was 1.27:1 on the canvas — invisible, so a card had neither
- *      a fill step nor an edge. It is 1.57:1 now, and --border-subtle is 2.06:1.
- *
- * The light column already had this correction (§23.6); this is the same pass
- * on the other half. `scripts/check-contrast.mjs` recomputes every number above
- * from the values below, in BOTH themes, and fails the build on a regression —
- * the ratios in these comments are therefore a record, never a claim.
- */
-
+/* Peacock teal / marigold palette. HSL channels preserve the existing
+ * Tailwind alpha and tenant-brand contracts. Contrast is checked, not inferred.
+ * Accessible text and dark surface steps intentionally differ from raw swatches. */
 :root[data-theme='dark'] {
-  --accent: var(--primary-400);
+  --primary-200: 185.14 45.45% 84.9%;
+  --primary-solid: 185 81.08% 29.02%;
+  --primary-on-solid: 0 0% 100%;
+  --amount-give: 4.03 100% 73.73%;
+  --amount-get: 120 47.33% 52.35%;
+  --divider: 213.33 11.11% 15.88%;
+  --text-disabled: 214.29 7.22% 38.04%;
+  --cta-press: var(--accent-600);
+  --cta-hover: var(--accent-600);
+  --accent-50: 36 48.39% 12.16%;
+  --accent-600: 35.87 100% 63.92%;
+  --primary-600: 185 81.08% 29.02%;
+  --primary-500: 185.04 60.37% 42.55%;
+  --primary-400: 185.71 41.18% 60%;
+  --primary-300: 185 44.12% 73.33%;
+  --primary-100: 186.12 52.69% 18.24%;
+  --primary-50: 185.29 53.13% 12.55%;
+  --action-fill: var(--primary-400);
+  --accent: var(--primary-50);
   --accent-hover: var(--primary-300);
   --accent-press: var(--primary-500);
-  --accent-quiet: rgba(113, 109, 228, 0.16);
-  --accent-line: rgba(157, 154, 240, 0.34);
+  --accent-quiet: rgba(43, 163, 174, 0.12);
+  --accent-line: rgba(14, 124, 134, 0.35);
 
-  /* ── Surfaces — re-spaced so each tier is a visible step, not a rounding ── */
-  --canvas: 214.29 30.43% 4.51%; /* ink-900 #080B0F */
-  --surface-sunken: 212.73 25.58% 8.43%; /* ink-850 #10151B — 1.08:1 on canvas */
-  --surface-card: 213.75 22.22% 14.12%; /* ink-800 #1C232C — 1.25:1 on canvas */
-  --surface-raised: 213.33 20% 17.65%; /* ink-750 #242C36 — 1.40:1 on canvas */
-  --surface-hover: 213 18.18% 21.57%; /* ink-700 #2D3641 — 1.29:1 on a card */
-  --surface-active: 212.73 16.42% 26.27%; /* ink-600 #38424E */
-  /* The rail is the one surface BELOW the canvas in this theme, so the
-     navigation reads as a panel the page sits beside rather than on. */
-  --surface-nav: 213.33 30.77% 10.2%; /* #121922 */
-  --surface-nav-hover: 213.75 22.22% 14.12%; /* ink-800 */
-  --surface-nav-active: 213.75 22.22% 16%;
-  /* The rail is light in the light theme now, so its ink follows the theme:
-     restated here for the dark rail. */
-  --text-on-nav: 210 22.22% 96.47%; /* #F4F6F8 */
-  --text-on-nav-muted: 213.33 12.5% 71.76%; /* #AEB6C0 */
-  --surface-subtle: 213.75 18% 12%;
-  --border-nav-active: 213.75 18% 22%;
+  --canvas: 216 12.2% 8.04%;
+  --surface-sunken: 214.29 11.86% 11.57%;
+  --surface-card: 213.33 11.39% 15.49%;
+  --surface-raised: 216 10.64% 18.43%;
+  --surface-hover: 212.31 11.93% 21.37%;
+  --surface-active: 205.26 14.96% 24.9%;
 
-  /* ── Borders — the edge is what makes a dark surface a surface ─────────── */
-  --border-hairline: 214.74 17.76% 20.98%; /* #2C343F — 1.57:1 on canvas */
-  --border-subtle: 213.91 16.08% 28.04%; /* #3C4653 — 2.06:1 on canvas */
-  /* Was ink-500 #3A434F — 1.93:1 on the canvas, below 1.4.11's 3:1 for a
-     control boundary. 5.14:1 on canvas, 4.13:1 on a card, 3.19:1 on hover. */
-  --border-strong: 215.45 9.02% 52.16%; /* #7A8390 */
+  --surface-nav: 214.29 11.86% 11.57%;
+  --surface-nav-hover: 213.33 11.39% 15.49%;
+  --surface-nav-active: 186.12 52.69% 18.24%;
+
+  --text-on-nav: 210 11.76% 93.33%;
+  --text-on-nav-muted: 216 8.88% 66.86%;
+  --surface-subtle: 213.33 11.39% 15.49%;
+  --border-nav-active: 185.04 60.37% 42.55%;
+
+  --border-hairline: 214.29 12.28% 22.35%;
+  --border-subtle: 213.33 12.16% 29.02%;
+
+  --border-strong: 215.45 9.02% 52.16%;
   --border-focus: var(--primary-300);
 
-  --text-primary: 210 22.22% 96.47%; /* #F4F6F8 — 14.62:1 on a card */
-  /* Was #AEB6C0. Lifted with the surfaces so the secondary tier keeps its
-     distance from the primary one now that the card is lighter. */
-  --text-secondary: 213.33 14.06% 74.9%; /* #B6BEC8 — 8.44:1 on a card */
-  --text-tertiary: 213.91 12.71% 64.51%; /* #99A3B0 — 6.20:1, 4.79:1 on hover */
-  /* Koper's #68737F is 3.58:1 on ink-800 — a fail; this is 6.20:1. */
-  --text-muted: 213.91 12.71% 64.51%; /* #99A3B0 */
-  --text-inverse: 214.29 30.43% 4.51%; /* ink-900 */
+  --text-primary: 210 11.76% 93.33%;
+
+  --text-secondary: 216 8.88% 66.86%;
+  --text-tertiary: 216 8.88% 66.86%;
+
+  --text-muted: 216 8.88% 66.86%;
+  --text-inverse: 216 12.2% 8.04%;
   --text-accent: var(--primary-300);
 
-  /* CR-2026-09-29-BRAND-C — the ONE --brand-* value with a dark step. The mark
-     itself does not change with the theme (its cover carries its own ground),
-     but the knot is also the full stop at the end of the wordmark's sweep, and
-     that dot sits on the theme's surface: #C8322B is 2.98:1 on a dark card.
-     Lifted, it is 4.57:1 on the canvas, 3.67:1 on a card, 4.10:1 on the rail
-     and still 4.31:1 on the mark's white band. Decorative, never text. */
-  --brand-knot: 3.08 67.24% 54.51%; /* #D9453D */
+  --brand-knot: 3.08 67.24% 54.51%;
 
-  --success: 150.85 60.68% 54.12%; /* #43D18C */
-  --success-bright: 151.65 57.47% 43.33%; /* #2FAE72 */
-  --success-dim: 158.33 54.55% 12.94%; /* #0F3326 */
+  --success: 120 47.33% 52.35%;
+  --success-bright: 151.65 57.47% 43.33%;
+  --success-dim: 158.33 54.55% 12.94%;
 
-  --warning: 38.12 86.73% 61.57%; /* #F2B448 */
-  --warning-bright: 36.34 69.72% 50.78%; /* #D9942A */
-  --warning-dim: 39.47 59.38% 12.55%; /* #33260D */
+  --warning: 38.12 86.73% 61.57%;
+  --warning-bright: 36.34 69.72% 50.78%;
+  --warning-dim: 39.47 59.38% 12.55%;
 
-  --error: 8.78 86.01% 71.96%; /* #F58C7A */
-  --error-bright: 353.71 67.14% 58.24%; /* #DC4D5C */
-  --error-dim: 349.41 45.95% 14.51%; /* #36141A */
+  --error: 4.03 100% 73.73%;
+  --error-bright: 353.71 67.14% 58.24%;
+  --error-dim: 349.41 45.95% 14.51%;
 
-  --form-error: 337.67 88.97% 71.57%; /* #F776A6 */
-  --form-error-bright: 339.75 66.81% 46.08%; /* #C4275C */
-  --form-error-dim: 333.85 60% 12.75%; /* #340D1E */
+  --form-error: 4.03 100% 73.73%;
+  --form-error-bright: 339.75 66.81% 46.08%;
+  --form-error-dim: 333.85 60% 12.75%;
 
-  --info: 210.44 89.47% 70.2%; /* #6FB2F7 */
-  --info-bright: 211.89 66.51% 57.84%; /* #4C8FDB */
-  --info-dim: 212.31 56.52% 13.53%; /* #0F2136 */
+  --info: 210.44 89.47% 70.2%;
+  --info-bright: 211.89 66.51% 57.84%;
+  --info-dim: 212.31 56.52% 13.53%;
 
-  /* Koper's own shadow alphas are correct on an ink canvas. A shadow does no
-     separating work at these luminances, which is why the fill step and the
-     hairline above had to do it instead. */
   --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4);
   --shadow-2: 0 2px 8px rgba(0, 0, 0, 0.45);
   --shadow-3: 0 8px 24px rgba(0, 0, 0, 0.5);
   --shadow-4: 0 20px 48px rgba(0, 0, 0, 0.58);
   --overlay-scrim: rgba(8, 10, 12, 0.72);
 
-  --focus-ring: 0 0 0 2px hsl(var(--canvas)), 0 0 0 4px hsl(var(--accent));
+  --focus-ring: 0 0 0 2px hsl(var(--canvas)), 0 0 0 4px hsl(var(--action-fill));
 
-  /* The landing page's ambient light is richer on ink: the same ramp, more of it. */
-  --landing-blob: var(--primary-500); /* #4A47D6 */
-  --landing-blob-2: var(--primary-700); /* #2E2B93 */
-  --landing-blob-3: 262 60% 45%; /* #6B2EB8 */
+  --landing-blob: var(--primary-500);
+  --landing-blob-2: var(--primary-700);
+  --landing-blob-3: 35.65 91.19% 44.51%;
   --landing-blob-alpha: 0.42;
-  --device-bezel: 216 18% 18%; /* #262D38 — lifted so the phone reads on the canvas */
-  --device-glow: rgba(113, 109, 228, 0.28);
+  --device-bezel: 216 18% 18%;
+  --device-glow: rgba(14, 124, 134, 0.28);
 }

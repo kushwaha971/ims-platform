@@ -29,7 +29,7 @@ Additional quick actions: Record payment, Add purchase, Add expense. On mobile u
 
 DASH-01: every card identifies period/scope and opens records that reproduce its figure. If a panel uses a different scope from the current chart, label it clearly.
 
-DASH-02: Customer/Supplier totals use explicit role-scoped definitions. An explicitly dual-role person's Shop net position must be explained according to decision D-03; do not invent separate receivable/payable balances or add overlapping panels together. An all-counterparty money total must be named accordingly and link to the matching Shop report.
+DASH-02: Customer/Supplier totals use explicit role-scoped definitions. Owner decision D-03 requires an explicitly dual-role person's customer receivable and supplier payable to stay separate until an explicit settlement. Do not silently offset them or treat a customer receivable as a supplier advance. The 17 Oct audit found this approved policy is not yet implemented. An all-counterparty money total must be named accordingly and link to the matching Shop report.
 
 DASH-03: label net/gross sales and before/after-tax profit accurately. Receipts, advances, credits, refunds, expenses and opening cash have distinct effects. Never show a collection percentage with unrelated numerator and denominator, or zero profit when cost is missing.
 

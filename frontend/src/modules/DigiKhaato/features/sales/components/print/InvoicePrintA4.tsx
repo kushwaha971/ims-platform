@@ -81,7 +81,7 @@ export function InvoicePrintA4({
   const mark = watermark(doc);
   const party = doc.partySnapshot;
   const supplier = doc.supplier;
-  const rule = branding?.primaryHex ?? '#111';
+  const rule = branding?.primaryHex ?? 'hsl(var(--print-ink))';
   const sgst = t(sgstLabelId(doc.placeOfSupplyState, doc.isInterState));
   const totals: [string, string][] = [
     [t('sales.totals.subtotal'), formatInr(doc.subtotal)],
@@ -119,7 +119,7 @@ export function InvoicePrintA4({
 
   return (
     <article
-      className="ub-print-sheet ub-print-a4 ub-gst relative bg-white p-6 text-black"
+      className="ub-print-sheet ub-print-a4 ub-gst relative bg-white p-6 text-printInk"
       data-print-template="a4"
       data-testid="print-a4"
     >
@@ -129,7 +129,7 @@ export function InvoicePrintA4({
           aria-hidden
         >
           <span
-            className="-rotate-30 text-7xl font-bold text-black/10"
+            className="-rotate-30 text-7xl font-bold text-printInk/10"
             data-testid="print-watermark"
           >
             {mark === 'draft' ? t('sales.print.draftMark') : t('sales.print.voidMark')}
@@ -147,7 +147,7 @@ export function InvoicePrintA4({
             {t(documentTitleId(doc.kind, supplier.gstType))}
           </h2>
           {columns !== 'none' && (
-            <p className="text-center text-[9px] uppercase sm:absolute sm:right-2 sm:top-1 print:absolute print:right-2 print:top-1">
+            <p className="text-center text-[0.5625rem] uppercase sm:absolute sm:right-2 sm:top-1 print:absolute print:right-2 print:top-1">
               {t('sales.print.original')}
             </p>
           )}
@@ -460,7 +460,7 @@ export function InvoicePrintA4({
         </div>
       </div>
 
-      <footer className="mt-1 flex justify-between text-[9px] text-black/60">
+      <footer className="mt-1 flex justify-between text-[0.5625rem] text-printInk/60">
         <p>{t('sales.print.computerGenerated')}</p>
         {/* CR-2026-09-29-BRAND-A: signed by the business that issued it. No
             product name, no domain, nothing of ours. */}

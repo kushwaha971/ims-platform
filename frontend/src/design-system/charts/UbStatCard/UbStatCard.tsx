@@ -203,7 +203,7 @@ function UbStatCardBase({
         // The applied tint goes on the CARD, not the button, so the border
         // moves with it — a tinted panel inside an untinted border reads as a
         // hover state rather than as a tile that is doing something.
-        pressed && 'border-accent bg-accent-quiet',
+        pressed && 'border-action bg-accent-quiet',
         className
       )}
     >

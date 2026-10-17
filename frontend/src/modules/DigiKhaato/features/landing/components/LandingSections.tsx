@@ -123,7 +123,7 @@ function HowItWorksSectionBase() {
                   as="span"
                   variant="inherit"
                   aria-hidden
-                  className="flex h-11 w-11 items-center justify-center rounded-full bg-accent font-serif-display text-[1.375rem] italic text-text-inverse"
+                  className="flex h-11 w-11 items-center justify-center rounded-full bg-action font-serif-display text-[1.375rem] italic text-text-inverse"
                 >
                   {n}
                 </UbText>

@@ -16,18 +16,6 @@
 @tailwind components;
 @tailwind utilities;
 
-/* The rupee sign, from Inter. DM Sans draws U+20B9 with a shape that reads as
-   a stray letter beside Indian figures; this face covers ONLY that code point
-   and sits first in every stack, so "₹" is Inter's wherever it appears — in a
-   button label as much as in an amount. */
-@font-face {
-  font-family: 'DK Rupee';
-  src: url('/fonts/inter-rupee.woff2') format('woff2');
-  font-weight: 100 900;
-  font-display: swap;
-  unicode-range: U+20B9;
-}
-
 @layer base {
   html {
     background-color: hsl(var(--canvas));
@@ -36,7 +24,8 @@
   }
 
   body {
-    font-family: var(--font-ui);
+    font-family: var(--font-sans);
+    font-variant-numeric: tabular-nums;
     font-size: var(--size-body);
     line-height: var(--leading-normal);
     min-height: 100dvh;
@@ -46,7 +35,7 @@
   /* Devanagari matras sit above and below the baseline; 1.5 is the floor
      wherever text may be Hindi (Part 19 §19.11.6). */
   :lang(hi) body {
-    line-height: var(--leading-normal);
+    line-height: 1.5;
   }
 
   *,
@@ -131,10 +120,10 @@
    preview IS the print. Black on white whatever the theme: it is a document. */
 @layer components {
   .ub-gst {
-    font-size: 10.5px;
+    font-size: 0.65625rem;
     line-height: 1.4;
-    color: #000;
-    background: #fff;
+    color: hsl(var(--print-ink));
+    background: hsl(var(--print-paper));
   }
 
   .ub-gst .gst-box {
@@ -194,7 +183,7 @@
       display: block;
       max-width: 100%;
       overflow-x: auto;
-      font-size: 8.5px;
+      font-size: 0.53125rem;
     }
 
     /* `table.` on purpose: the general `.gst-grid th, td` padding is declared
@@ -207,11 +196,11 @@
   }
 
   .ub-gst .gst-label {
-    font-size: 9px;
+    font-size: 0.5625rem;
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.04em;
-    color: #333;
+    color: hsl(var(--print-muted));
   }
 
   .ub-gst table {
@@ -228,7 +217,7 @@
   }
 
   .ub-gst .gst-grid th {
-    background: #f2f2f2;
+    background: hsl(var(--print-fill));
     font-weight: 600;
     text-align: center;
   }
@@ -251,7 +240,7 @@
   }
 
   .ub-gst .gst-grid tfoot td {
-    background: #f7f7f7;
+    background: hsl(var(--print-fill));
   }
 
   .ub-gst .gst-meta th,
@@ -286,9 +275,9 @@
   .ub-gst .gst-totals .gst-grand > * {
     border-top: 1px solid #000;
     border-bottom: 1px solid #000;
-    font-size: 12px;
+    font-size: 0.75rem;
     font-weight: 700;
-    background: #f2f2f2;
+    background: hsl(var(--print-fill));
   }
 }
 
@@ -331,8 +320,8 @@
        the same width, which a proportional font does not. */
     .ub-print-sheet {
       font-size: 11pt;
-      color: #000;
-      background: #fff;
+      color: hsl(var(--print-ink));
+      background: hsl(var(--print-paper));
     }
 
     .ub-print-sheet table {
@@ -363,7 +352,7 @@
        keep the ordinary hairline of the cells beside them. */
     .ub-print-sheet thead th {
       border-bottom-width: 1pt;
-      border-bottom-color: #333;
+      border-bottom-color: hsl(var(--print-muted));
     }
 
     .ub-print-sheet tr {
@@ -393,7 +382,7 @@
 
     .ub-print-thermal {
       page: thermal80;
-      font-size: 11px;
+      font-size: 0.6875rem;
     }
 
     .ub-print-a4 {
@@ -422,7 +411,7 @@
 
     .ub-print-sheet.ub-gst .gst-box,
     .ub-print-sheet.ub-gst .gst-row {
-      border-color: #000;
+      border-color: hsl(var(--print-ink));
     }
 
     .ub-print-sheet.ub-gst .gst-divide {
@@ -570,25 +559,9 @@
    * upgrade; `designSystemGuards.test.ts` fails if a literal comes back.
    */
 
-  /**
-   * cmdk's highlighted row.
-   *
-   * `MLCommandItem` carries `data-[selected=true]:bg-accent
-   * data-[selected=true]:text-accent-foreground`, which is shadcn's contract
-   * where `accent` is a near-white HOVER WASH. In this product `--accent` is the
-   * indigo ACTION colour (§23.2.4) — `alias.css` records that collision in a
-   * comment — and `accent.foreground` was never added to the Tailwind theme, so
-   * `text-accent-foreground` compiled to nothing at all.
-   *
-   * The result: every keyboard-active row in the combobox was a solid `#4A47D6`
-   * block with near-black text on it. Roughly 1.6:1 — below any legibility
-   * floor, on the control a merchant uses to pick their GST state from 38
-   * options with the keyboard.
-   *
-   * Fixed here rather than by renaming `--accent`, because that name is the
-   * product's action colour across 200 files and ml-uikit is the thing with the
-   * different meaning.
-   */
+  /** Keep keyboard-highlighted cmdk and Radix rows on the semantic hover
+   * surface with readable text. Filled actions and hover washes have separate
+   * tokens; vendor components retain shadcn's accent-wash contract. */
   [cmdk-item][data-selected='true'],
   [data-radix-collection-item][data-highlighted] {
     background-color: hsl(var(--surface-hover)) !important;
@@ -936,7 +909,7 @@
    and only below `lg`: desktop keeps its type exactly. */
 @media (max-width: 1023.98px) {
   :is(input, textarea, select).ds-body-base-regular {
-    font-size: 16px;
+    font-size: 1rem;
   }
 }
 

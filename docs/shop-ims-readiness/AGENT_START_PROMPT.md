@@ -234,3 +234,29 @@ own build in the same environment before raising a budget. `dues`'
 Use isolated fixtures and preserve unrelated work. Never wipe real databases,
 send real messages or access phone contacts in QA. Keep QA.md, the acceptance
 tracker and this handoff current.
+
+
+## Latest verification override — 17 October 2026
+
+Read [15-theme-and-verification-review.md](15-theme-and-verification-review.md)
+first. It is a local verification checkpoint, not a deployment claim. The
+owner requested a colors/fonts-only migration before this audit: Jakarta/Mukta,
+teal/marigold and semantic money colors are implemented without changing page
+structure, dimensions, navigation or financial logic. Keep that narrow scope
+separate from the remaining programme.
+
+Do not ask D-03 again: the owner chose **separate customer/supplier balances,
+explicit settlement only**. The pulled code still nets ₹1,000/₹600 to ₹400 and
+labels ₹400 as a supplier advance with no supplier payment. DASH-02 is Fail
+against the approved policy. Another confirmed gap: Shop dashboard Remind uses
+the Udhaar party-reminder flow and refuses a Shop-only ₹445 receivable. Fix the
+scope with a reviewed data contract and fail-before tests; never weaken the
+server's Udhaar isolation to make that button work.
+
+At 320px in Hindi, the existing invoice total dock truncates ₹378.00. Hindi
+switching also leaves the document language as en. Native contact picking,
+physical phone/keyboard/printer behavior and actual 125% browser zoom were not
+certified here. Existing purchase reload/new-tab recovery and duplicate-mobile
+limits remain open. WP-08/09/10 and owner release acceptance are not complete.
+Do not claim 9/10 readiness from test counts, or no duplicates anywhere from a
+shared-owner scan. Do not restore the older local stash over the pulled work.

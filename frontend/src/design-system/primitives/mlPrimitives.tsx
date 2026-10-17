@@ -218,7 +218,7 @@ export interface MLButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const BUTTON_VARIANT: Record<MLButtonVariant, string> = {
-  primary: 'bg-accent text-text-inverse hover:bg-accent-hover active:bg-accent-press',
+  primary: 'bg-cta text-cta-foreground hover:bg-cta-hover active:bg-cta-press',
   /* BrandHub's `secondary` is a FILL (`bg-[#f1f1f1] hover:bg-[#e6e6e6]`), not
      an outline. What this called `secondary` was actually its
      `outline-neutral`, and with the dark `--border-strong` rather than a
@@ -238,10 +238,10 @@ const BUTTON_VARIANT: Record<MLButtonVariant, string> = {
 const BUTTON_SIZE: Record<MLButtonSize, string> = {
   /* Figma "button": 12 px side padding, 14/20 text in a 36 px box; the
      compact in-row variant is 28 px with 12/16 text. */
-  sm: 'h-7 px-3 ds-body-base-medium',
-  md: 'h-10 px-4 ds-body-base-medium',
+  sm: 'h-7 px-3 text-button-sm',
+  md: 'h-10 px-4 text-button',
   // 44px is the mobile touch-target floor (R-A-3).
-  lg: 'h-11 px-5 ds-body-base-medium',
+  lg: 'h-11 px-5 text-button',
 };
 
 /**

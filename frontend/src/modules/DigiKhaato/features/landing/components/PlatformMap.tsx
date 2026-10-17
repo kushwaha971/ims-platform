@@ -143,7 +143,7 @@ function PlatformMapSectionBase() {
                 ))}
               </UbBox>
               <UbBox className="absolute left-[var(--bus-inset)] right-[var(--bus-inset)] top-1/2 hidden h-0 border-t-2 border-accent-line lg:block" />
-              <UbBox className="absolute left-1/2 top-0 h-full w-0 -translate-x-1/2 border-l-2 border-accent lg:top-1/2 lg:h-1/2" />
+              <UbBox className="absolute left-1/2 top-0 h-full w-0 -translate-x-1/2 border-l-2 border-action lg:top-1/2 lg:h-1/2" />
               <UbText
                 as="span"
                 variant="inherit"

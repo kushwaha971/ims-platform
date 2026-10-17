@@ -219,7 +219,7 @@ describe.each(RAMPS)(
 );
 
 describe.each(RAMPS)('the emphasis pair separates in $theme', ({ raw }) => {
-  const accent = resolve(raw, 'accent');
+  const accent = resolve(raw, 'action-fill');
   const recessive = resolve(raw, 'viz-8');
   const surface = resolve(raw, 'surface-card');
 

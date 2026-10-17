@@ -15,7 +15,7 @@
  * new dependency, ADR-021). Where the bundled browser revision is not the one
  * installed, set CHROMIUM_PATH.
  */
-import { existsSync, mkdirSync, readFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, readdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -33,11 +33,26 @@ const executablePath =
 
 const svg = (rel) => readFileSync(join(pub, rel), 'utf8');
 const dataUri = (text) => `data:image/svg+xml;base64,${Buffer.from(text).toString('base64')}`;
-const font = readFileSync(join(root, 'src/fonts/dm-sans-latin-wght-normal.woff2')).toString(
-  'base64'
-);
-
-const FONT_FACE = `@font-face{font-family:'DM Sans';font-weight:100 1000;src:url(data:font/woff2;base64,${font}) format('woff2');}`;
+// next/font/google self-hosts the chosen face during build. Reuse its Latin
+// asset for generated artwork; never fetch a font CDN while rendering previews.
+function builtJakartaFont() {
+  const chunks = join(root, '.next/static/chunks');
+  if (!existsSync(chunks)) throw new Error('Build the frontend before rendering brand artwork.');
+  for (const file of readdirSync(chunks).filter((name) => name.endsWith('.css'))) {
+    const css = readFileSync(join(chunks, file), 'utf8');
+    for (const match of css.matchAll(/@font-face\s*\{([^}]+)\}/g)) {
+      if (
+        !/font-family:[^;]*Jakarta/.test(match[1]) ||
+        !/unicode-range:U\+(?:0-FF|\?\?)/i.test(match[1])
+      )
+        continue;
+      const asset = match[1].match(/url\(["']?[^)"']*\/([^/)"']+\.woff2)/);
+      if (asset) return readFileSync(join(root, '.next/static/media', asset[1])).toString('base64');
+    }
+  }
+  throw new Error('Built Jakarta Sans Latin font was not found; rebuild the frontend.');
+}
+const FONT_FACE = `@font-face{font-family:'Jakarta';font-weight:200 800;src:url(data:font/woff2;base64,${builtJakartaFont()}) format('woff2');}`;
 
 // [id, file under public/brand/, name, applied, its own 16 px cut]
 const concepts = [
@@ -77,22 +92,22 @@ function conceptSheet(tiny) {
     })
     .join('');
   return `<!doctype html><html><head><meta charset="utf-8"><style>${FONT_FACE}
-    body{margin:0;background:#F6F7F9;font-family:'DM Sans',sans-serif;color:#0A090B}
+    body{margin:0;background:#FBF8F4;font-family:'Jakarta',sans-serif;color:#1B1E24}
     h1{font-weight:600;font-size:22px;margin:32px 40px 8px} p.sub{margin:0 40px 24px;color:#6B696F;font-size:14px}
     .row{display:flex;gap:24px;padding:0 40px}
     .card{flex:1;background:#fff;border:1px solid #E6E6E6;border-radius:12px;padding:24px;display:flex;flex-direction:column;gap:24px}
-    header{font-size:14px} em{font-style:normal;background:#E1E0FC;color:#2E2B93;border-radius:999px;padding:2px 8px;font-size:12px;margin-left:4px}
+    header{font-size:14px} em{font-style:normal;background:#C7E7EA;color:#0A5C63;border-radius:999px;padding:2px 8px;font-size:12px;margin-left:4px}
     .lockup,.dark{display:flex;align-items:center;gap:14px}
     .word{font-weight:600;font-size:34px;letter-spacing:-0.01em;line-height:1}
     .word.sm{font-size:20px;color:#F4F6F8}
-    .dark{background:#151340;border-radius:10px;padding:14px}
+    .dark{background:#04272B;border-radius:10px;padding:14px}
     .sizes{display:flex;align-items:flex-end;gap:24px}
     figure{margin:0;display:flex;flex-direction:column;align-items:center;gap:6px}
     figcaption{font-size:11px;color:#6B696F}
     .zoom{image-rendering:pixelated}
   </style></head><body>
     <h1>YourKhata — logo concepts</h1>
-    <p class="sub">K-c cover in primary-600 #3A36B8, knot bahi red #C8322B · wordmark DM Sans 600 · each shown at 72, 48, 32 and 16 px and on the dark rail</p>
+    <p class="sub">K-c cover in primary-600 #0E7C86, knot bahi red #C8322B · wordmark Jakarta 600 · each shown at 72, 48, 32 and 16 px and on the dark rail</p>
     <div class="row">${cards}</div>
   </body></html>`;
 }
@@ -101,20 +116,22 @@ function conceptSheet(tiny) {
  * CR-2026-09-29-PLATFORM-C — the link-preview card, `public/brand/yourkhata-og.png`
  * (1200 × 630, the size every preview surface crops from). Built from the
  * K-c lockup and the hero's own headline, read from the landing catalogue so
- * the card and the page say the same sentence; indigo from the closing band's
+ * the card and the page say the same sentence; teal from the closing band's
  * primary-700 → primary-900. No screenshot and no demo data: a preview card is
  * a sign, and a screenshot shrunk to 600 px wide is a grey smear.
  *
  * `features/landing/config/seo.ts` (`OG_IMAGE`) is what points at it, and
  * `seo.test.ts` checks the file's PNG header says 1200 × 630.
  */
-async function renderOg(browser) {
-  const messages = JSON.parse(readFileSync(join(root, 'locales/catalogues/landing.en.json'), 'utf8'));
+export function brandOgHtml() {
+  const messages = JSON.parse(
+    readFileSync(join(root, 'locales/catalogues/landing.en.json'), 'utf8')
+  );
   const lead = messages['landing.hero.lead'];
   const line = messages['landing.hero.srLine'];
   const footer = 'Works in any browser · Hindi or English';
-  if (!lead || !line) throw new Error('landing.hero.lead / landing.hero.srLine missing from the catalogue');
-  const italic = readFileSync(join(root, 'src/fonts/fraunces-latin-wght-italic.woff2')).toString('base64');
+  if (!lead || !line)
+    throw new Error('landing.hero.lead / landing.hero.srLine missing from the catalogue');
   // The lockup's wordmark on a dark ground, by DESIGN-SYSTEM.md §7's table:
   // the letters white (the rail's `tone="inherit"`), the K and sweep
   // primary-300, the sweep's knot its dark step. The MARK is unchanged — it is
@@ -125,25 +142,23 @@ async function renderOg(browser) {
     markPart +
     '<!-- Wordmark' +
     wordPart
-      .replaceAll('fill="#0A090B"', 'fill="#FFFFFF"')
-      .replaceAll('fill="#3A36B8"', 'fill="#9D9AF0"')
-      .replaceAll('fill="#4A47D6"', 'fill="#9D9AF0"')
+      .replaceAll('fill="#1B1E24"', 'fill="#FFFFFF"')
+      .replaceAll('fill="#0E7C86"', 'fill="#6FBBC3"')
+      .replaceAll('fill="#0E7C86"', 'fill="#6FBBC3"')
       .replaceAll('fill="#C8322B"', 'fill="#D9453D"');
   const esc = (text) => text.replace(/&/g, '&amp;').replace(/</g, '&lt;');
-  const page = await browser.newPage({ viewport: { width: 1200, height: 630 }, deviceScaleFactor: 1 });
-  await page.setContent(`<!doctype html><html><head><meta charset="utf-8"><style>${FONT_FACE}
-    @font-face{font-family:'Fraunces';font-style:italic;font-weight:100 900;src:url(data:font/woff2;base64,${italic}) format('woff2');}
+  return `<!doctype html><html><head><meta charset="utf-8"><style>${FONT_FACE}
     html,body{margin:0;width:1200px;height:630px;overflow:hidden}
-    body{position:relative;font-family:'DM Sans',sans-serif;color:#fff;
-      background:linear-gradient(135deg,#2E2B93 0%,#211F69 58%,#151340 100%)}
+    body{position:relative;font-family:'Jakarta',sans-serif;color:#fff;
+      background:linear-gradient(135deg,#0A5C63 0%,#073E43 58%,#04272B 100%)}
     .glow{position:absolute;border-radius:50%;filter:blur(90px)}
-    .g1{width:520px;height:520px;right:-140px;top:-180px;background:rgba(113,109,228,.45)}
-    .g2{width:460px;height:460px;left:-160px;bottom:-220px;background:rgba(74,71,214,.40)}
+    .g1{width:520px;height:520px;right:-140px;top:-180px;background:rgba(50,150,160,.45)}
+    .g2{width:460px;height:460px;left:-160px;bottom:-220px;background:rgba(14,124,134,.40)}
     .wrap{position:relative;height:100%;box-sizing:border-box;padding:72px 80px 64px;display:flex;flex-direction:column}
     .lockup{height:72px;width:auto;display:block;align-self:flex-start}
-    h1{margin:auto 0 0;font-family:'Fraunces',serif;font-style:italic;font-weight:600;font-size:78px;line-height:1.04;letter-spacing:-0.015em;max-width:1040px}
-    .line{margin:22px 0 0;font-weight:600;font-size:38px;line-height:1.2;color:#E1E0FC;max-width:980px}
-    .foot{margin-top:auto;padding-top:40px;display:flex;justify-content:space-between;align-items:center;font-size:26px;font-weight:500;color:#C7C6F7}
+    h1{margin:auto 0 0;font-family:'Jakarta',serif;font-style:italic;font-weight:600;font-size:78px;line-height:1.04;letter-spacing:-0.015em;max-width:1040px}
+    .line{margin:22px 0 0;font-weight:600;font-size:38px;line-height:1.2;color:#C7E7EA;max-width:980px}
+    .foot{margin-top:auto;padding-top:40px;display:flex;justify-content:space-between;align-items:center;font-size:26px;font-weight:500;color:#C7E7EA}
     .domain{color:#fff;font-weight:600}
     .knot{display:inline-block;width:12px;height:12px;border-radius:50%;background:#C8322B;margin-right:12px;vertical-align:2px}
   </style></head><body>
@@ -154,7 +169,15 @@ async function renderOg(browser) {
       <p class="line">${esc(line)}</p>
       <div class="foot"><span>${esc(footer)}</span><span class="domain"><span class="knot"></span>yourkhata.com</span></div>
     </div>
-  </body></html>`);
+  </body></html>`;
+}
+
+async function renderOg(browser) {
+  const page = await browser.newPage({
+    viewport: { width: 1200, height: 630 },
+    deviceScaleFactor: 1,
+  });
+  await page.setContent(brandOgHtml());
   await page.evaluate(() => document.fonts.ready);
   const out = join(pub, 'brand/yourkhata-og.png');
   await page.screenshot({ path: out, clip: { x: 0, y: 0, width: 1200, height: 630 } });
@@ -215,7 +238,7 @@ async function main() {
       })
       .join('');
     await sheet.setContent(
-      `<!doctype html><html><head><style>${FONT_FACE}body{margin:0;padding:32px;background:#F6F7F9;font-family:'DM Sans';display:flex;gap:28px;align-items:flex-end;flex-wrap:wrap}figure{margin:0;display:flex;flex-direction:column;align-items:center;gap:8px}figcaption{font-size:11px;color:#6B696F}</style></head><body>${tiles}</body></html>`
+      `<!doctype html><html><head><style>${FONT_FACE}body{margin:0;padding:32px;background:#FBF8F4;font-family:'Jakarta';display:flex;gap:28px;align-items:flex-end;flex-wrap:wrap}figure{margin:0;display:flex;flex-direction:column;align-items:center;gap:8px}figcaption{font-size:11px;color:#6B696F}</style></head><body>${tiles}</body></html>`
     );
     await sheet.screenshot({ path: join(shots, 'icons.png') });
     console.log(`wrote ${join(shots, 'icons.png')}`);
@@ -224,7 +247,9 @@ async function main() {
   }
 }
 
-main().catch((error) => {
-  console.error(error);
-  process.exit(1);
-});
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  main().catch((error) => {
+    console.error(error);
+    process.exit(1);
+  });
+}

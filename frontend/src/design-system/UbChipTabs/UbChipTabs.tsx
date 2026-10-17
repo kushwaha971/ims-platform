@@ -123,7 +123,7 @@ export function UbChipTabs<T extends string>({
         <span
           aria-hidden
           className={cn(
-            'absolute bottom-1 top-1 rounded-pill bg-accent shadow-sm',
+            'absolute bottom-1 top-1 rounded-pill bg-action shadow-sm',
             'transition-[transform,width] duration-base ease-entrance',
             !measured && 'opacity-0'
           )}
@@ -150,7 +150,7 @@ export function UbChipTabs<T extends string>({
                 'transition-colors duration-fast ease-standard',
                 'outline-none focus-visible:shadow-focus',
                 selected
-                  ? cn('text-text-inverse', !measured && 'bg-accent')
+                  ? cn('text-text-inverse', !measured && 'bg-action')
                   : 'text-text-secondary hover:bg-surface-hover hover:text-text-primary'
               )}
             >

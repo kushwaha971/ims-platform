@@ -22,6 +22,6 @@ export const useUbActionPresentation = (): UbActionPresentation =>
 
 /** A button or action link drawn as a row of a ⋯ sheet. */
 export const SHEET_ROW_CLASSES =
-  'h-14 min-h-14 w-full justify-start gap-4 rounded-none px-4 text-[16px] font-medium ' +
+  'h-14 min-h-14 w-full justify-start gap-4 rounded-none px-4 text-[1rem] font-medium ' +
   'border-0 bg-transparent text-text-primary shadow-none hover:bg-surface-hover ' +
   '[&_svg]:h-5 [&_svg]:w-5 [&_svg]:text-text-secondary';

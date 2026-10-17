@@ -243,7 +243,7 @@ function LandingFooterBase() {
               underline={false}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full sm:h-8 sm:w-8 bg-[#0A66C2] text-white transition-opacity hover:opacity-80"
+              className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full sm:h-8 sm:w-8 bg-social-linkedin text-white transition-opacity hover:opacity-80"
             >
               <Linkedin aria-hidden="true" className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
             </UbLink>
@@ -254,7 +254,7 @@ function LandingFooterBase() {
               underline={false}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full sm:h-8 sm:w-8 bg-[#1877F2] text-white transition-opacity hover:opacity-80"
+              className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full sm:h-8 sm:w-8 bg-social-facebook text-white transition-opacity hover:opacity-80"
             >
               <Facebook aria-hidden="true" className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
             </UbLink>
@@ -265,7 +265,7 @@ function LandingFooterBase() {
               underline={false}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full sm:h-8 sm:w-8 bg-[#C13584] text-white transition-opacity hover:opacity-80"
+              className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full sm:h-8 sm:w-8 bg-social-instagram text-white transition-opacity hover:opacity-80"
             >
               <Instagram aria-hidden="true" className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
             </UbLink>

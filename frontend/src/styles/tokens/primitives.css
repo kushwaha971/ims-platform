@@ -5,6 +5,10 @@
  */
 
 :root {
+  --print-ink: 220 14.29% 12.35%;
+  --print-paper: 0 0% 100%;
+  --print-muted: 220 8.74% 40.39%;
+  --print-fill: 220 13.04% 95.49%;
   /* ── Spacing, radius, layout (§23.2.1) ─────────────────────────────────── */
   --space-0: 0;
   --space-1: 4px;
@@ -82,55 +86,58 @@
   );
 
   /* ── Typography (§23.2.2) ──────────────────────────────────────────────── */
-  /* Clash Grotesk/Display carry no Devanagari; the roles are kept and the faces
-     substituted with Inter + Noto Sans Devanagari (§23.2.2 font decision). */
-  --font-display:
-    'DK Rupee', var(--font-dm-sans, 'DM Sans'), var(--font-inter, 'Inter'),
-    var(--font-noto-devanagari, 'Noto Sans Devanagari'), system-ui, -apple-system, 'Segoe UI',
-    sans-serif;
-  --font-ui:
-    'DK Rupee', var(--font-dm-sans, 'DM Sans'), var(--font-inter, 'Inter'),
-    var(--font-noto-devanagari, 'Noto Sans Devanagari'), system-ui, -apple-system, 'Segoe UI',
-    sans-serif;
-  --font-mono: 'IBM Plex Mono', ui-monospace, 'SFMono-Regular', 'Menlo', monospace;
-  --font-metric:
-    var(--font-inter, 'Inter'), var(--font-noto-devanagari, 'Noto Sans Devanagari'), system-ui,
-    sans-serif;
+  /* Fixed paper/ink materials in the decorative auth illustration. */
+  --art-ink: 220 14% 12.35%;
+  --art-muted: 220 5% 56%;
+  --art-faint: 215 9% 74%;
+  --art-paper: 34.29 46.67% 97.06%;
+  --art-get: 120 59.48% 30%;
+  --art-give: 3.62 71.29% 40.98%;
+  --art-spine: 5.68 62.91% 29.61%;
+  --art-red-rule: 0 89.58% 81.18%;
+  --art-success-wash: 158 64% 95%;
+  --art-coin-dark: 37.97 90.2% 32%;
+  --art-coin-light: 36.67 100% 69.41%;
+  --font-sans: var(--font-jakarta), var(--font-mukta), system-ui, sans-serif;
+  --font-display: var(--font-sans);
+  --font-ui: var(--font-sans);
+  --font-metric: var(--font-sans);
+  --font-mono: ui-monospace, 'SFMono-Regular', 'Menlo', monospace;
 
-  --size-display: 44px;
-  --size-h1: 20px;
-  --size-h2: 18px;
-  --size-h3: 16px;
-  --size-h4: 14px;
-  --size-body: 14px;
-  --size-body-sm: 12px;
-  --size-caption: 12px;
-  --size-label: 12px;
-  --size-label-caps: 10px;
-  --size-micro: 10px;
+  --size-display: clamp(1.5rem, 1.3rem + 0.9vw, 2rem);
+  --size-h1: clamp(1.25rem, 1.12rem + 0.6vw, 1.5rem);
+  --size-h2: clamp(1.125rem, 1.02rem + 0.5vw, 1.375rem);
+  --size-h3: clamp(1rem, 0.95rem + 0.25vw, 1.125rem);
+  --size-h4: 1rem;
+  --size-body: clamp(0.9375rem, 0.92rem + 0.1vw, 1rem);
+  --size-body-sm: 0.875rem;
+  --size-caption: 0.75rem;
+  --size-label: 0.875rem;
+  --size-label-caps: 0.75rem;
+  --size-micro: 0.75rem;
   /* The brand wordmark (§23.2.6, CR-2026-09-19-D). It is a NAME, not a heading,
      so it gets its own four tiers rather than borrowing `ds-h*` — a wordmark
      set in the page's heading tier competes with the page's heading. */
-  --size-wordmark-sm: 15px;
-  --size-wordmark-md: 18px;
-  --size-wordmark-lg: 22px;
-  --size-wordmark-xl: 26px;
-  --size-metric-xl: 52px;
-  --size-metric-lg: 38px;
-  --size-metric-md: 24px;
-  --size-metric-sm: 20px;
+  --size-wordmark-sm: 0.9375rem;
+  --size-wordmark-md: 1.125rem;
+  --size-wordmark-lg: 1.375rem;
+  --size-wordmark-xl: 1.625rem;
+  --size-metric-xl: clamp(1.5rem, 1.3rem + 0.9vw, 2rem);
+  --size-metric-lg: clamp(1.125rem, 1.02rem + 0.5vw, 1.375rem);
+  --size-metric-md: clamp(1.125rem, 1.02rem + 0.5vw, 1.375rem);
+  --size-metric-sm: 1rem;
 
-  --leading-tight: 1.05;
+  --leading-tight: 1.2;
   --leading-snug: 1.25;
-  --leading-normal: 1.5;
+  --leading-normal: 1.4;
   --leading-relaxed: 1.65;
   --leading-label: 1.4;
   /* Devanagari matras clip below 1.5 — the Hindi label tier is taller (§23.2.2). */
   --leading-label-hi: 1.5;
-  --size-label-hi: 12.5px;
+  --size-label-hi: 0.875rem;
 
-  --track-display: -0.025em;
-  --track-heading: -0.015em;
+  --track-display: -0.01em;
+  --track-heading: -0.01em;
   --track-body: 0;
   --track-label: 0;
   --track-label-caps: 0.09em;

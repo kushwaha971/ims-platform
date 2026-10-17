@@ -77,7 +77,7 @@ export const LANDING_SHARE_DESCRIPTION: string = CURRENT.shareDescription;
  *     the product (CR-2026-09-29-BRAND-A). A file referenced from this page's
  *     metadata alone cannot leak.
  *  2. `next/og` reads TTF/OTF/WOFF only; every brand face here is WOFF2, so the
- *     card would be set in its bundled fallback, not in Fraunces and DM Sans.
+ *     card would be set in its bundled fallback, not in the self-hosted Jakarta face.
  *
  * Under `/brand/`, so it shares that prefix's cache policy (next.config.js,
  * nginx). Regenerate it when the headline or the mark changes.

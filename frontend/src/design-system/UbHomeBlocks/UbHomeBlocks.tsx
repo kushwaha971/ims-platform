@@ -69,7 +69,7 @@ function UbHeroPairBase({
           aria-label={figure.ariaLabel}
           className="flex min-w-0 flex-col gap-0.5 p-3 outline-none transition-colors hover:bg-surface-hover focus-visible:shadow-focus active:bg-surface-hover sm:p-4"
         >
-          <span className="flex items-center gap-1 text-[13px] leading-[18px] text-text-tertiary">
+          <span className="flex items-center gap-1 text-[0.8125rem] leading-[18px] text-text-tertiary">
             {figure.label}
             <ChevronRight aria-hidden className="h-3.5 w-3.5" />
           </span>
@@ -96,10 +96,10 @@ function UbHeroPairBase({
  */
 const heroSize = (value: string): string =>
   value.length <= 9
-    ? 'text-[24px]'
+    ? 'text-[1.5rem]'
     : value.length <= 12
-      ? 'text-[20px] sm:text-[24px]'
-      : 'text-[17px] sm:text-[24px]';
+      ? 'text-[1.25rem] sm:text-[1.5rem]'
+      : 'text-[1.0625rem] sm:text-[1.5rem]';
 
 export interface UbMiniStat {
   readonly key: string;
@@ -125,10 +125,10 @@ function UbMiniStatStripBase({
       {stats.map((stat) => {
         const body = (
           <>
-            <span className="text-[12px] leading-4 text-text-tertiary">{stat.label}</span>
+            <span className="text-[0.75rem] leading-4 text-text-tertiary">{stat.label}</span>
             <span
               className={cn(
-                'ds-num text-[15px] font-semibold leading-5',
+                'ds-num text-[0.9375rem] font-semibold leading-5',
                 TONE_TEXT[stat.tone ?? 'default']
               )}
             >
@@ -192,7 +192,7 @@ function UbQuickActionsBase({
             >
               {action.icon}
             </span>
-            <span className="text-[12.5px] font-medium leading-4 text-text-primary">
+            <span className="text-[0.78125rem] font-medium leading-4 text-text-primary">
               {action.label}
             </span>
           </Link>
@@ -239,11 +239,11 @@ function UbAttentionListBase({
               {item.icon}
             </span>
             <span className="flex min-w-0 flex-1 flex-col">
-              <span className="text-[16px] font-medium leading-[22px] text-text-primary">
+              <span className="text-[1rem] font-medium leading-[22px] text-text-primary">
                 {item.title}
               </span>
               {item.caption ? (
-                <span className="text-[13px] leading-[18px] text-text-tertiary">
+                <span className="text-[0.8125rem] leading-[18px] text-text-tertiary">
                   {item.caption}
                 </span>
               ) : null}

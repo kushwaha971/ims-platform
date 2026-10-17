@@ -82,7 +82,7 @@ export function MLRadioGroup<T extends string>({
             card && 'rounded-control border px-3 py-2.5',
             card &&
               (value === option.value
-                ? 'border-accent bg-accent-quiet'
+                ? 'border-action bg-accent-quiet'
                 : 'border-border-subtle hover:bg-surface-hover'),
             option.disabled && 'cursor-not-allowed opacity-60'
           )}
@@ -95,11 +95,11 @@ export function MLRadioGroup<T extends string>({
             disabled={option.disabled}
             className={cn(
               'ub-hit relative mt-1 flex h-4 w-4 shrink-0 items-center justify-center rounded-pill border',
-              'border-border-subtle bg-surface-card text-accent',
+              'border-border-subtle bg-surface-card text-text-accent',
               'transition-colors duration-fast ease-standard',
-              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2',
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2',
               'disabled:cursor-not-allowed disabled:bg-surface-sunken disabled:text-border-strong',
-              'data-[state=checked]:border-accent'
+              'data-[state=checked]:border-action'
             )}
           >
             <RadioGroupPrimitive.Indicator className="h-2.5 w-2.5 rounded-pill bg-current" />

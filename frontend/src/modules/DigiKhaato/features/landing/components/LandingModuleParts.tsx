@@ -130,7 +130,7 @@ function ModuleIconTileBase({
     <UbBox
       aria-hidden
       className={cn(
-        'flex shrink-0 items-center justify-center bg-accent text-text-inverse shadow-[0_10px_24px_-12px_var(--device-glow)]',
+        'flex shrink-0 items-center justify-center bg-action text-text-inverse shadow-[0_10px_24px_-12px_var(--device-glow)]',
         size === 'lg' && 'h-14 w-14 rounded-[18px]',
         size === 'md' && 'h-11 w-11 rounded-[14px]',
         size === 'sm' && 'h-10 w-10 rounded-[12px]'
@@ -196,7 +196,7 @@ function ModuleIllustration({ id }: Readonly<{ id: LandingModuleId }>) {
       <UbBox className="absolute left-1/2 top-1/2 aspect-square w-[46%] -translate-x-1/2 -translate-y-1/2 rounded-full border border-dashed border-accent-line" />
       <UbBox className="absolute left-1/2 top-1/2 aspect-square w-[30%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-surface-card/60 ring-1 ring-inset ring-accent-line" />
       {/* the module, at the centre */}
-      <UbBox className="absolute left-1/2 top-1/2 flex h-[4.5rem] w-[4.5rem] -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-[22px] bg-accent text-text-inverse shadow-[0_18px_40px_-14px_var(--device-glow)] transition-transform duration-base ease-standard group-hover:scale-105 sm:h-20 sm:w-20">
+      <UbBox className="absolute left-1/2 top-1/2 flex h-[4.5rem] w-[4.5rem] -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-[22px] bg-action text-text-inverse shadow-[0_18px_40px_-14px_var(--device-glow)] transition-transform duration-base ease-standard group-hover:scale-105 sm:h-20 sm:w-20">
         <Icon className="h-9 w-9 sm:h-10 sm:w-10" strokeWidth={1.6} />
       </UbBox>
       {MODULE_SCENE[id].map((Satellite, index) => (

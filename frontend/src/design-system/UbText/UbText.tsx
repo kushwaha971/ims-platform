@@ -23,7 +23,7 @@ import { cn } from 'src/utils/cn';
  * order gets broken:
  *
  *  - `variant` is the VISUAL tier — one of the thirteen `ds-*` roles the
- *    typography plugin registers. Writing `text-[13.5px] leading-[1.5]` instead
+ *    typography plugin registers. Writing `text-[0.84375rem] leading-[1.5]` instead
  *    is what R-S-5 forbids.
  *  - `as` is the SEMANTIC element, and it defaults to `<p>`. A page title is
  *    `<UbText as="h1" variant="h2">` because §23.2.2's `ds-h2` is what a phone

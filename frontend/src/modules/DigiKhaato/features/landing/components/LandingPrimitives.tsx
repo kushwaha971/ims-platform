@@ -27,13 +27,7 @@ export const LANDING_SCALE = 'min-[2400px]:[zoom:1.25] min-[3400px]:[zoom:1.6]';
 /** The section rhythm: generous. */
 export const LANDING_SECTION = 'relative py-16 md:py-20 xl:py-24';
 
-/**
- * The italic-serif lead line: Fraunces italic, regular weight. Fraunces has no
- * Devanagari, and a browser's synthesised slant of Noto Sans Devanagari is a
- * typographic error rather than an italic (Devanagari has no italic
- * tradition), so in Hindi the line is upright, medium, in the secondary tone —
- * the contrast with the key line is carried by weight and colour instead.
- */
+/** Existing italic emphasis uses Jakarta; Hindi remains upright in Mukta. */
 export const SERIF_LEAD =
   'block font-serif-display font-normal italic tracking-[-0.01em] [&:lang(hi)]:font-medium [&:lang(hi)]:not-italic [&:lang(hi)]:tracking-normal';
 
@@ -47,7 +41,7 @@ export function LandingEyebrow({ children }: Readonly<{ children: ReactNode }>):
       variant="inherit"
       className="ds-body-s-medium inline-flex items-center gap-2 rounded-pill border border-accent-line bg-accent-quiet px-3 py-1 text-text-accent"
     >
-      <UbBox as="span" aria-hidden className="h-1.5 w-1.5 rounded-full bg-accent" />
+      <UbBox as="span" aria-hidden className="h-1.5 w-1.5 rounded-full bg-action" />
       {children}
     </UbText>
   );

@@ -431,7 +431,7 @@ export function UbDataGrid<TRow>({
           data-testid="ub-grid-busy"
           className="h-0.5 w-full overflow-hidden bg-surface-sunken"
         >
-          <div className="h-full w-1/3 animate-pulse bg-accent motion-reduce:animate-none" />
+          <div className="h-full w-1/3 animate-pulse bg-action motion-reduce:animate-none" />
         </div>
       )}
 

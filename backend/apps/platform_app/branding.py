@@ -25,9 +25,9 @@ HEX_RE = re.compile(r"^#[0-9A-Fa-f]{6}$")
 MIN_PRIMARY_CONTRAST = 3.0
 WHITE = "#FFFFFF"
 
-#: Part 23 / `docs/DESIGN-SYSTEM.md` §1: the product's own indigo.
+#: Part 23 / `docs/DESIGN-SYSTEM.md` §1: the product's peacock teal.
 PRODUCT_DEFAULTS: dict[str, Any] = {
-    "primary_hex": "#4A47D6",
+    "primary_hex": "#0E7C86",
     "secondary_hex": None,
     "app_name": "YourKhata",
     "doc_header": "",

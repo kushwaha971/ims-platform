@@ -7,7 +7,7 @@ import {
   GOOGLE_SITE_VERIFICATION,
   SITE_URL,
 } from 'src/constants';
-import { dmSans, epilogue, fraunces, inter, notoDevanagari } from 'src/fonts';
+import { jakarta, mukta } from 'src/lib/fonts';
 import { BRAND_INIT, THEME_INIT } from 'src/utils/bootScripts';
 import { LOCALE_COOKIE, THEME_CHOICE_COOKIE } from 'src/utils/cookieUtils';
 import { siteVerification } from 'src/utils/seo';
@@ -88,7 +88,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: '#4A47D6',
+  themeColor: '#0E7C86',
   width: 'device-width',
   initialScale: 1,
   viewportFit: 'cover',
@@ -107,7 +107,7 @@ export default async function RootLayout({
     <html
       lang={locale}
       data-theme={theme}
-      className={`${dmSans.variable} ${inter.variable} ${fraunces.variable} ${epilogue.variable} ${notoDevanagari.variable}`}
+      className={`${jakarta.variable} ${mukta.variable}`}
       suppressHydrationWarning
     >
       <head>
